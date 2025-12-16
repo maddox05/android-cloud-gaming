@@ -1,0 +1,1 @@
+# each time I get a new server, I have to run this script to set it up (each time server dies as well, as I wont ever use storage)
