@@ -62,13 +62,19 @@ func (s *WebRTCServer) handleOffer(w http.ResponseWriter, r *http.Request) {
 	// Read the offer from client
 	var offer webrtc.SessionDescription
 	if err := json.NewDecoder(r.Body).Decode(&offer); err != nil {
+		log.Printf("Error decoding offer: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	log.Printf("Received offer type: %s", offer.Type)
+	log.Printf("Offer SDP length: %d", len(offer.SDP))
+	log.Printf("Offer SDP:\n%s", offer.SDP)
+
 	// Create answer
 	answer, err := s.createAnswer(offer)
 	if err != nil {
+		log.Printf("Error creating answer: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -155,12 +155,32 @@
             showStatus('Connecting...', 'connecting');
 
             try {
-                // Create RTCPeerConnection
+                // Create RTCPeerConnection with multiple STUN servers
                 peerConnection = new RTCPeerConnection({
                     iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' }
-                    ]
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' }
+                    ],
+                    iceCandidatePoolSize: 10
                 });
+
+                console.log('Created peer connection');
+
+                // Add a transceiver to receive video (this ensures proper SDP generation)
+                peerConnection.addTransceiver('video', {
+                    direction: 'recvonly'
+                });
+                console.log('Added video transceiver');
+
+                // Log ICE candidates as they're discovered
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        console.log('ICE candidate:', event.candidate.candidate);
+                    } else {
+                        console.log('ICE gathering complete (null candidate)');
+                    }
+                };
 
                 // Handle incoming video track
                 peerConnection.ontrack = (event) => {
@@ -181,54 +201,71 @@
                 };
 
                 // Create offer
+                console.log('Creating offer...');
                 const offer = await peerConnection.createOffer();
+
+                console.log('Setting local description...');
                 await peerConnection.setLocalDescription(offer);
 
-                console.log('Waiting for ICE gathering...');
+                console.log('Initial SDP:', offer.sdp.substring(0, 500));
+
+                // Wait for ICE gathering with timeout
                 showStatus('Gathering connection info...', 'connecting');
 
-                // Wait for ICE gathering to complete (with 5 second timeout)
-                await Promise.race([
-                    new Promise((resolve) => {
-                        if (peerConnection.iceGatheringState === 'complete') {
-                            console.log('ICE already complete');
-                            resolve();
-                        } else {
-                            const checkICE = () => {
-                                console.log('ICE gathering state:', peerConnection.iceGatheringState);
-                                if (peerConnection.iceGatheringState === 'complete') {
-                                    peerConnection.removeEventListener('icegatheringstatechange', checkICE);
-                                    resolve();
-                                }
-                            };
-                            peerConnection.addEventListener('icegatheringstatechange', checkICE);
-                        }
-                    }),
-                    new Promise((resolve) => setTimeout(() => {
-                        console.log('ICE gathering timeout, proceeding anyway');
+                await new Promise((resolve) => {
+                    const timeout = setTimeout(() => {
+                        console.log('ICE gathering timeout after 3 seconds');
                         resolve();
-                    }, 5000))
-                ]);
+                    }, 3000);
 
-                console.log('Sending offer to server');
+                    const checkComplete = () => {
+                        if (peerConnection.iceGatheringState === 'complete') {
+                            console.log('ICE gathering completed');
+                            clearTimeout(timeout);
+                            resolve();
+                        }
+                    };
+
+                    if (peerConnection.iceGatheringState === 'complete') {
+                        clearTimeout(timeout);
+                        resolve();
+                    } else {
+                        peerConnection.addEventListener('icegatheringstatechange', checkComplete);
+                    }
+                });
+
+                // Prepare the offer to send
+                const offerToSend = {
+                    type: peerConnection.localDescription.type,
+                    sdp: peerConnection.localDescription.sdp
+                };
+
+                console.log('Sending offer to server...');
+                console.log('Offer type:', offerToSend.type);
+                console.log('SDP length:', offerToSend.sdp.length);
+                console.log('SDP preview:', offerToSend.sdp.substring(0, 300));
+
                 showStatus('Connecting to server...', 'connecting');
 
-                // Send offer to server (with ICE candidates included)
+                // Send offer to server
                 const response = await fetch(serverAddress + '/offer', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(peerConnection.localDescription)
+                    body: JSON.stringify(offerToSend)
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to send offer to server');
+                    const errorText = await response.text();
+                    console.error('Server error:', errorText);
+                    throw new Error('Server returned ' + response.status + ': ' + errorText);
                 }
 
                 // Get answer from server
                 const answer = await response.json();
-                await peerConnection.setRemoteDescription(answer);
+                console.log('Received answer from server');
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
 
                 showStatus('WebRTC connection established', 'connected');
 
