@@ -184,20 +184,34 @@
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
 
-                // Wait for ICE gathering to complete
-                await new Promise((resolve) => {
-                    if (peerConnection.iceGatheringState === 'complete') {
-                        resolve();
-                    } else {
-                        peerConnection.addEventListener('icegatheringstatechange', () => {
-                            if (peerConnection.iceGatheringState === 'complete') {
-                                resolve();
-                            }
-                        });
-                    }
-                });
+                console.log('Waiting for ICE gathering...');
+                showStatus('Gathering connection info...', 'connecting');
 
-                console.log('ICE gathering complete, sending offer');
+                // Wait for ICE gathering to complete (with 5 second timeout)
+                await Promise.race([
+                    new Promise((resolve) => {
+                        if (peerConnection.iceGatheringState === 'complete') {
+                            console.log('ICE already complete');
+                            resolve();
+                        } else {
+                            const checkICE = () => {
+                                console.log('ICE gathering state:', peerConnection.iceGatheringState);
+                                if (peerConnection.iceGatheringState === 'complete') {
+                                    peerConnection.removeEventListener('icegatheringstatechange', checkICE);
+                                    resolve();
+                                }
+                            };
+                            peerConnection.addEventListener('icegatheringstatechange', checkICE);
+                        }
+                    }),
+                    new Promise((resolve) => setTimeout(() => {
+                        console.log('ICE gathering timeout, proceeding anyway');
+                        resolve();
+                    }, 5000))
+                ]);
+
+                console.log('Sending offer to server');
+                showStatus('Connecting to server...', 'connecting');
 
                 // Send offer to server (with ICE candidates included)
                 const response = await fetch(serverAddress + '/offer', {
