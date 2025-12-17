@@ -160,27 +160,27 @@ func (s *WebRTCServer) createAnswer(offer webrtc.SessionDescription) (*webrtc.Se
 	s.peerConnection = peerConnection
 	s.videoTrack = videoTrack
 
-	// Create data channel for input events
-	dataChannel, err := peerConnection.CreateDataChannel("input", nil)
-	if err != nil {
-		peerConnection.Close()
-		return nil, fmt.Errorf("failed to create data channel: %w", err)
-	}
-	s.dataChannel = dataChannel
+	// Handle incoming data channel from client
+	peerConnection.OnDataChannel(func(dc *webrtc.DataChannel) {
+		log.Printf("🎮 Data channel received from client: %s", dc.Label())
+		s.dataChannel = dc
 
-	log.Println("✓ Created data channel for input")
+		// Set up data channel event handlers
+		dc.OnOpen(func() {
+			log.Printf("🎉 Data channel opened - ready to receive input events")
+		})
 
-	// Set up data channel event handlers
-	dataChannel.OnOpen(func() {
-		log.Printf("🎮 Data channel opened - ready to receive input events")
-	})
+		dc.OnClose(func() {
+			log.Printf("🔒 Data channel closed")
+		})
 
-	dataChannel.OnClose(func() {
-		log.Printf("🎮 Data channel closed")
-	})
+		dc.OnMessage(func(msg webrtc.DataChannelMessage) {
+			s.handleInputEvent(msg.Data)
+		})
 
-	dataChannel.OnMessage(func(msg webrtc.DataChannelMessage) {
-		s.handleInputEvent(msg.Data)
+		dc.OnError(func(err error) {
+			log.Printf("❌ Data channel error: %v", err)
+		})
 	})
 
 	// Set up connection state handler to start streaming when connected
@@ -427,14 +427,13 @@ func (s *WebRTCServer) streamVideo() {
 		return
 	}
 
-	frameDuration := time.Second / 30 // screenrecord ≈ 30fps
-	ticker := time.NewTicker(frameDuration)
-	defer ticker.Stop()
+	log.Println("📹 Reading NAL units from adb screenrecord...")
 
 	frameCount := 0
 	lastLogTime := time.Now()
 
-	for range ticker.C {
+	// Read NAL units as fast as they arrive (don't use ticker)
+	for {
 		if s.videoTrack == nil {
 			break
 		}
@@ -450,7 +449,7 @@ func (s *WebRTCServer) streamVideo() {
 		frameTime := time.Now().UnixMilli()
 		err = s.videoTrack.WriteSample(media.Sample{
 			Data:     nalus.Data,
-			Duration: frameDuration,
+			Duration: time.Millisecond, // Send immediately
 		})
 		if err != nil {
 			log.Printf("WriteSample error: %v", err)

@@ -145,8 +145,15 @@
         }
 
         function sendInputEvent(type, data) {
-            if (!dataChannel || dataChannel.readyState !== 'open') {
-                console.warn('⚠️  Data channel not ready, cannot send input');
+            if (!dataChannel) {
+                console.error('❌ Data channel not initialized! dataChannel is null');
+                console.log('Connection state:', peerConnection?.connectionState);
+                return;
+            }
+
+            if (dataChannel.readyState !== 'open') {
+                console.error(`❌ Data channel not ready! State: ${dataChannel.readyState}`);
+                console.log('Data channel:', dataChannel);
                 return;
             }
 
@@ -157,24 +164,34 @@
             };
 
             const jsonStr = JSON.stringify(event);
-            dataChannel.send(jsonStr);
-
-            console.log(`🎮 [INPUT] Sent at ${event.timestamp} ms | Type: ${type}`, data);
+            try {
+                dataChannel.send(jsonStr);
+                console.log(`✓ [INPUT] Sent at ${event.timestamp} ms | Type: ${type}`, data);
+            } catch (err) {
+                console.error('❌ Failed to send input event:', err);
+            }
         }
 
         function setupInputHandlers() {
             const video = document.getElementById('video');
 
+            console.log('🎮 Setting up input handlers on video element');
+            console.log('Video element:', video);
+            console.log('Video dimensions:', video.offsetWidth, 'x', video.offsetHeight);
+
             // Prevent default touch behaviors
             video.style.touchAction = 'none';
+            video.style.cursor = 'pointer';
 
             let touchStartPos = null;
             let touchStartTime = null;
 
             // Mouse/Touch tap handler
             video.addEventListener('click', (e) => {
+                console.log('🖱️  CLICK EVENT FIRED!', e);
                 e.preventDefault();
                 const rect = video.getBoundingClientRect();
+                console.log('Video rect:', rect);
 
                 // Calculate relative position (0-1)
                 const relX = (e.clientX - rect.left) / rect.width;
@@ -190,6 +207,7 @@
 
             // Touch start - record position for swipe detection
             video.addEventListener('touchstart', (e) => {
+                console.log('👆 TOUCHSTART EVENT FIRED!', e);
                 e.preventDefault();
                 const touch = e.touches[0];
                 const rect = video.getBoundingClientRect();
@@ -199,13 +217,18 @@
                     y: touch.clientY
                 };
                 touchStartTime = Date.now();
+                console.log('Touch start position:', touchStartPos);
             });
 
             // Touch end - determine if tap or swipe
             video.addEventListener('touchend', (e) => {
+                console.log('👆 TOUCHEND EVENT FIRED!', e);
                 e.preventDefault();
 
-                if (!touchStartPos) return;
+                if (!touchStartPos) {
+                    console.warn('No touchStartPos recorded');
+                    return;
+                }
 
                 const touch = e.changedTouches[0];
                 const rect = video.getBoundingClientRect();
@@ -314,23 +337,26 @@
                 });
                 console.log('Added video transceiver');
 
-                // Handle incoming data channel from server
-                peerConnection.ondatachannel = (event) => {
-                    dataChannel = event.channel;
-                    console.log('🎮 Data channel received:', dataChannel.label);
+                // Create data channel BEFORE creating offer (must be done on offering side)
+                dataChannel = peerConnection.createDataChannel('input');
+                console.log('🎮 Created data channel:', dataChannel.label);
 
-                    dataChannel.onopen = () => {
-                        console.log('🎮 Data channel opened - input enabled');
-                        setupInputHandlers();
-                    };
+                dataChannel.onopen = () => {
+                    console.log('🎉 DATA CHANNEL OPENED!');
+                    console.log('   State:', dataChannel.readyState);
+                    setupInputHandlers();
+                };
 
-                    dataChannel.onclose = () => {
-                        console.log('🎮 Data channel closed');
-                    };
+                dataChannel.onclose = () => {
+                    console.log('🔒 Data channel closed');
+                };
 
-                    dataChannel.onmessage = (msg) => {
-                        console.log('📨 Message from server:', msg.data);
-                    };
+                dataChannel.onerror = (err) => {
+                    console.error('❌ Data channel error:', err);
+                };
+
+                dataChannel.onmessage = (msg) => {
+                    console.log('📨 Message from server:', msg.data);
                 };
 
                 // Log ICE candidates as they're discovered
