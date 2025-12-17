@@ -1,1 +1,226 @@
-Hell is real.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android Cloud Gaming</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .connection-panel {
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background-color: #333;
+            color: #fff;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+
+        .video-container {
+            background-color: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 9 / 16;
+            max-width: 360px;
+            margin: 0 auto;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .status.connecting {
+            background-color: #ff9800;
+            color: #000;
+        }
+
+        .status.connected {
+            background-color: #4CAF50;
+        }
+
+        .status.error {
+            background-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Android Cloud Gaming</h1>
+
+        <div class="connection-panel">
+            <div class="input-group">
+                <label for="serverIp">Server IP Address:</label>
+                <input type="text" id="serverIp" placeholder="e.g., 192.168.1.100:8080" value="localhost:8080">
+            </div>
+
+            <button id="connectBtn" onclick="connect()">Connect</button>
+
+            <div id="status" class="status" style="display: none;"></div>
+        </div>
+
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+        </div>
+    </div>
+
+    <script>
+        let peerConnection = null;
+        let serverAddress = '';
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+            status.style.display = 'block';
+        }
+
+        async function connect() {
+            const serverIp = document.getElementById('serverIp').value.trim();
+            if (!serverIp) {
+                showStatus('Please enter a server IP address', 'error');
+                return;
+            }
+
+            serverAddress = serverIp.startsWith('http') ? serverIp : 'http://' + serverIp;
+
+            const connectBtn = document.getElementById('connectBtn');
+            connectBtn.disabled = true;
+            showStatus('Connecting...', 'connecting');
+
+            try {
+                // Create RTCPeerConnection
+                peerConnection = new RTCPeerConnection({
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' }
+                    ]
+                });
+
+                // Handle incoming video track
+                peerConnection.ontrack = (event) => {
+                    console.log('Received video track');
+                    const video = document.getElementById('video');
+                    video.srcObject = event.streams[0];
+                    showStatus('Connected - Streaming video', 'connected');
+                };
+
+                // Handle connection state changes
+                peerConnection.onconnectionstatechange = () => {
+                    console.log('Connection state:', peerConnection.connectionState);
+                    if (peerConnection.connectionState === 'failed' ||
+                        peerConnection.connectionState === 'disconnected') {
+                        showStatus('Connection lost', 'error');
+                        connectBtn.disabled = false;
+                    }
+                };
+
+                // Create offer
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                // Send offer to server
+                const response = await fetch(serverAddress + '/offer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(offer)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to send offer to server');
+                }
+
+                // Get answer from server
+                const answer = await response.json();
+                await peerConnection.setRemoteDescription(answer);
+
+                showStatus('WebRTC connection established', 'connected');
+
+            } catch (error) {
+                console.error('Connection error:', error);
+                showStatus('Connection failed: ' + error.message, 'error');
+                connectBtn.disabled = false;
+
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+            }
+        }
+
+        // Allow Enter key to connect
+        document.getElementById('serverIp').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                connect();
+            }
+        });
+    </script>
+</body>
+</html>
