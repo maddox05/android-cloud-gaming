@@ -174,29 +174,57 @@
                 console.log('Added video transceiver');
 
                 // Log ICE candidates as they're discovered
+                let candidateCount = 0;
                 peerConnection.onicecandidate = (event) => {
                     if (event.candidate) {
-                        console.log('ICE candidate:', event.candidate.candidate);
+                        candidateCount++;
+                        console.log(`🧊 Client ICE candidate #${candidateCount}:`, event.candidate.candidate);
                     } else {
-                        console.log('ICE gathering complete (null candidate)');
+                        console.log(`✓ Client ICE gathering complete (${candidateCount} candidates total)`);
+                    }
+                };
+
+                // Monitor ICE gathering state
+                peerConnection.onicegatheringstatechange = () => {
+                    console.log('🔍 ICE Gathering State:', peerConnection.iceGatheringState);
+                };
+
+                // Monitor ICE connection state
+                peerConnection.oniceconnectionstatechange = () => {
+                    console.log('📡 ICE Connection State:', peerConnection.iceConnectionState);
+                    if (peerConnection.iceConnectionState === 'connected') {
+                        console.log('🎉 ICE Connected!');
+                        showStatus('Connected - Waiting for video...', 'connected');
+                    } else if (peerConnection.iceConnectionState === 'failed') {
+                        console.error('❌ ICE Connection Failed');
+                        showStatus('ICE connection failed', 'error');
+                        connectBtn.disabled = false;
                     }
                 };
 
                 // Handle incoming video track
                 peerConnection.ontrack = (event) => {
-                    console.log('Received video track');
+                    console.log('📹 Received video track!');
+                    console.log('Track ID:', event.track.id);
+                    console.log('Streams:', event.streams.length);
                     const video = document.getElementById('video');
-                    video.srcObject = event.streams[0];
-                    showStatus('Connected - Streaming video', 'connected');
+                    if (event.streams && event.streams[0]) {
+                        video.srcObject = event.streams[0];
+                        showStatus('🎬 Streaming video!', 'connected');
+                    }
                 };
 
                 // Handle connection state changes
                 peerConnection.onconnectionstatechange = () => {
-                    console.log('Connection state:', peerConnection.connectionState);
-                    if (peerConnection.connectionState === 'failed' ||
-                        peerConnection.connectionState === 'disconnected') {
+                    console.log('🔌 Connection State:', peerConnection.connectionState);
+                    if (peerConnection.connectionState === 'failed') {
+                        showStatus('Connection failed', 'error');
+                        connectBtn.disabled = false;
+                    } else if (peerConnection.connectionState === 'disconnected') {
                         showStatus('Connection lost', 'error');
                         connectBtn.disabled = false;
+                    } else if (peerConnection.connectionState === 'connected') {
+                        console.log('✓ Peer connection established');
                     }
                 };
 
@@ -240,12 +268,12 @@
                     sdp: peerConnection.localDescription.sdp
                 };
 
-                console.log('Sending offer to server...');
-                console.log('Offer type:', offerToSend.type);
-                console.log('SDP length:', offerToSend.sdp.length);
-                console.log('SDP preview:', offerToSend.sdp.substring(0, 300));
+                console.log('📤 Sending offer to server...');
+                console.log('   Offer type:', offerToSend.type);
+                console.log('   SDP length:', offerToSend.sdp.length);
+                console.log('   ICE candidates in SDP:', (offerToSend.sdp.match(/a=candidate/g) || []).length);
 
-                showStatus('Connecting to server...', 'connecting');
+                showStatus('Sending offer to server...', 'connecting');
 
                 // Send offer to server
                 const response = await fetch(serverAddress + '/offer', {
@@ -258,16 +286,22 @@
 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('Server error:', errorText);
+                    console.error('❌ Server error:', errorText);
                     throw new Error('Server returned ' + response.status + ': ' + errorText);
                 }
 
                 // Get answer from server
                 const answer = await response.json();
-                console.log('Received answer from server');
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                console.log('📥 Received answer from server');
+                console.log('   Answer type:', answer.type);
+                console.log('   SDP length:', answer.sdp.length);
+                console.log('   ICE candidates in answer:', (answer.sdp.match(/a=candidate/g) || []).length);
 
-                showStatus('WebRTC connection established', 'connected');
+                showStatus('Setting remote description...', 'connecting');
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                console.log('✓ Remote description set, ICE negotiation starting...');
+
+                showStatus('Establishing connection...', 'connecting');
 
             } catch (error) {
                 console.error('Connection error:', error);
