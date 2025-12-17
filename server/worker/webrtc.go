@@ -21,7 +21,21 @@ type WebRTCServer struct {
 	adbPort        string
 	peerConnection *webrtc.PeerConnection
 	videoTrack     *webrtc.TrackLocalStaticSample
+	dataChannel    *webrtc.DataChannel
 	mutex          sync.Mutex
+}
+
+// InputEvent represents an input action from the frontend
+type InputEvent struct {
+	Type      string  `json:"type"`      // "tap", "swipe", "keyevent", "text"
+	X         int     `json:"x,omitempty"`
+	Y         int     `json:"y,omitempty"`
+	X2        int     `json:"x2,omitempty"`
+	Y2        int     `json:"y2,omitempty"`
+	Duration  int     `json:"duration,omitempty"` // for swipe
+	KeyCode   string  `json:"keycode,omitempty"`  // for keyevent
+	Text      string  `json:"text,omitempty"`     // for text input
+	Timestamp int64   `json:"timestamp"`          // client timestamp
 }
 
 func NewWebRTCServer(port, adbPort string) *WebRTCServer {
@@ -146,6 +160,29 @@ func (s *WebRTCServer) createAnswer(offer webrtc.SessionDescription) (*webrtc.Se
 	s.peerConnection = peerConnection
 	s.videoTrack = videoTrack
 
+	// Create data channel for input events
+	dataChannel, err := peerConnection.CreateDataChannel("input", nil)
+	if err != nil {
+		peerConnection.Close()
+		return nil, fmt.Errorf("failed to create data channel: %w", err)
+	}
+	s.dataChannel = dataChannel
+
+	log.Println("✓ Created data channel for input")
+
+	// Set up data channel event handlers
+	dataChannel.OnOpen(func() {
+		log.Printf("🎮 Data channel opened - ready to receive input events")
+	})
+
+	dataChannel.OnClose(func() {
+		log.Printf("🎮 Data channel closed")
+	})
+
+	dataChannel.OnMessage(func(msg webrtc.DataChannelMessage) {
+		s.handleInputEvent(msg.Data)
+	})
+
 	// Set up connection state handler to start streaming when connected
 	peerConnection.OnICEConnectionStateChange(func(connectionState webrtc.ICEConnectionState) {
 		log.Printf("📡 ICE Connection State: %s", connectionState.String())
@@ -153,7 +190,7 @@ func (s *WebRTCServer) createAnswer(offer webrtc.SessionDescription) (*webrtc.Se
 		switch connectionState {
 		case webrtc.ICEConnectionStateConnected:
 			log.Println("🎉 ICE Connected! Starting video stream...")
-			go s.streamTestVideo()
+			go s.streamVideo()
 		case webrtc.ICEConnectionStateDisconnected:
 			log.Println("⚠️  ICE Disconnected")
 		case webrtc.ICEConnectionStateFailed:
@@ -218,122 +255,219 @@ func (s *WebRTCServer) createAnswer(offer webrtc.SessionDescription) (*webrtc.Se
 }
 
 func (s *WebRTCServer) streamTestVideo() {
-	log.Println("🎬 STREAMING TEST PATTERN - YOU SHOULD SEE A COLOR BAR PATTERN")
+	log.Println("🎬 STREAMING VIDEO FROM assets/test_video.mp4")
 
+	// UNCOMMENT THIS FOR TEST PATTERN (to verify WebRTC works):
+	// cmd := exec.Command("ffmpeg",
+	// 	"-re", "-f", "lavfi", "-i", "testsrc=size=360x640:rate=30",
+	// 	"-pix_fmt", "yuv420p", "-c:v", "libx264",
+	// 	"-preset", "ultrafast", "-tune", "zerolatency",
+	// 	"-profile:v", "baseline", "-f", "h264", "pipe:1",
+	// )
+
+	// FILE INPUT - optimized for CPU encoding
 	cmd := exec.Command("ffmpeg",
-		"-re",
-		"-f", "lavfi",
-		"-i", "testsrc=size=360x640:rate=20",
-		"-pix_fmt", "yuv420p",
+		"-stream_loop", "-1",
+		"-i", "assets/test_video.mp4",
+		"-vf", "fps=20,scale=270:480",  // Lower res/fps for CPU
 		"-c:v", "libx264",
-		"-preset", "ultrafast",
+		"-preset", "superfast",        // Faster than ultrafast
 		"-tune", "zerolatency",
 		"-profile:v", "baseline",
+		"-pix_fmt", "yuv420p",
+		"-threads", "4",               // Multi-thread encoding
+		"-g", "60",                    // Keyframe every 2 seconds
+		"-an",
+		"-bsf:v", "h264_mp4toannexb",
 		"-f", "h264",
 		"pipe:1",
 	)
 
-	stdout, _ := cmd.StdoutPipe()
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Printf("Pipe error: %v", err)
+		return
+	}
 	cmd.Stderr = os.Stderr
-	cmd.Start()
 
+	if err := cmd.Start(); err != nil {
+		log.Printf("FFmpeg error: %v", err)
+		return
+	}
+
+	log.Println("📹 Parsing H.264 NAL units...")
+
+	// Use h264reader to send complete NAL units (fixes green screen)
 	h264Reader, err := h264reader.NewReader(stdout)
 	if err != nil {
 		log.Printf("h264reader error: %v", err)
 		return
 	}
 
-	log.Println("📹 Sending test frames to browser...")
-	count := 0
+	nalCount := 0
 	for {
 		nal, err := h264Reader.NextNAL()
 		if err != nil {
-			if err != io.EOF {
-				log.Printf("NAL error: %v", err)
-			}
 			break
 		}
 
 		if s.videoTrack != nil {
+			// Send NAL units immediately - duration doesn't matter for H.264
 			s.videoTrack.WriteSample(media.Sample{
 				Data:     nal.Data,
-				Duration: time.Millisecond * 50,
+				Duration: time.Millisecond, // Minimal duration, send ASAP
 			})
-			count++
-			if count%100 == 0 {
-				log.Printf("✓ Sent %d frames", count)
+			nalCount++
+			if nalCount%200 == 0 {
+				log.Printf("✓ Sent %d NAL units", nalCount)
 			}
 		}
 	}
+
+	cmd.Process.Kill()
+	cmd.Wait()
+}
+
+func (s *WebRTCServer) handleInputEvent(data []byte) {
+	receiveTime := time.Now().UnixMilli()
+
+	var event InputEvent
+	if err := json.Unmarshal(data, &event); err != nil {
+		log.Printf("❌ [INPUT] Failed to parse input event: %v", err)
+		return
+	}
+
+	// Calculate latency from client to server
+	latency := receiveTime - event.Timestamp
+
+	log.Printf("🎮 [INPUT] Received at %d ms | Type: %s | Client timestamp: %d ms | Latency: %d ms",
+		receiveTime, event.Type, event.Timestamp, latency)
+
+	// Execute the input command via ADB
+	startExec := time.Now().UnixMilli()
+	if err := s.executeADBInput(event); err != nil {
+		log.Printf("❌ [INPUT] Failed to execute ADB command: %v", err)
+		return
+	}
+	execDuration := time.Now().UnixMilli() - startExec
+
+	log.Printf("✓ [INPUT] Executed %s in %d ms | Total handling time: %d ms",
+		event.Type, execDuration, time.Now().UnixMilli()-receiveTime)
+}
+
+func (s *WebRTCServer) executeADBInput(event InputEvent) error {
+	var cmd *exec.Cmd
+
+	switch event.Type {
+	case "tap":
+		cmd = exec.Command("adb", "shell", "input", "tap",
+			fmt.Sprintf("%d", event.X), fmt.Sprintf("%d", event.Y))
+		log.Printf("🎯 [ADB] input tap %d %d", event.X, event.Y)
+
+	case "swipe":
+		duration := event.Duration
+		if duration == 0 {
+			duration = 300 // default 300ms
+		}
+		cmd = exec.Command("adb", "shell", "input", "swipe",
+			fmt.Sprintf("%d", event.X), fmt.Sprintf("%d", event.Y),
+			fmt.Sprintf("%d", event.X2), fmt.Sprintf("%d", event.Y2),
+			fmt.Sprintf("%d", duration))
+		log.Printf("👆 [ADB] input swipe %d %d %d %d %d",
+			event.X, event.Y, event.X2, event.Y2, duration)
+
+	case "keyevent":
+		cmd = exec.Command("adb", "shell", "input", "keyevent", event.KeyCode)
+		log.Printf("⌨️  [ADB] input keyevent %s", event.KeyCode)
+
+	case "text":
+		// Escape special characters for shell
+		cmd = exec.Command("adb", "shell", "input", "text", event.Text)
+		log.Printf("📝 [ADB] input text '%s'", event.Text)
+
+	default:
+		return fmt.Errorf("unknown input type: %s", event.Type)
+	}
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("ADB command failed: %v, output: %s", err, output)
+	}
+
+	return nil
 }
 
 func (s *WebRTCServer) streamVideo() {
-	log.Println("Starting fast video stream to WebRTC...")
+	log.Println("Starting adb screenrecord → WebRTC stream")
 
-	// Optimized pipeline: adb -> ffmpeg with minimal latency
-	cmd := exec.Command("bash", "-c",
-		fmt.Sprintf(`adb -s localhost:%s exec-out screenrecord --bit-rate=2M --output-format=h264 --size=360x640 - | \
-		ffmpeg -re -fflags nobuffer+fastseek -flags low_delay -probesize 32 -analyzeduration 0 \
-		-i pipe:0 -c:v copy -bsf:v h264_mp4toannexb -f h264 pipe:1`, s.adbPort))
+	cmd := exec.Command(
+		"adb",
+		"shell",
+		"screenrecord",
+		"--output-format=h264",
+		"-",
+	)
 
-	cmd.Stderr = os.Stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Printf("Failed to create pipe: %v", err)
+		log.Printf("stdout pipe error: %v", err)
 		return
 	}
+	cmd.Stderr = os.Stderr
 
-	log.Println("Starting streaming pipeline...")
 	if err := cmd.Start(); err != nil {
-		log.Printf("Failed to start command: %v", err)
+		log.Printf("failed to start adb screenrecord: %v", err)
 		return
 	}
 
-	// Read and send raw H264 chunks directly - bypass h264reader
-	log.Println("Streaming raw H264 chunks to WebRTC...")
-	chunkSize := 1024 * 32 // 32KB chunks
-	buffer := make([]byte, chunkSize)
-	chunkCount := 0
-	startTime := time.Now()
+	// Create H264 Annex-B reader
+	reader, err := h264reader.NewReader(stdout)
+	if err != nil {
+		log.Printf("h264 reader error: %v", err)
+		return
+	}
 
-	for {
-		n, err := stdout.Read(buffer)
-		if err != nil {
-			if err != io.EOF {
-				log.Printf("Read error: %v", err)
-			}
-			break
-		}
+	frameDuration := time.Second / 30 // screenrecord ≈ 30fps
+	ticker := time.NewTicker(frameDuration)
+	defer ticker.Stop()
 
-		if n == 0 {
-			continue
-		}
+	frameCount := 0
+	lastLogTime := time.Now()
 
+	for range ticker.C {
 		if s.videoTrack == nil {
 			break
 		}
 
-		// Send raw H264 chunk to WebRTC
-		chunk := make([]byte, n)
-		copy(chunk, buffer[:n])
-
-		if err := s.videoTrack.WriteSample(media.Sample{
-			Data:     chunk,
-			Duration: time.Millisecond * 50,
-		}); err != nil {
-			log.Printf("Error sending chunk: %v", err)
+		nalus, err := reader.NextNAL()
+		if err != nil {
+			if err != io.EOF {
+				log.Printf("NAL read error: %v", err)
+			}
 			break
 		}
 
-		chunkCount++
-		if chunkCount%20 == 0 {
-			elapsed := time.Since(startTime).Seconds()
-			bytesPerSec := float64(chunkCount*chunkSize) / elapsed / 1024
-			log.Printf("Sent %d chunks (%.1f KB/s)", chunkCount, bytesPerSec)
+		frameTime := time.Now().UnixMilli()
+		err = s.videoTrack.WriteSample(media.Sample{
+			Data:     nalus.Data,
+			Duration: frameDuration,
+		})
+		if err != nil {
+			log.Printf("WriteSample error: %v", err)
+			break
+		}
+
+		frameCount++
+		// Log every 30 frames (approximately 1 second)
+		if frameCount%30 == 0 {
+			elapsed := time.Since(lastLogTime).Milliseconds()
+			fps := float64(30) / (float64(elapsed) / 1000.0)
+			log.Printf("📹 [FRAME] Sent frame #%d at %d ms | FPS: %.1f", frameCount, frameTime, fps)
+			lastLogTime = time.Now()
 		}
 	}
 
-	log.Printf("Stream stopped after %d chunks", chunkCount)
 	cmd.Process.Kill()
 	cmd.Wait()
+	log.Println("Video stream stopped")
 }

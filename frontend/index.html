@@ -132,13 +132,154 @@
 
     <script>
         let peerConnection = null;
+        let dataChannel = null;
         let serverAddress = '';
+        let frameCount = 0;
+        let lastFrameLogTime = Date.now();
 
         function showStatus(message, type) {
             const status = document.getElementById('status');
             status.textContent = message;
             status.className = 'status ' + type;
             status.style.display = 'block';
+        }
+
+        function sendInputEvent(type, data) {
+            if (!dataChannel || dataChannel.readyState !== 'open') {
+                console.warn('⚠️  Data channel not ready, cannot send input');
+                return;
+            }
+
+            const event = {
+                type: type,
+                timestamp: Date.now(),
+                ...data
+            };
+
+            const jsonStr = JSON.stringify(event);
+            dataChannel.send(jsonStr);
+
+            console.log(`🎮 [INPUT] Sent at ${event.timestamp} ms | Type: ${type}`, data);
+        }
+
+        function setupInputHandlers() {
+            const video = document.getElementById('video');
+
+            // Prevent default touch behaviors
+            video.style.touchAction = 'none';
+
+            let touchStartPos = null;
+            let touchStartTime = null;
+
+            // Mouse/Touch tap handler
+            video.addEventListener('click', (e) => {
+                e.preventDefault();
+                const rect = video.getBoundingClientRect();
+
+                // Calculate relative position (0-1)
+                const relX = (e.clientX - rect.left) / rect.width;
+                const relY = (e.clientY - rect.top) / rect.height;
+
+                // Convert to device coordinates (assuming 1080x1920 portrait)
+                const deviceX = Math.round(relX * 1080);
+                const deviceY = Math.round(relY * 1920);
+
+                console.log(`🖱️  Click at screen (${e.clientX}, ${e.clientY}) -> device (${deviceX}, ${deviceY})`);
+                sendInputEvent('tap', { x: deviceX, y: deviceY });
+            });
+
+            // Touch start - record position for swipe detection
+            video.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const rect = video.getBoundingClientRect();
+
+                touchStartPos = {
+                    x: touch.clientX,
+                    y: touch.clientY
+                };
+                touchStartTime = Date.now();
+            });
+
+            // Touch end - determine if tap or swipe
+            video.addEventListener('touchend', (e) => {
+                e.preventDefault();
+
+                if (!touchStartPos) return;
+
+                const touch = e.changedTouches[0];
+                const rect = video.getBoundingClientRect();
+
+                const endX = touch.clientX;
+                const endY = touch.clientY;
+
+                const deltaX = Math.abs(endX - touchStartPos.x);
+                const deltaY = Math.abs(endY - touchStartPos.y);
+                const deltaTime = Date.now() - touchStartTime;
+
+                // If movement is small and quick, it's a tap
+                if (deltaX < 10 && deltaY < 10 && deltaTime < 300) {
+                    const relX = (touchStartPos.x - rect.left) / rect.width;
+                    const relY = (touchStartPos.y - rect.top) / rect.height;
+
+                    const deviceX = Math.round(relX * 1080);
+                    const deviceY = Math.round(relY * 1920);
+
+                    console.log(`👆 Tap at device (${deviceX}, ${deviceY})`);
+                    sendInputEvent('tap', { x: deviceX, y: deviceY });
+                } else {
+                    // It's a swipe
+                    const startRelX = (touchStartPos.x - rect.left) / rect.width;
+                    const startRelY = (touchStartPos.y - rect.top) / rect.height;
+                    const endRelX = (endX - rect.left) / rect.width;
+                    const endRelY = (endY - rect.top) / rect.height;
+
+                    const deviceX1 = Math.round(startRelX * 1080);
+                    const deviceY1 = Math.round(startRelY * 1920);
+                    const deviceX2 = Math.round(endRelX * 1080);
+                    const deviceY2 = Math.round(endRelY * 1920);
+
+                    console.log(`👆 Swipe from (${deviceX1}, ${deviceY1}) to (${deviceX2}, ${deviceY2}) in ${deltaTime}ms`);
+                    sendInputEvent('swipe', {
+                        x: deviceX1,
+                        y: deviceY1,
+                        x2: deviceX2,
+                        y2: deviceY2,
+                        duration: Math.min(deltaTime, 1000)
+                    });
+                }
+
+                touchStartPos = null;
+                touchStartTime = null;
+            });
+
+            // Keyboard handler for common Android keys
+            document.addEventListener('keydown', (e) => {
+                let keycode = null;
+
+                switch(e.key) {
+                    case 'Escape':
+                        keycode = 'KEYCODE_BACK';
+                        break;
+                    case 'Home':
+                        keycode = 'KEYCODE_HOME';
+                        break;
+                    case 'Enter':
+                        keycode = 'KEYCODE_ENTER';
+                        break;
+                    case 'Backspace':
+                        keycode = 'KEYCODE_DEL';
+                        break;
+                }
+
+                if (keycode) {
+                    e.preventDefault();
+                    console.log(`⌨️  Key: ${e.key} -> ${keycode}`);
+                    sendInputEvent('keyevent', { keycode: keycode });
+                }
+            });
+
+            console.log('✓ Input handlers configured');
         }
 
         async function connect() {
@@ -172,6 +313,25 @@
                     direction: 'recvonly'
                 });
                 console.log('Added video transceiver');
+
+                // Handle incoming data channel from server
+                peerConnection.ondatachannel = (event) => {
+                    dataChannel = event.channel;
+                    console.log('🎮 Data channel received:', dataChannel.label);
+
+                    dataChannel.onopen = () => {
+                        console.log('🎮 Data channel opened - input enabled');
+                        setupInputHandlers();
+                    };
+
+                    dataChannel.onclose = () => {
+                        console.log('🎮 Data channel closed');
+                    };
+
+                    dataChannel.onmessage = (msg) => {
+                        console.log('📨 Message from server:', msg.data);
+                    };
+                };
 
                 // Log ICE candidates as they're discovered
                 let candidateCount = 0;
@@ -211,6 +371,38 @@
                     if (event.streams && event.streams[0]) {
                         video.srcObject = event.streams[0];
                         showStatus('🎬 Streaming video!', 'connected');
+
+                        // Log frame reception
+                        video.addEventListener('loadeddata', () => {
+                            console.log('📹 [FRAME] First frame loaded');
+                        });
+
+                        // Monitor frame rate using requestVideoFrameCallback if available
+                        if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
+                            const logFrames = () => {
+                                frameCount++;
+                                const now = Date.now();
+
+                                // Log every 30 frames (approximately 1 second at 30fps)
+                                if (frameCount % 30 === 0) {
+                                    const elapsed = now - lastFrameLogTime;
+                                    const fps = 30000 / elapsed; // frames per second
+                                    console.log(`📹 [FRAME] Received frame #${frameCount} at ${now} ms | FPS: ${fps.toFixed(1)}`);
+                                    lastFrameLogTime = now;
+                                }
+
+                                video.requestVideoFrameCallback(logFrames);
+                            };
+                            video.requestVideoFrameCallback(logFrames);
+                        } else {
+                            // Fallback for browsers without requestVideoFrameCallback
+                            video.addEventListener('timeupdate', () => {
+                                frameCount++;
+                                if (frameCount % 30 === 0) {
+                                    console.log(`📹 [FRAME] Playing frame #${frameCount} at ${Date.now()} ms`);
+                                }
+                            });
+                        }
                     }
                 };
 
