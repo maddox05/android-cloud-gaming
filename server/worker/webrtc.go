@@ -22,6 +22,8 @@ type WebRTCServer struct {
 	peerConnection *webrtc.PeerConnection
 	videoTrack     *webrtc.TrackLocalStaticSample
 	dataChannel    *webrtc.DataChannel
+	deviceWidth    int
+	deviceHeight   int
 	mutex          sync.Mutex
 }
 
@@ -39,10 +41,41 @@ type InputEvent struct {
 }
 
 func NewWebRTCServer(port, adbPort string) *WebRTCServer {
-	return &WebRTCServer{
+	server := &WebRTCServer{
 		port:    port,
 		adbPort: adbPort,
 	}
+	server.getDeviceResolution()
+	return server
+}
+
+func (s *WebRTCServer) getDeviceResolution() {
+	// Get device resolution using adb shell wm size
+	cmd := exec.Command("adb", "shell", "wm", "size")
+	output, err := cmd.Output()
+	if err != nil {
+		log.Printf("⚠️  Failed to get device resolution, using defaults (1080x1920): %v", err)
+		s.deviceWidth = 1080
+		s.deviceHeight = 1920
+		return
+	}
+
+	// Parse output like "Physical size: 1080x2400"
+	outputStr := string(output)
+	var width, height int
+	if _, err := fmt.Sscanf(outputStr, "Physical size: %dx%d", &width, &height); err != nil {
+		// Try alternative format "Override size: 1080x2400"
+		if _, err := fmt.Sscanf(outputStr, "Override size: %dx%d", &width, &height); err != nil {
+			log.Printf("⚠️  Failed to parse device resolution: %s, using defaults", outputStr)
+			s.deviceWidth = 1080
+			s.deviceHeight = 1920
+			return
+		}
+	}
+
+	s.deviceWidth = width
+	s.deviceHeight = height
+	log.Printf("📱 Device resolution: %dx%d", s.deviceWidth, s.deviceHeight)
 }
 
 func (s *WebRTCServer) Start() error {
@@ -337,44 +370,51 @@ func (s *WebRTCServer) handleInputEvent(data []byte) {
 		return
 	}
 
-	// Calculate latency from client to server
 	latency := receiveTime - event.Timestamp
+	log.Printf("🎮 [INPUT] Received | Type: %s | Latency: %d ms", event.Type, latency)
 
-	log.Printf("🎮 [INPUT] Received at %d ms | Type: %s | Client timestamp: %d ms | Latency: %d ms",
-		receiveTime, event.Type, event.Timestamp, latency)
-
-	// Execute the input command via ADB
-	startExec := time.Now().UnixMilli()
-	if err := s.executeADBInput(event); err != nil {
-		log.Printf("❌ [INPUT] Failed to execute ADB command: %v", err)
-		return
-	}
-	execDuration := time.Now().UnixMilli() - startExec
-
-	log.Printf("✓ [INPUT] Executed %s in %d ms | Total handling time: %d ms",
-		event.Type, execDuration, time.Now().UnixMilli()-receiveTime)
+	// Execute ADB command in goroutine (non-blocking)
+	go func() {
+		startExec := time.Now().UnixMilli()
+		if err := s.executeADBInput(event); err != nil {
+			log.Printf("❌ [INPUT] Failed: %v", err)
+			return
+		}
+		execDuration := time.Now().UnixMilli() - startExec
+		log.Printf("✓ [INPUT] Executed %s in %d ms", event.Type, execDuration)
+	}()
 }
 
 func (s *WebRTCServer) executeADBInput(event InputEvent) error {
 	var cmd *exec.Cmd
 
+	// Scale coordinates from frontend (assumes 1080x1920) to actual device resolution
+	scaleX := float64(s.deviceWidth) / 1080.0
+	scaleY := float64(s.deviceHeight) / 1920.0
+
 	switch event.Type {
 	case "tap":
+		actualX := int(float64(event.X) * scaleX)
+		actualY := int(float64(event.Y) * scaleY)
 		cmd = exec.Command("adb", "shell", "input", "tap",
-			fmt.Sprintf("%d", event.X), fmt.Sprintf("%d", event.Y))
-		log.Printf("🎯 [ADB] input tap %d %d", event.X, event.Y)
+			fmt.Sprintf("%d", actualX), fmt.Sprintf("%d", actualY))
+		log.Printf("🎯 [ADB] input tap %d %d (scaled from %d %d)", actualX, actualY, event.X, event.Y)
 
 	case "swipe":
 		duration := event.Duration
 		if duration == 0 {
 			duration = 300 // default 300ms
 		}
+		actualX1 := int(float64(event.X) * scaleX)
+		actualY1 := int(float64(event.Y) * scaleY)
+		actualX2 := int(float64(event.X2) * scaleX)
+		actualY2 := int(float64(event.Y2) * scaleY)
 		cmd = exec.Command("adb", "shell", "input", "swipe",
-			fmt.Sprintf("%d", event.X), fmt.Sprintf("%d", event.Y),
-			fmt.Sprintf("%d", event.X2), fmt.Sprintf("%d", event.Y2),
+			fmt.Sprintf("%d", actualX1), fmt.Sprintf("%d", actualY1),
+			fmt.Sprintf("%d", actualX2), fmt.Sprintf("%d", actualY2),
 			fmt.Sprintf("%d", duration))
-		log.Printf("👆 [ADB] input swipe %d %d %d %d %d",
-			event.X, event.Y, event.X2, event.Y2, duration)
+		log.Printf("👆 [ADB] input swipe %d %d %d %d %d (scaled)",
+			actualX1, actualY1, actualX2, actualY2, duration)
 
 	case "keyevent":
 		cmd = exec.Command("adb", "shell", "input", "keyevent", event.KeyCode)
@@ -391,54 +431,53 @@ func (s *WebRTCServer) executeADBInput(event InputEvent) error {
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		log.Printf("❌ ADB command failed: %v", err)
+		log.Printf("   Command output: %s", string(output))
 		return fmt.Errorf("ADB command failed: %v, output: %s", err, output)
+	}
+
+	if len(output) > 0 {
+		log.Printf("   ADB output: %s", string(output))
 	}
 
 	return nil
 }
 
 func (s *WebRTCServer) streamVideo() {
-	log.Println("Starting adb screenrecord → WebRTC stream")
+	log.Println("🎬 Starting adb screenrecord → WebRTC stream")
 
 	cmd := exec.Command(
 		"adb",
 		"shell",
 		"screenrecord",
 		"--output-format=h264",
+		"--bit-rate", "8000000",
 		"-",
 	)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		log.Printf("stdout pipe error: %v", err)
+		log.Printf("❌ stdout pipe error: %v", err)
 		return
 	}
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Start(); err != nil {
-		log.Printf("failed to start adb screenrecord: %v", err)
+		log.Printf("❌ failed to start adb screenrecord: %v", err)
 		return
 	}
 
-	// Create H264 Annex-B reader
 	reader, err := h264reader.NewReader(stdout)
 	if err != nil {
-		log.Printf("h264 reader error: %v", err)
+		log.Printf("❌ h264 reader error: %v", err)
 		return
 	}
 
-	log.Println("📹 Reading NAL units from adb screenrecord...")
+	log.Println("📹 Streaming frames...")
 
-	frameCount := 0
-	lastLogTime := time.Now()
-
-	// Read NAL units as fast as they arrive (don't use ticker)
+	nalCount := 0
 	for {
-		if s.videoTrack == nil {
-			break
-		}
-
-		nalus, err := reader.NextNAL()
+		nal, err := reader.NextNAL()
 		if err != nil {
 			if err != io.EOF {
 				log.Printf("NAL read error: %v", err)
@@ -446,27 +485,22 @@ func (s *WebRTCServer) streamVideo() {
 			break
 		}
 
-		frameTime := time.Now().UnixMilli()
-		err = s.videoTrack.WriteSample(media.Sample{
-			Data:     nalus.Data,
-			Duration: time.Millisecond, // Send immediately
-		})
-		if err != nil {
-			log.Printf("WriteSample error: %v", err)
+		if s.videoTrack == nil {
 			break
 		}
 
-		frameCount++
-		// Log every 30 frames (approximately 1 second)
-		if frameCount%30 == 0 {
-			elapsed := time.Since(lastLogTime).Milliseconds()
-			fps := float64(30) / (float64(elapsed) / 1000.0)
-			log.Printf("📹 [FRAME] Sent frame #%d at %d ms | FPS: %.1f", frameCount, frameTime, fps)
-			lastLogTime = time.Now()
+		s.videoTrack.WriteSample(media.Sample{
+			Data:     nal.Data,
+			Duration: time.Millisecond,
+		})
+
+		nalCount++
+		if nalCount%100 == 0 {
+			log.Printf("📹 [FRAME] %d frames sent", nalCount)
 		}
 	}
 
 	cmd.Process.Kill()
 	cmd.Wait()
-	log.Println("Video stream stopped")
+	log.Printf("📹 Stream ended (%d frames sent)", nalCount)
 }

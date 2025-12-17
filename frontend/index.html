@@ -175,60 +175,54 @@
         function setupInputHandlers() {
             const video = document.getElementById('video');
 
-            console.log('🎮 Setting up input handlers on video element');
-            console.log('Video element:', video);
-            console.log('Video dimensions:', video.offsetWidth, 'x', video.offsetHeight);
+            console.log('🎮 Setting up input handlers');
 
-            // Prevent default touch behaviors
             video.style.touchAction = 'none';
             video.style.cursor = 'pointer';
 
             let touchStartPos = null;
             let touchStartTime = null;
+            let lastTouchTime = 0;
 
-            // Mouse/Touch tap handler
+            // Mouse click handler (only fires on non-touch devices)
             video.addEventListener('click', (e) => {
-                console.log('🖱️  CLICK EVENT FIRED!', e);
+                // Prevent duplicate if touch event just fired
+                if (Date.now() - lastTouchTime < 500) {
+                    console.log('🚫 Ignoring click (touch event just fired)');
+                    return;
+                }
+
                 e.preventDefault();
                 const rect = video.getBoundingClientRect();
-                console.log('Video rect:', rect);
 
-                // Calculate relative position (0-1)
                 const relX = (e.clientX - rect.left) / rect.width;
                 const relY = (e.clientY - rect.top) / rect.height;
 
-                // Convert to device coordinates (assuming 1080x1920 portrait)
                 const deviceX = Math.round(relX * 1080);
                 const deviceY = Math.round(relY * 1920);
 
-                console.log(`🖱️  Click at screen (${e.clientX}, ${e.clientY}) -> device (${deviceX}, ${deviceY})`);
+                console.log(`🖱️  Click -> tap (${deviceX}, ${deviceY})`);
                 sendInputEvent('tap', { x: deviceX, y: deviceY });
             });
 
             // Touch start - record position for swipe detection
             video.addEventListener('touchstart', (e) => {
-                console.log('👆 TOUCHSTART EVENT FIRED!', e);
                 e.preventDefault();
                 const touch = e.touches[0];
-                const rect = video.getBoundingClientRect();
 
                 touchStartPos = {
                     x: touch.clientX,
                     y: touch.clientY
                 };
                 touchStartTime = Date.now();
-                console.log('Touch start position:', touchStartPos);
             });
 
             // Touch end - determine if tap or swipe
             video.addEventListener('touchend', (e) => {
-                console.log('👆 TOUCHEND EVENT FIRED!', e);
                 e.preventDefault();
+                lastTouchTime = Date.now(); // Prevent click event from firing
 
-                if (!touchStartPos) {
-                    console.warn('No touchStartPos recorded');
-                    return;
-                }
+                if (!touchStartPos) return;
 
                 const touch = e.changedTouches[0];
                 const rect = video.getBoundingClientRect();
@@ -248,7 +242,7 @@
                     const deviceX = Math.round(relX * 1080);
                     const deviceY = Math.round(relY * 1920);
 
-                    console.log(`👆 Tap at device (${deviceX}, ${deviceY})`);
+                    console.log(`👆 Touch -> tap (${deviceX}, ${deviceY})`);
                     sendInputEvent('tap', { x: deviceX, y: deviceY });
                 } else {
                     // It's a swipe
@@ -262,7 +256,7 @@
                     const deviceX2 = Math.round(endRelX * 1080);
                     const deviceY2 = Math.round(endRelY * 1920);
 
-                    console.log(`👆 Swipe from (${deviceX1}, ${deviceY1}) to (${deviceX2}, ${deviceY2}) in ${deltaTime}ms`);
+                    console.log(`👆 Touch -> swipe (${deviceX1},${deviceY1}) to (${deviceX2},${deviceY2})`);
                     sendInputEvent('swipe', {
                         x: deviceX1,
                         y: deviceY1,
@@ -273,7 +267,6 @@
                 }
 
                 touchStartPos = null;
-                touchStartTime = null;
             });
 
             // Keyboard handler for common Android keys
