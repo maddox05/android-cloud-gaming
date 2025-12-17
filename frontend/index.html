@@ -184,13 +184,28 @@
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
 
-                // Send offer to server
+                // Wait for ICE gathering to complete
+                await new Promise((resolve) => {
+                    if (peerConnection.iceGatheringState === 'complete') {
+                        resolve();
+                    } else {
+                        peerConnection.addEventListener('icegatheringstatechange', () => {
+                            if (peerConnection.iceGatheringState === 'complete') {
+                                resolve();
+                            }
+                        });
+                    }
+                });
+
+                console.log('ICE gathering complete, sending offer');
+
+                // Send offer to server (with ICE candidates included)
                 const response = await fetch(serverAddress + '/offer', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(offer)
+                    body: JSON.stringify(peerConnection.localDescription)
                 });
 
                 if (!response.ok) {

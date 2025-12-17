@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os/exec"
 	"sync"
+	"time"
 
 	"github.com/pion/webrtc/v3"
 	"github.com/pion/webrtc/v3/pkg/media"
@@ -208,9 +209,10 @@ func (s *WebRTCServer) streamVideo() {
 		}
 
 		// Write NAL to video track
+		// Video RTP clock rate is 90000 Hz, so duration = 90000 / fps
 		if err := s.videoTrack.WriteSample(media.Sample{
 			Data:     nal.Data,
-			Duration: media.ClockRate / 20, // 20 fps
+			Duration: time.Millisecond * 50, // 20 fps = 50ms per frame
 		}); err != nil {
 			log.Printf("Error writing sample: %v", err)
 			break
