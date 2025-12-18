@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Android Cloud Gaming</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #fff;
+    }
+    h1 {
+      margin-bottom: 20px;
+      color: #eee;
+    }
+    #status {
+      margin-bottom: 10px;
+      padding: 8px 16px;
+      background: #16213e;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    #status.connected { background: #1b4332; }
+    #status.error { background: #7f1d1d; }
+    #container {
+      position: relative;
+      border: 2px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #canvas {
+      display: block;
+      background: #000;
+      touch-action: none;
+    }
+    #connect-btn {
+      margin-top: 20px;
+      padding: 12px 32px;
+      font-size: 16px;
+      background: #4361ee;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #connect-btn:hover {
+      background: #3a56d4;
+    }
+    #connect-btn:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <h1>Android Cloud Gaming</h1>
+  <div id="status">Disconnected</div>
+  <div id="container">
+    <canvas id="canvas" width="360" height="640"></canvas>
+  </div>
+  <button id="connect-btn">Connect</button>
+
+  <script>
+    const SIGNAL_URL = 'ws://localhost:8080';
+    const SCREEN_WIDTH = 360;
+    const SCREEN_HEIGHT = 640;
+
+    let ws = null;
+    let pc = null;
+    let videoChannel = null;
+    let inputChannel = null;
+    let decoder = null;
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const statusEl = document.getElementById('status');
+    const connectBtn = document.getElementById('connect-btn');
+
+    function setStatus(text, type = '') {
+      statusEl.textContent = text;
+      statusEl.className = type;
+    }
+
+    // Initialize VideoDecoder for H.264
+    function initDecoder() {
+      decoder = new VideoDecoder({
+        output: (frame) => {
+          ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
+          frame.close();
+        },
+        error: (e) => {
+          console.error('Decoder error:', e);
+        }
+      });
+
+      decoder.configure({
+        codec: 'avc1.42E01E', // H.264 Baseline Profile
+        optimizeForLatency: true,
+      });
+    }
+
+    // Parse H.264 NAL units and feed to decoder
+    let nalBuffer = new Uint8Array(0);
+    let frameCount = 0;
+
+    function processH264Data(data) {
+      // Append new data to buffer
+      const newBuffer = new Uint8Array(nalBuffer.length + data.length);
+      newBuffer.set(nalBuffer);
+      newBuffer.set(new Uint8Array(data), nalBuffer.length);
+      nalBuffer = newBuffer;
+
+      // Find NAL unit start codes (0x00 0x00 0x00 0x01 or 0x00 0x00 0x01)
+      const nalUnits = [];
+      let start = -1;
+
+      for (let i = 0; i < nalBuffer.length - 3; i++) {
+        const is4ByteStart = nalBuffer[i] === 0 && nalBuffer[i+1] === 0 && nalBuffer[i+2] === 0 && nalBuffer[i+3] === 1;
+        const is3ByteStart = nalBuffer[i] === 0 && nalBuffer[i+1] === 0 && nalBuffer[i+2] === 1;
+
+        if (is4ByteStart || is3ByteStart) {
+          if (start !== -1) {
+            nalUnits.push(nalBuffer.slice(start, i));
+          }
+          start = i;
+        }
+      }
+
+      // Keep incomplete NAL in buffer
+      if (start !== -1 && nalUnits.length > 0) {
+        nalBuffer = nalBuffer.slice(nalUnits.reduce((acc, nal) => acc + nal.length, 0));
+      }
+
+      // Decode NAL units
+      for (const nal of nalUnits) {
+        if (nal.length < 5) continue;
+
+        // Get NAL type (5 bits after start code)
+        const startCodeLen = (nal[2] === 1) ? 3 : 4;
+        const nalType = nal[startCodeLen] & 0x1F;
+
+        // Determine if keyframe (IDR = 5) or delta frame
+        const isKeyframe = nalType === 5 || nalType === 7 || nalType === 8;
+
+        try {
+          const chunk = new EncodedVideoChunk({
+            type: isKeyframe ? 'key' : 'delta',
+            timestamp: frameCount * (1000000 / 20), // 20fps in microseconds
+            data: nal,
+          });
+
+          if (decoder.state === 'configured') {
+            decoder.decode(chunk);
+            frameCount++;
+          }
+        } catch (e) {
+          // Skip invalid chunks
+        }
+      }
+    }
+
+    // WebRTC setup
+    async function connect() {
+      connectBtn.disabled = true;
+      setStatus('Connecting...');
+
+      // Connect to signal server
+      ws = new WebSocket(SIGNAL_URL);
+
+      ws.onopen = () => {
+        setStatus('Connected to signal server');
+        // Request to start session
+        ws.send(JSON.stringify({ type: 'start' }));
+      };
+
+      ws.onmessage = async (event) => {
+        const msg = JSON.parse(event.data);
+        console.log('Signal:', msg.type);
+
+        switch (msg.type) {
+          case 'offer':
+            await handleOffer(msg);
+            break;
+          case 'ice-candidate':
+            if (pc && msg.candidate) {
+              await pc.addIceCandidate(msg.candidate);
+            }
+            break;
+          case 'error':
+            setStatus(msg.message, 'error');
+            connectBtn.disabled = false;
+            break;
+        }
+      };
+
+      ws.onerror = (e) => {
+        console.error('WebSocket error:', e);
+        setStatus('Connection error', 'error');
+        connectBtn.disabled = false;
+      };
+
+      ws.onclose = () => {
+        setStatus('Disconnected');
+        connectBtn.disabled = false;
+        cleanup();
+      };
+    }
+
+    async function handleOffer(msg) {
+      pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+
+      pc.ondatachannel = (event) => {
+        const channel = event.channel;
+        console.log('Data channel:', channel.label);
+
+        if (channel.label === 'video') {
+          videoChannel = channel;
+          channel.binaryType = 'arraybuffer';
+          channel.onmessage = (e) => {
+            processH264Data(e.data);
+          };
+          channel.onopen = () => {
+            setStatus('Streaming', 'connected');
+            initDecoder();
+          };
+        } else if (channel.label === 'input') {
+          inputChannel = channel;
+          channel.onopen = () => {
+            console.log('Input channel ready');
+          };
+        }
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'ice-candidate',
+            candidate: event.candidate
+          }));
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        console.log('Connection state:', pc.connectionState);
+        if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+          setStatus('Disconnected', 'error');
+          cleanup();
+        }
+      };
+
+      await pc.setRemoteDescription({ type: 'offer', sdp: msg.sdp });
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      ws.send(JSON.stringify({
+        type: 'answer',
+        sdp: answer.sdp
+      }));
+    }
+
+    function cleanup() {
+      if (decoder) {
+        decoder.close();
+        decoder = null;
+      }
+      if (pc) {
+        pc.close();
+        pc = null;
+      }
+      videoChannel = null;
+      inputChannel = null;
+      nalBuffer = new Uint8Array(0);
+      frameCount = 0;
+    }
+
+    // Input handling
+    function sendInput(msg) {
+      if (inputChannel && inputChannel.readyState === 'open') {
+        inputChannel.send(JSON.stringify(msg));
+      }
+    }
+
+    // Touch/Mouse events
+    let isPointerDown = false;
+
+    canvas.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      isPointerDown = true;
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (SCREEN_WIDTH / rect.width);
+      const y = (e.clientY - rect.top) * (SCREEN_HEIGHT / rect.height);
+
+      sendInput({
+        type: 'drag',
+        action: 'start',
+        pointerId: e.pointerId,
+        x: Math.floor(x),
+        y: Math.floor(y)
+      });
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isPointerDown) return;
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (SCREEN_WIDTH / rect.width);
+      const y = (e.clientY - rect.top) * (SCREEN_HEIGHT / rect.height);
+
+      sendInput({
+        type: 'drag',
+        action: 'move',
+        pointerId: e.pointerId,
+        x: Math.floor(x),
+        y: Math.floor(y)
+      });
+    });
+
+    canvas.addEventListener('pointerup', (e) => {
+      e.preventDefault();
+      isPointerDown = false;
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (SCREEN_WIDTH / rect.width);
+      const y = (e.clientY - rect.top) * (SCREEN_HEIGHT / rect.height);
+
+      sendInput({
+        type: 'drag',
+        action: 'end',
+        pointerId: e.pointerId,
+        x: Math.floor(x),
+        y: Math.floor(y)
+      });
+    });
+
+    canvas.addEventListener('pointercancel', (e) => {
+      isPointerDown = false;
+      sendInput({
+        type: 'drag',
+        action: 'cancel',
+        pointerId: e.pointerId,
+        x: 0,
+        y: 0
+      });
+    });
+
+    // Prevent context menu on canvas
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // Connect button
+    connectBtn.addEventListener('click', connect);
+  </script>
+</body>
+</html>

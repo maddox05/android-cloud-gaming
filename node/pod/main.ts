@@ -1,32 +1,184 @@
-// main will be the entry point for the pod node module
-// main will talk to all 3 compoennts, that being input video and redroid runner.
-//main on start will run the redroid runner
-// call get video which takes in a webrtc socket to send that video too
-// and wait for inputs from the webrtc socket
-// main is basically a webrtc handler
-// it will have 2 lines open
-// one for the video where it can only send not recieve
-// and one for the input where it can only receive and not send
-// singaler will start the connection, and main will only get the finalized connection details.
-// main.ts will also have 2 threads open.
-// one for the video, and one for the inputs, so none of them block
-// webrtc will be setup using media soup.
+import WebSocket from "ws";
+import wrtc from "@roamhq/wrtc";
+import { redroidRunner } from "./redriod_runner.js";
+import { videoHandler } from "./video.js";
+import { inputHandler } from "./input.js";
+import { InputMessage } from "./types.js";
 
-/**
- * PROMPT:
- * you will be finishing my android cloud gaming platform MVP
- * you will finish the singaling server first then the backend then the frontend (simple html file)
- * this allows users to play android games on cloud from browser.
- *
- * each file has comments on it on how its suppose to be made, and how they connect to the other componets.
- *
- * the video input and redroid runner should all be singletons, dont do anything complicated though, simplicitity is key.
- *
- *
- *
- * read through all files once and come back w questions and clarifications
- *
- * speed is of importance, but only really matters for the video, but since we are piping and forwarding it shouldnt be an issue
- *
- * use media soup for webrtc stuff, if im forfetting anything lmk
- */
+const { RTCPeerConnection, RTCSessionDescription } = wrtc;
+
+const SIGNAL_SERVER_URL = process.env.SIGNAL_URL || "ws://localhost:8080?role=pod";
+
+type PC = InstanceType<typeof RTCPeerConnection>;
+type DataChannel = ReturnType<PC["createDataChannel"]>;
+
+let peerConnection: PC | null = null;
+let videoChannel: DataChannel | null = null;
+let inputChannel: DataChannel | null = null;
+
+async function createPeerConnection(): Promise<PC> {
+  const pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  });
+
+  // Create data channel for video (sending H.264)
+  videoChannel = pc.createDataChannel("video", {
+    ordered: false,
+    maxRetransmits: 0,
+  });
+
+  videoChannel.onopen = () => {
+    console.log("Video channel open");
+    // Start piping video data
+    videoHandler.onData((data) => {
+      if (videoChannel && videoChannel.readyState === "open") {
+        videoChannel.send(data);
+      }
+    });
+  };
+
+  // Create data channel for input (receiving)
+  inputChannel = pc.createDataChannel("input", {
+    ordered: true,
+  });
+
+  inputChannel.onopen = () => {
+    console.log("Input channel open");
+  };
+
+  inputChannel.onmessage = (event) => {
+    try {
+      const msg: InputMessage = JSON.parse(event.data);
+      inputHandler.sendInput(msg);
+    } catch (e) {
+      console.error("Invalid input message:", e);
+    }
+  };
+
+  pc.onicecandidate = (event) => {
+    if (event.candidate && signalSocket && signalSocket.readyState === WebSocket.OPEN) {
+      signalSocket.send(JSON.stringify({
+        type: "ice-candidate",
+        candidate: event.candidate,
+      }));
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    console.log("Connection state:", pc.connectionState);
+    if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+      cleanup();
+    }
+  };
+
+  return pc;
+}
+
+function cleanup() {
+  if (videoChannel) {
+    videoChannel.close();
+    videoChannel = null;
+  }
+  if (inputChannel) {
+    inputChannel.close();
+    inputChannel = null;
+  }
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
+}
+
+let signalSocket: WebSocket | null = null;
+
+async function connectToSignalServer() {
+  signalSocket = new WebSocket(SIGNAL_SERVER_URL);
+
+  signalSocket.on("open", () => {
+    console.log("Connected to signal server");
+  });
+
+  signalSocket.on("message", async (data) => {
+    const msg = JSON.parse(data.toString());
+    console.log("Signal message:", msg.type);
+
+    switch (msg.type) {
+      case "start": {
+        // Client wants to connect, create offer
+        console.log("Creating peer connection and offer...");
+        peerConnection = await createPeerConnection();
+
+        const offer = await peerConnection!.createOffer();
+        await peerConnection!.setLocalDescription(offer);
+
+        signalSocket!.send(JSON.stringify({
+          type: "offer",
+          sdp: offer.sdp,
+        }));
+        break;
+      }
+
+      case "answer":
+        // Client sent answer
+        if (peerConnection) {
+          await peerConnection.setRemoteDescription(
+            new RTCSessionDescription({ type: "answer", sdp: msg.sdp })
+          );
+          console.log("Remote description set");
+        }
+        break;
+
+      case "ice-candidate":
+        // Client sent ICE candidate
+        if (peerConnection && msg.candidate) {
+          await peerConnection.addIceCandidate(msg.candidate);
+        }
+        break;
+
+      case "client-disconnected":
+        console.log("Client disconnected, cleaning up...");
+        cleanup();
+        break;
+    }
+  });
+
+  signalSocket.on("close", () => {
+    console.log("Signal server disconnected, reconnecting in 3s...");
+    setTimeout(connectToSignalServer, 3000);
+  });
+
+  signalSocket.on("error", (err) => {
+    console.error("Signal socket error:", err);
+  });
+}
+
+async function main() {
+  console.log("Starting Pod...");
+
+  // Start Redroid
+  console.log("Starting Redroid...");
+  await redroidRunner.start();
+
+  // Connect to scrcpy video/input
+  console.log("Connecting to scrcpy...");
+  await videoHandler.connect();
+  await inputHandler.connect();
+
+  // Connect to signal server
+  console.log("Connecting to signal server...");
+  await connectToSignalServer();
+
+  console.log("Pod ready!");
+
+  // Handle graceful shutdown
+  process.on("SIGINT", async () => {
+    console.log("\nShutting down...");
+    cleanup();
+    videoHandler.disconnect();
+    inputHandler.disconnect();
+    await redroidRunner.stop();
+    process.exit(0);
+  });
+}
+
+main().catch(console.error);
