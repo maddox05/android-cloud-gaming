@@ -444,14 +444,16 @@ func (s *WebRTCServer) executeADBInput(event InputEvent) error {
 }
 
 func (s *WebRTCServer) streamVideo() {
-	log.Println("🎬 Starting adb screenrecord → WebRTC stream")
+	log.Println("⚡ Starting OPTIMIZED adb screenrecord → WebRTC stream")
 
+	// Use adb screenrecord with extreme optimization for lowest latency
 	cmd := exec.Command(
 		"adb",
 		"shell",
 		"screenrecord",
-		"--output-format=h264",
-		"--bit-rate", "8000000",
+		"--output-format=h264",   // Raw H.264, no container
+		"--bit-rate", "500000",   // 500kbps - very low for speed
+		"--size", "360x640",      // 360p for minimal encoding
 		"-",
 	)
 
@@ -467,20 +469,22 @@ func (s *WebRTCServer) streamVideo() {
 		return
 	}
 
+	log.Println("📹 Reading H.264 stream...")
+
 	reader, err := h264reader.NewReader(stdout)
 	if err != nil {
 		log.Printf("❌ h264 reader error: %v", err)
 		return
 	}
 
-	log.Println("📹 Streaming frames...")
+	log.Println("✓ H.264 reader initialized, streaming frames...")
 
 	nalCount := 0
 	for {
 		nal, err := reader.NextNAL()
 		if err != nil {
 			if err != io.EOF {
-				log.Printf("NAL read error: %v", err)
+				log.Printf("❌ NAL read error: %v", err)
 			}
 			break
 		}
@@ -496,11 +500,14 @@ func (s *WebRTCServer) streamVideo() {
 
 		nalCount++
 		if nalCount%100 == 0 {
-			log.Printf("📹 [FRAME] %d frames sent", nalCount)
+			log.Printf("📹 [FRAME] %d NAL units sent", nalCount)
+		}
+		if nalCount == 1 {
+			log.Println("✓ First frame sent!")
 		}
 	}
 
 	cmd.Process.Kill()
 	cmd.Wait()
-	log.Printf("📹 Stream ended (%d frames sent)", nalCount)
+	log.Printf("📹 Stream ended (%d NAL units sent)", nalCount)
 }
