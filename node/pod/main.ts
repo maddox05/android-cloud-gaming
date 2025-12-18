@@ -39,10 +39,13 @@ async function createPeerConnection(): Promise<PC> {
   videoChannel.onopen = () => {
     console.log("Video channel open");
     // Start piping video data
+    let videoChunkCount = 0;
     videoHandler.onData((data) => {
       if (videoChannel && videoChannel.readyState === "open") {
+        videoChunkCount++;
+        console.log(`Video sent: chunk #${videoChunkCount}, ${data.length} bytes`);
         // Convert Node Buffer to Uint8Array for WebRTC
-        videoChannel.send(new Uint8Array(data)); // todo look at speed effects this will have
+        videoChannel.send(new Uint8Array(data));
       }
     });
   };
@@ -62,6 +65,7 @@ async function createPeerConnection(): Promise<PC> {
   inputChannel.onmessage = (event) => {
     try {
       const msg: InputMessage = JSON.parse(event.data);
+      console.log("Input received:", msg.type, msg.action, `(${msg.x}, ${msg.y})`);
       inputHandler.sendInput(msg);
     } catch (e) {
       console.error("Invalid input message:", e);

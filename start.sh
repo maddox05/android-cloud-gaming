@@ -121,17 +121,27 @@ echo -e "${GREEN}Frontend available at: http://localhost:$FRONTEND_PORT${NC}"
 echo ""
 echo -e "Press Ctrl+C to stop all services..."
 
+# Kill a process and all its children
+kill_tree() {
+    local pid=$1
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        pkill -P "$pid" 2>/dev/null
+        kill "$pid" 2>/dev/null
+        wait "$pid" 2>/dev/null
+    fi
+}
+
 # Cleanup function
 cleanup() {
     echo -e "\n${RED}Stopping all services...${NC}"
-    kill $SIGNAL_PID 2>/dev/null
-    kill $POD_PID 2>/dev/null
-    kill $FRONTEND_PID 2>/dev/null
+    kill_tree $FRONTEND_PID
+    kill_tree $POD_PID
+    kill_tree $SIGNAL_PID
     echo -e "${GREEN}All services stopped.${NC}"
     exit 0
 }
 
-trap cleanup SIGINT SIGTERM
+trap cleanup SIGINT SIGTERM EXIT
 
 # Wait for all background processes
 wait

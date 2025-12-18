@@ -94,11 +94,14 @@ class RedroidRunner {
     // Push scrcpy server
     console.log("Pushing scrcpy server...");
     await this.execAsync(
-      `adb -s localhost:${redroid_docker_port} push scrcpy-server-v2.1 /data/local/tmp/scrcpy-server-manual.jar`
+      `adb -s localhost:${redroid_docker_port} push /opt/scrcpy/scrcpy-server /data/local/tmp/scrcpy-server.jar`
     );
 
-    // Setup SINGLE port forward for scrcpy abstract socket
-    // scrcpy uses one abstract socket - we connect multiple times for video then control
+    // Get scrcpy version
+    const scrcpyVersion = (await this.execAsync("cat /opt/scrcpy/version")).trim();
+    console.log(`Using scrcpy version: ${scrcpyVersion}`);
+
+    // Setup port forward for scrcpy abstract socket
     console.log("Setting up port forward...");
     await this.execAsync(
       `adb -s localhost:${redroid_docker_port} forward tcp:${scrcpy_config.port} localabstract:scrcpy`
@@ -112,7 +115,7 @@ class RedroidRunner {
         "-s",
         `localhost:${redroid_docker_port}`,
         "shell",
-        `CLASSPATH=/data/local/tmp/scrcpy-server-manual.jar app_process / com.genymobile.scrcpy.Server 2.1 tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${redroid_width}`,
+        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${redroid_width}`,
       ],
       { stdio: "pipe" }
     );

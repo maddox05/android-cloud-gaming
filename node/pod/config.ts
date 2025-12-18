@@ -1,7 +1,7 @@
 export const redroid_config = {
   // Container settings
   redroid_docker_container_name: "redroid-worker",
-  redroid_docker_port: 5555,
+  redroid_docker_port: 9999,
 
   // Docker image
   redroid_docker_image_name: "redroid/redroid",

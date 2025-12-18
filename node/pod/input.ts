@@ -117,15 +117,12 @@ class InputHandler {
     buf.writeUInt16BE(Math.floor(pressure * 0xffff), offset);
     offset += 2;
 
-    // Action button (4 bytes) - the button that triggered this action
-    const actionButton = action === AMOTION_EVENT_ACTION_DOWN ? AMOTION_EVENT_BUTTON_PRIMARY : 0;
-    buf.writeInt32BE(actionButton, offset);
+    // Action button (4 bytes) - for touch events, always 0 (buttons are for mouse only)
+    buf.writeInt32BE(0, offset);
     offset += 4;
 
-    // Buttons (4 bytes) - currently pressed buttons
-    const buttons =
-      action === AMOTION_EVENT_ACTION_UP ? 0 : AMOTION_EVENT_BUTTON_PRIMARY;
-    buf.writeInt32BE(buttons, offset);
+    // Buttons (4 bytes) - for touch events, always 0
+    buf.writeInt32BE(0, offset);
 
     return buf;
   }
@@ -143,7 +140,8 @@ class InputHandler {
     let pressure = 1.0;
 
     if (msg.type === "drag") {
-      pointerId = msg.pointerId;
+      // Use a simple pointer ID (0) for touch - browser IDs can be too large
+      pointerId = 0;
       x = msg.x;
       y = msg.y;
 
@@ -172,6 +170,7 @@ class InputHandler {
     }
 
     const buf = this.buildTouchMessage(action, pointerId, x, y, pressure);
+    console.log(`Touch: action=${action} pos=(${x},${y}) pressure=${pressure}`);
     this.socket.write(buf);
   }
 

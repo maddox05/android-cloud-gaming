@@ -94,95 +94,210 @@
       statusEl.className = type;
     }
 
-    // Initialize VideoDecoder for H.264
-    function initDecoder() {
-      decoder = new VideoDecoder({
-        output: (frame) => {
-          ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
-          frame.close();
-        },
-        error: (e) => {
-          console.error('Decoder error:', e);
-        }
-      });
+    // H.264 NAL Parser and Decoder
+    class H264Decoder {
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.decoder = null;
+        this.buffer = new Uint8Array(0);
+        this.sps = null;
+        this.pps = null;
+        this.timestamp = 0;
+        this.configured = false;
+      }
 
-      decoder.configure({
-        codec: 'avc1.42E01E', // H.264 Baseline Profile
-        optimizeForLatency: true,
-      });
-    }
+      // Append incoming data to buffer
+      appendData(data) {
+        const incoming = new Uint8Array(data);
+        console.log('Received chunk:', incoming.length, 'bytes, first 8:', Array.from(incoming.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' '));
+        const newBuffer = new Uint8Array(this.buffer.length + incoming.length);
+        newBuffer.set(this.buffer, 0);
+        newBuffer.set(incoming, this.buffer.length);
+        this.buffer = newBuffer;
+        this.processBuffer();
+      }
 
-    // Parse H.264 NAL units and feed to decoder
-    let nalBuffer = new Uint8Array(0);
-    let frameCount = 0;
+      // Find NAL units in buffer and process them
+      processBuffer() {
+        const nalUnits = [];
+        let lastStart = -1;
 
-    function processH264Data(data) {
-      // Append new data to buffer
-      const newBuffer = new Uint8Array(nalBuffer.length + data.length);
-      newBuffer.set(nalBuffer);
-      newBuffer.set(new Uint8Array(data), nalBuffer.length);
-      nalBuffer = newBuffer;
-
-      // Find NAL unit start codes (0x00 0x00 0x00 0x01 or 0x00 0x00 0x01)
-      const nalUnits = [];
-      let start = -1;
-
-      for (let i = 0; i < nalBuffer.length - 3; i++) {
-        const is4ByteStart = nalBuffer[i] === 0 && nalBuffer[i+1] === 0 && nalBuffer[i+2] === 0 && nalBuffer[i+3] === 1;
-        const is3ByteStart = nalBuffer[i] === 0 && nalBuffer[i+1] === 0 && nalBuffer[i+2] === 1;
-
-        if (is4ByteStart || is3ByteStart) {
-          if (start !== -1) {
-            nalUnits.push(nalBuffer.slice(start, i));
+        // Find all NAL start codes
+        for (let i = 0; i < this.buffer.length - 4; i++) {
+          // Check for 4-byte start code (00 00 00 01)
+          if (this.buffer[i] === 0 && this.buffer[i+1] === 0 &&
+              this.buffer[i+2] === 0 && this.buffer[i+3] === 1) {
+            if (lastStart !== -1) {
+              nalUnits.push(this.buffer.slice(lastStart, i));
+            }
+            lastStart = i;
+            i += 3;
           }
-          start = i;
+          // Check for 3-byte start code (00 00 01)
+          else if (this.buffer[i] === 0 && this.buffer[i+1] === 0 && this.buffer[i+2] === 1) {
+            if (lastStart !== -1) {
+              nalUnits.push(this.buffer.slice(lastStart, i));
+            }
+            lastStart = i;
+            i += 2;
+          }
+        }
+
+        // Keep incomplete data in buffer (from last start code to end)
+        if (lastStart !== -1 && nalUnits.length > 0) {
+          this.buffer = this.buffer.slice(lastStart);
+        } else if (lastStart === -1) {
+          // No start codes found, clear buffer if it's getting too large
+          if (this.buffer.length > 1024 * 1024) {
+            console.warn('Buffer overflow, clearing');
+            this.buffer = new Uint8Array(0);
+          }
+        }
+
+        // Process found NAL units
+        if (nalUnits.length > 0) {
+          console.log('Found', nalUnits.length, 'NAL units');
+        }
+        for (const nal of nalUnits) {
+          this.processNAL(nal);
         }
       }
 
-      // Keep incomplete NAL in buffer
-      if (start !== -1 && nalUnits.length > 0) {
-        nalBuffer = nalBuffer.slice(nalUnits.reduce((acc, nal) => acc + nal.length, 0));
-      }
-
-      // Decode NAL units
-      for (const nal of nalUnits) {
-        if (nal.length < 5) continue;
+      // Process a single NAL unit
+      processNAL(nal) {
+        if (nal.length < 5) return;
 
         // Get NAL type (5 bits after start code)
         const startCodeLen = (nal[2] === 1) ? 3 : 4;
         const nalType = nal[startCodeLen] & 0x1F;
 
-        // Determine if keyframe (IDR = 5) or delta frame
-        const isKeyframe = nalType === 5 || nalType === 7 || nalType === 8;
+        switch (nalType) {
+          case 7: // SPS
+            this.sps = nal;
+            console.log('Got SPS, length:', nal.length);
+            this.tryConfigureDecoder();
+            break;
+          case 8: // PPS
+            this.pps = nal;
+            console.log('Got PPS, length:', nal.length);
+            this.tryConfigureDecoder();
+            break;
+          case 5: // IDR (keyframe)
+            this.decodeFrame(nal, true);
+            break;
+          case 1: // Non-IDR (P-frame)
+            this.decodeFrame(nal, false);
+            break;
+        }
+      }
+
+      // Parse SPS to get codec string
+      parseCodecFromSPS(sps) {
+        const startCodeLen = (sps[2] === 1) ? 3 : 4;
+        const profileIdc = sps[startCodeLen + 1];
+        const constraints = sps[startCodeLen + 2];
+        const levelIdc = sps[startCodeLen + 3];
+
+        const hex = (n) => n.toString(16).padStart(2, '0').toUpperCase();
+        return `avc1.${hex(profileIdc)}${hex(constraints)}${hex(levelIdc)}`;
+      }
+
+      // Configure decoder once we have SPS and PPS
+      tryConfigureDecoder() {
+        if (!this.sps || !this.pps || this.configured) return;
+
+        const codec = this.parseCodecFromSPS(this.sps);
+        console.log('Configuring decoder with codec:', codec);
+
+        this.decoder = new VideoDecoder({
+          output: (frame) => {
+            this.ctx.drawImage(frame, 0, 0, this.canvas.width, this.canvas.height);
+            frame.close();
+          },
+          error: (e) => {
+            console.error('Decoder error:', e);
+          }
+        });
+
+        try {
+          this.decoder.configure({
+            codec: codec,
+            optimizeForLatency: true,
+          });
+          this.configured = true;
+          console.log('Decoder configured successfully');
+        } catch (e) {
+          console.error('Failed to configure decoder:', e);
+          // Try fallback codec
+          try {
+            this.decoder.configure({
+              codec: 'avc1.42E01E', // Baseline Profile Level 3.0
+              optimizeForLatency: true,
+            });
+            this.configured = true;
+            console.log('Decoder configured with fallback codec');
+          } catch (e2) {
+            console.error('Fallback codec also failed:', e2);
+          }
+        }
+      }
+
+      // Decode a video frame
+      decodeFrame(nal, isKeyframe) {
+        if (!this.decoder || this.decoder.state !== 'configured') {
+          console.log('Decoder not ready, state:', this.decoder?.state);
+          return;
+        }
+        console.log('Decoding frame:', isKeyframe ? 'KEY' : 'delta', 'size:', nal.length);
+
+        // For keyframes, prepend SPS and PPS
+        let frameData = nal;
+        if (isKeyframe && this.sps && this.pps) {
+          const combined = new Uint8Array(this.sps.length + this.pps.length + nal.length);
+          combined.set(this.sps, 0);
+          combined.set(this.pps, this.sps.length);
+          combined.set(nal, this.sps.length + this.pps.length);
+          frameData = combined;
+        }
 
         try {
           const chunk = new EncodedVideoChunk({
             type: isKeyframe ? 'key' : 'delta',
-            timestamp: frameCount * (1000000 / 20), // 20fps in microseconds
-            data: nal,
+            timestamp: this.timestamp,
+            data: frameData,
           });
-
-          if (decoder.state === 'configured') {
-            decoder.decode(chunk);
-            frameCount++;
-          }
+          this.decoder.decode(chunk);
+          this.timestamp += 33333; // ~30fps in microseconds
         } catch (e) {
-          // Skip invalid chunks
+          // Skip invalid chunks silently
         }
       }
+
+      reset() {
+        if (this.decoder) {
+          this.decoder.close();
+          this.decoder = null;
+        }
+        this.buffer = new Uint8Array(0);
+        this.sps = null;
+        this.pps = null;
+        this.timestamp = 0;
+        this.configured = false;
+      }
     }
+
+    let h264Decoder = null;
 
     // WebRTC setup
     async function connect() {
       connectBtn.disabled = true;
       setStatus('Connecting...');
 
-      // Connect to signal server
       ws = new WebSocket(SIGNAL_URL);
 
       ws.onopen = () => {
         setStatus('Connected to signal server');
-        // Request to start session
         ws.send(JSON.stringify({ type: 'start' }));
       };
 
@@ -231,12 +346,16 @@
         if (channel.label === 'video') {
           videoChannel = channel;
           channel.binaryType = 'arraybuffer';
-          channel.onmessage = (e) => {
-            processH264Data(e.data);
-          };
+
           channel.onopen = () => {
             setStatus('Streaming', 'connected');
-            initDecoder();
+            h264Decoder = new H264Decoder(canvas);
+          };
+
+          channel.onmessage = (e) => {
+            if (h264Decoder) {
+              h264Decoder.appendData(e.data);
+            }
           };
         } else if (channel.label === 'input') {
           inputChannel = channel;
@@ -274,9 +393,9 @@
     }
 
     function cleanup() {
-      if (decoder) {
-        decoder.close();
-        decoder = null;
+      if (h264Decoder) {
+        h264Decoder.reset();
+        h264Decoder = null;
       }
       if (pc) {
         pc.close();
@@ -284,8 +403,6 @@
       }
       videoChannel = null;
       inputChannel = null;
-      nalBuffer = new Uint8Array(0);
-      frameCount = 0;
     }
 
     // Input handling
@@ -357,10 +474,7 @@
       });
     });
 
-    // Prevent context menu on canvas
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-
-    // Connect button
     connectBtn.addEventListener('click', connect);
   </script>
 </body>

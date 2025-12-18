@@ -6,6 +6,7 @@ class VideoHandler {
   private socket: net.Socket | null = null;
   private connected = false;
   private onDataCallback: ((data: Buffer) => void) | null = null;
+  private pendingData: Buffer[] = [];  // Buffer data until callback is set
 
   private constructor() {}
 
@@ -16,9 +17,17 @@ class VideoHandler {
     return VideoHandler.instance;
   }
 
-  // Set callback for when video data arrives
   onData(callback: (data: Buffer) => void): void {
     this.onDataCallback = callback;
+
+    // Flush any buffered data
+    if (this.pendingData.length > 0) {
+      console.log(`Flushing ${this.pendingData.length} buffered chunks`);
+      for (const data of this.pendingData) {
+        callback(data);
+      }
+      this.pendingData = [];
+    }
   }
 
   /**
@@ -37,10 +46,14 @@ class VideoHandler {
       });
 
       this.socket.on("data", (data) => {
-        // Forward raw H.264 data to callback
-        // With raw_stream=true, this is pure H.264 without any headers
+        console.log("Received video data:", data.length, "bytes");
+
         if (this.onDataCallback) {
           this.onDataCallback(data);
+        } else {
+          // Buffer data until callback is set (don't lose SPS/PPS!)
+          this.pendingData.push(Buffer.from(data));
+          console.log("Buffering chunk (no callback yet), total buffered:", this.pendingData.length);
         }
       });
 
@@ -67,6 +80,7 @@ class VideoHandler {
       this.socket = null;
       this.connected = false;
     }
+    this.pendingData = [];
   }
 }
 
