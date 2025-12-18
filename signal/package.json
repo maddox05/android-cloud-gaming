@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "tsx signal.ts",
-    "dev": "tsx watch signal.ts"
+    "start": "npm i && tsx signal.ts",
+    "dev": "npm i && tsx watch signal.ts"
   },
   "dependencies": {
     "ws": "^8.18.0"

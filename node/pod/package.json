@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "tsx main.ts",
-    "dev": "tsx watch main.ts"
+    "start": "npm i && tsx main.ts",
+    "dev": "npm i && tsx watch main.ts"
   },
   "dependencies": {
     "@roamhq/wrtc": "^0.8.0",
