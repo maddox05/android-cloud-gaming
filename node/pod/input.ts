@@ -1,23 +1,24 @@
 import net from "net";
 import { scrcpy_config } from "./config.js";
-import { redroidRunner } from "./redriod_runner.js";
 import { InputMessage } from "../../shared/types.js";
 
-// scrcpy control message types (from control_msg.h)
+// scrcpy control message types
 const SC_CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT = 2;
 
 // Android MotionEvent actions
-const AMOTION_EVENT_ACTION_DOWN = 0;
-const AMOTION_EVENT_ACTION_UP = 1;
-const AMOTION_EVENT_ACTION_MOVE = 2;
+const ACTION_DOWN = 0;
+const ACTION_UP = 1;
+const ACTION_MOVE = 2;
 
-// Android MotionEvent buttons
-const AMOTION_EVENT_BUTTON_PRIMARY = 1 << 0;
+// Touch pointer ID - use simple ID for finger touch
+const POINTER_ID_FINGER = BigInt(0);
 
 class InputHandler {
   private static instance: InputHandler;
   private socket: net.Socket | null = null;
   private connected = false;
+  private videoWidth = 0;
+  private videoHeight = 0;
 
   private constructor() {}
 
@@ -28,7 +29,12 @@ class InputHandler {
     return InputHandler.instance;
   }
 
-  // Connect to scrcpy control socket (must be called AFTER video socket connects)
+  setVideoDimensions(width: number, height: number): void {
+    this.videoWidth = width;
+    this.videoHeight = height;
+    console.log(`Input handler using video dimensions: ${width}x${height}`);
+  }
+
   async connect(): Promise<void> {
     if (this.connected) return;
 
@@ -50,8 +56,6 @@ class InputHandler {
         this.connected = false;
       });
 
-      // Control socket can receive device messages (e.g., clipboard)
-      // For MVP we ignore them
       this.socket.on("data", (data) => {
         // Device messages - ignore for now
       });
@@ -59,31 +63,33 @@ class InputHandler {
   }
 
   /**
-   * Build scrcpy INJECT_TOUCH_EVENT message (32 bytes total)
-   * Format from scrcpy protocol:
-   * - type: u8 (1 byte) = 2 for inject touch
+   * Build scrcpy INJECT_TOUCH_EVENT message
+   * Format based on py-scrcpy-client and scrcpy source:
+   * - type: u8 (1 byte)
    * - action: u8 (1 byte)
    * - pointerId: i64 BE (8 bytes)
    * - x: i32 BE (4 bytes)
    * - y: i32 BE (4 bytes)
-   * - screenWidth: u16 BE (2 bytes)
-   * - screenHeight: u16 BE (2 bytes)
-   * - pressure: u16 BE (2 bytes) - fixed point 0-0xFFFF
-   * - actionButton: i32 BE (4 bytes)
-   * - buttons: i32 BE (4 bytes)
+   * - width: u16 BE (2 bytes)
+   * - height: u16 BE (2 bytes)
+   * - pressure: u16 BE (2 bytes) - 0xFFFF for touch
+   * - actionButton: i32 BE (4 bytes) - 1 for primary
+   * - buttons: i32 BE (4 bytes) - 1 for primary
    */
   private buildTouchMessage(
     action: number,
-    pointerId: number,
     x: number,
-    y: number,
-    pressure: number
+    y: number
   ): Buffer {
     const buf = Buffer.alloc(32);
     let offset = 0;
 
-    const screenWidth = redroidRunner.getScreenWidth();
-    const screenHeight = redroidRunner.getScreenHeight();
+    const screenWidth = this.videoWidth || 360;
+    const screenHeight = this.videoHeight || 640;
+
+    // Clamp coordinates
+    x = Math.max(0, Math.min(x, screenWidth));
+    y = Math.max(0, Math.min(y, screenHeight));
 
     // Message type (1 byte)
     buf.writeUInt8(SC_CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT, offset);
@@ -93,36 +99,37 @@ class InputHandler {
     buf.writeUInt8(action, offset);
     offset += 1;
 
-    // Pointer ID (8 bytes, big-endian signed 64-bit)
-    buf.writeBigInt64BE(BigInt(pointerId), offset);
+    // Pointer ID (8 bytes) - use 0 for single finger
+    buf.writeBigInt64BE(POINTER_ID_FINGER, offset);
     offset += 8;
 
-    // Position X (4 bytes, big-endian signed 32-bit)
+    // Position X (4 bytes)
     buf.writeInt32BE(Math.floor(x), offset);
     offset += 4;
 
-    // Position Y (4 bytes, big-endian signed 32-bit)
+    // Position Y (4 bytes)
     buf.writeInt32BE(Math.floor(y), offset);
     offset += 4;
 
-    // Screen width (2 bytes, big-endian unsigned 16-bit)
+    // Screen width (2 bytes)
     buf.writeUInt16BE(screenWidth, offset);
     offset += 2;
 
-    // Screen height (2 bytes, big-endian unsigned 16-bit)
+    // Screen height (2 bytes)
     buf.writeUInt16BE(screenHeight, offset);
     offset += 2;
 
-    // Pressure (2 bytes, fixed-point 0-0xFFFF)
-    buf.writeUInt16BE(Math.floor(pressure * 0xffff), offset);
+    // Pressure (2 bytes) - 0xFFFF for full pressure, 0 for UP
+    const pressure = action === ACTION_UP ? 0 : 0xFFFF;
+    buf.writeUInt16BE(pressure, offset);
     offset += 2;
 
-    // Action button (4 bytes) - for touch events, always 0 (buttons are for mouse only)
-    buf.writeInt32BE(0, offset);
+    // Action button (4 bytes) - 0 for touch (no button)
+    buf.writeUInt32BE(0, offset);
     offset += 4;
 
-    // Buttons (4 bytes) - for touch events, always 0
-    buf.writeInt32BE(0, offset);
+    // Buttons (4 bytes) - 0 for touch (no buttons)
+    buf.writeUInt32BE(0, offset);
 
     return buf;
   }
@@ -134,28 +141,23 @@ class InputHandler {
     }
 
     let action: number;
-    let pointerId = 0;
     let x: number;
     let y: number;
-    let pressure = 1.0;
 
     if (msg.type === "drag") {
-      // Use a simple pointer ID (0) for touch - browser IDs can be too large
-      pointerId = 0;
       x = msg.x;
       y = msg.y;
 
       switch (msg.action) {
         case "start":
-          action = AMOTION_EVENT_ACTION_DOWN;
+          action = ACTION_DOWN;
           break;
         case "move":
-          action = AMOTION_EVENT_ACTION_MOVE;
+          action = ACTION_MOVE;
           break;
         case "end":
         case "cancel":
-          action = AMOTION_EVENT_ACTION_UP;
-          pressure = 0;
+          action = ACTION_UP;
           break;
         default:
           return;
@@ -163,15 +165,49 @@ class InputHandler {
     } else if (msg.type === "click") {
       x = msg.x;
       y = msg.y;
-      action = msg.action === "down" ? AMOTION_EVENT_ACTION_DOWN : AMOTION_EVENT_ACTION_UP;
-      pressure = msg.action === "down" ? 1.0 : 0;
+      action = msg.action === "down" ? ACTION_DOWN : ACTION_UP;
     } else {
       return;
     }
 
-    const buf = this.buildTouchMessage(action, pointerId, x, y, pressure);
-    console.log(`Touch: action=${action} pos=(${x},${y}) pressure=${pressure}`);
+    const actionName = action === ACTION_DOWN ? "DOWN" : action === ACTION_UP ? "UP" : "MOVE";
+    const buf = this.buildTouchMessage(action, x, y);
+    console.log(`Touch ${actionName}: (${Math.floor(x)}, ${Math.floor(y)}) screen=${this.videoWidth}x${this.videoHeight}`);
+    console.log(`  HEX: ${buf.toString('hex')}`);
     this.socket.write(buf);
+  }
+
+  // Test function - sends a complete tap with proper timing
+  async testTap(x: number, y: number): Promise<void> {
+    if (!this.socket || !this.connected) {
+      console.warn("Cannot test tap - socket not connected");
+      return;
+    }
+
+    console.log(`\n=== TEST TAP at (${x}, ${y}) ===`);
+
+    // DOWN
+    const downBuf = this.buildTouchMessage(ACTION_DOWN, x, y);
+    console.log(`DOWN: ${downBuf.toString('hex')}`);
+    this.socket.write(downBuf);
+
+    // Wait 50ms
+    await new Promise(r => setTimeout(r, 50));
+
+    // MOVE (same position)
+    const moveBuf = this.buildTouchMessage(ACTION_MOVE, x, y);
+    console.log(`MOVE: ${moveBuf.toString('hex')}`);
+    this.socket.write(moveBuf);
+
+    // Wait 50ms
+    await new Promise(r => setTimeout(r, 50));
+
+    // UP
+    const upBuf = this.buildTouchMessage(ACTION_UP, x, y);
+    console.log(`UP:   ${upBuf.toString('hex')}`);
+    this.socket.write(upBuf);
+
+    console.log(`=== TEST TAP COMPLETE ===\n`);
   }
 
   disconnect(): void {

@@ -64,9 +64,17 @@ async function createPeerConnection(): Promise<PC> {
 
   inputChannel.onmessage = (event) => {
     try {
-      const msg: InputMessage = JSON.parse(event.data);
-      console.log("Input received:", msg.type, msg.action, `(${msg.x}, ${msg.y})`);
-      inputHandler.sendInput(msg);
+      const msg = JSON.parse(event.data);
+      if (msg.type === "videoDimensions") {
+        console.log("Video dimensions received:", msg.width, "x", msg.height);
+        inputHandler.setVideoDimensions(msg.width, msg.height);
+      } else if (msg.type === "testTap") {
+        // Test tap with proper timing
+        inputHandler.testTap(msg.x, msg.y);
+      } else {
+        console.log("Input received:", msg.type, msg.action, `(${msg.x}, ${msg.y})`);
+        inputHandler.sendInput(msg as InputMessage);
+      }
     } catch (e) {
       console.error("Invalid input message:", e);
     }
