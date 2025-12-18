@@ -21,18 +21,24 @@ class VideoHandler {
     this.onDataCallback = callback;
   }
 
+  /**
+   * Connect to scrcpy video socket.
+   * IMPORTANT: This MUST be called BEFORE inputHandler.connect()
+   * scrcpy expects connections in order: video first, then control
+   */
   async connect(): Promise<void> {
     if (this.connected) return;
 
     return new Promise((resolve, reject) => {
-      this.socket = net.createConnection(scrcpy_config.video_port, "127.0.0.1", () => {
-        console.log("Video socket connected");
+      this.socket = net.createConnection(scrcpy_config.port, "127.0.0.1", () => {
+        console.log("Video socket connected (first connection)");
         this.connected = true;
         resolve();
       });
 
       this.socket.on("data", (data) => {
         // Forward raw H.264 data to callback
+        // With raw_stream=true, this is pure H.264 without any headers
         if (this.onDataCallback) {
           this.onDataCallback(data);
         }

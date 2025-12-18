@@ -18,8 +18,9 @@ export const redroid_config = {
 };
 
 export const scrcpy_config = {
-  video_port: 6767,
-  input_port: 6868,
+  // Single port - scrcpy uses one abstract socket, we connect multiple times
+  // First connection = video, second connection = control
+  port: 6767,
 };
 
 export const pod_config = {

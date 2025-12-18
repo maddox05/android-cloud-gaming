@@ -1,12 +1,10 @@
 import { spawn, exec } from "child_process";
 import { redroid_config, scrcpy_config } from "./config.js";
-import net from "net";
 
 class RedroidRunner {
   private static instance: RedroidRunner;
   private running = false;
-  private videoSocket: net.Server | null = null;
-  private controlSocket: net.Socket | null = null;
+  private scrcpyProc: ReturnType<typeof spawn> | null = null;
 
   private constructor() {}
 
@@ -40,7 +38,16 @@ class RedroidRunner {
       return;
     }
 
-    const { redroid_docker_container_name, redroid_docker_port, redroid_docker_image_name, redroid_docker_image_tag, redroid_width, redroid_height, redroid_dpi, redroid_fps } = redroid_config;
+    const {
+      redroid_docker_container_name,
+      redroid_docker_port,
+      redroid_docker_image_name,
+      redroid_docker_image_tag,
+      redroid_width,
+      redroid_height,
+      redroid_dpi,
+      redroid_fps,
+    } = redroid_config;
 
     // Stop existing container if any
     try {
@@ -68,7 +75,9 @@ class RedroidRunner {
     let booted = false;
     for (let i = 0; i < 30; i++) {
       try {
-        const result = await this.execAsync(`adb -s localhost:${redroid_docker_port} shell getprop sys.boot_completed`);
+        const result = await this.execAsync(
+          `adb -s localhost:${redroid_docker_port} shell getprop sys.boot_completed`
+        );
         if (result === "1") {
           booted = true;
           break;
@@ -84,42 +93,68 @@ class RedroidRunner {
 
     // Push scrcpy server
     console.log("Pushing scrcpy server...");
-    await this.execAsync(`adb -s localhost:${redroid_docker_port} push scrcpy-server-v2.1 /data/local/tmp/scrcpy-server-manual.jar`);
+    await this.execAsync(
+      `adb -s localhost:${redroid_docker_port} push scrcpy-server-v2.1 /data/local/tmp/scrcpy-server-manual.jar`
+    );
 
-    // Setup port forwards
-    console.log("Setting up port forwards...");
-    await this.execAsync(`adb -s localhost:${redroid_docker_port} forward tcp:${scrcpy_config.video_port} localabstract:scrcpy`);
-    await this.execAsync(`adb -s localhost:${redroid_docker_port} forward tcp:${scrcpy_config.input_port} localabstract:scrcpy`);
+    // Setup SINGLE port forward for scrcpy abstract socket
+    // scrcpy uses one abstract socket - we connect multiple times for video then control
+    console.log("Setting up port forward...");
+    await this.execAsync(
+      `adb -s localhost:${redroid_docker_port} forward tcp:${scrcpy_config.port} localabstract:scrcpy`
+    );
 
-    // Start scrcpy server
+    // Start scrcpy server with tunnel_forward=true, audio=false, control=true, raw_stream=true
     console.log("Starting scrcpy server...");
-    const scrcpyProc = spawn("adb", [
-      "-s", `localhost:${redroid_docker_port}`,
-      "shell",
-      `CLASSPATH=/data/local/tmp/scrcpy-server-manual.jar app_process / com.genymobile.scrcpy.Server 2.1 tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${redroid_width}`,
-    ], { stdio: "inherit" });
+    this.scrcpyProc = spawn(
+      "adb",
+      [
+        "-s",
+        `localhost:${redroid_docker_port}`,
+        "shell",
+        `CLASSPATH=/data/local/tmp/scrcpy-server-manual.jar app_process / com.genymobile.scrcpy.Server 2.1 tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${redroid_width}`,
+      ],
+      { stdio: "pipe" }
+    );
 
-    scrcpyProc.on("error", (err) => console.error("scrcpy error:", err));
+    this.scrcpyProc.stdout?.on("data", (data) => {
+      console.log("scrcpy:", data.toString().trim());
+    });
 
-    // Wait for scrcpy to be ready
+    this.scrcpyProc.stderr?.on("data", (data) => {
+      console.error("scrcpy err:", data.toString().trim());
+    });
+
+    this.scrcpyProc.on("error", (err) => console.error("scrcpy error:", err));
+    this.scrcpyProc.on("exit", (code) => console.log("scrcpy exited with code:", code));
+
+    // Wait for scrcpy to be ready (it starts listening on the abstract socket)
     await this.sleep(2000);
 
     this.running = true;
     console.log("RedroidRunner started successfully!");
-    console.log(`Video port: ${scrcpy_config.video_port}`);
-    console.log(`Input port: ${scrcpy_config.input_port}`);
+    console.log(`scrcpy port: ${scrcpy_config.port} (connect twice: video first, then control)`);
   }
 
-  getVideoPort(): number {
-    return scrcpy_config.video_port;
+  getScrcpyPort(): number {
+    return scrcpy_config.port;
   }
 
-  getInputPort(): number {
-    return scrcpy_config.input_port;
+  getScreenWidth(): number {
+    return redroid_config.redroid_width;
+  }
+
+  getScreenHeight(): number {
+    return redroid_config.redroid_height;
   }
 
   async stop(): Promise<void> {
     if (!this.running) return;
+
+    if (this.scrcpyProc) {
+      this.scrcpyProc.kill();
+      this.scrcpyProc = null;
+    }
 
     try {
       await this.execAsync(`docker stop ${redroid_config.redroid_docker_container_name}`);

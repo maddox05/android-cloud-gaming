@@ -7,7 +7,8 @@ import { InputMessage } from "./types.js";
 
 const { RTCPeerConnection, RTCSessionDescription } = wrtc;
 
-const SIGNAL_SERVER_URL = process.env.SIGNAL_URL || "ws://localhost:8080?role=pod";
+const SIGNAL_SERVER_URL =
+  process.env.SIGNAL_URL || "ws://localhost:8080?role=pod";
 
 type PC = InstanceType<typeof RTCPeerConnection>;
 type DataChannel = ReturnType<PC["createDataChannel"]>;
@@ -32,14 +33,18 @@ async function createPeerConnection(): Promise<PC> {
     // Start piping video data
     videoHandler.onData((data) => {
       if (videoChannel && videoChannel.readyState === "open") {
-        videoChannel.send(data);
+        // Convert Node Buffer to Uint8Array for WebRTC
+        videoChannel.send(new Uint8Array(data));
       }
     });
   };
 
   // Create data channel for input (receiving)
+  // Using unordered + maxRetransmits:0 for lowest latency
+  // Trade-off: events may drop or arrive out of order
   inputChannel = pc.createDataChannel("input", {
-    ordered: true,
+    ordered: false,
+    maxRetransmits: 0,
   });
 
   inputChannel.onopen = () => {
@@ -56,17 +61,26 @@ async function createPeerConnection(): Promise<PC> {
   };
 
   pc.onicecandidate = (event) => {
-    if (event.candidate && signalSocket && signalSocket.readyState === WebSocket.OPEN) {
-      signalSocket.send(JSON.stringify({
-        type: "ice-candidate",
-        candidate: event.candidate,
-      }));
+    if (
+      event.candidate &&
+      signalSocket &&
+      signalSocket.readyState === WebSocket.OPEN
+    ) {
+      signalSocket.send(
+        JSON.stringify({
+          type: "ice-candidate",
+          candidate: event.candidate,
+        })
+      );
     }
   };
 
   pc.onconnectionstatechange = () => {
     console.log("Connection state:", pc.connectionState);
-    if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+    if (
+      pc.connectionState === "disconnected" ||
+      pc.connectionState === "failed"
+    ) {
       cleanup();
     }
   };
@@ -111,10 +125,12 @@ async function connectToSignalServer() {
         const offer = await peerConnection!.createOffer();
         await peerConnection!.setLocalDescription(offer);
 
-        signalSocket!.send(JSON.stringify({
-          type: "offer",
-          sdp: offer.sdp,
-        }));
+        signalSocket!.send(
+          JSON.stringify({
+            type: "offer",
+            sdp: offer.sdp,
+          })
+        );
         break;
       }
 
@@ -159,9 +175,11 @@ async function main() {
   console.log("Starting Redroid...");
   await redroidRunner.start();
 
-  // Connect to scrcpy video/input
-  console.log("Connecting to scrcpy...");
+  // Connect to scrcpy sockets in ORDER: video first, then control
+  // scrcpy uses a single abstract socket - connections are served in order
+  console.log("Connecting to scrcpy video socket (first)...");
   await videoHandler.connect();
+  console.log("Connecting to scrcpy control socket (second)...");
   await inputHandler.connect();
 
   // Connect to signal server
