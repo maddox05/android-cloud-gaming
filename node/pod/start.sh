@@ -10,7 +10,7 @@ CONTAINER_ID=$(sudo docker run -itd --rm --privileged \
     --name "$CONTAINER_NAME" \
     -v ~/data:/data \
     -p "$PORT:5555" \
-    redroid/redroid:12.0.0-latest \
+    rredroid/redroid:12.0.0_64only-latest \
     androidboot.redroid_width=360 \
     androidboot.redroid_height=640 \
     androidboot.redroid_dpi=120 \
@@ -18,5 +18,4 @@ CONTAINER_ID=$(sudo docker run -itd --rm --privileged \
 
 echo "$CONTAINER_ID"
 
-# todo for future
-# each worker needs to be containerized, so if i started another, they would be separate, i need to start multiple on one machine
+# del this file and use redroid runner instead.
