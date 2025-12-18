@@ -72,8 +72,9 @@
   </div>
   <button id="connect-btn">Connect</button>
 
+  <script src="config.js"></script>
   <script>
-    const SIGNAL_URL = 'ws://localhost:8080';
+    const SIGNAL_URL = window.CONFIG?.SIGNAL_URL || 'ws://localhost:8080';
     const SCREEN_WIDTH = 360;
     const SCREEN_HEIGHT = 640;
 

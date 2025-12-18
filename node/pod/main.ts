@@ -3,12 +3,20 @@ import wrtc from "@roamhq/wrtc";
 import { redroidRunner } from "./redriod_runner.js";
 import { videoHandler } from "./video.js";
 import { inputHandler } from "./input.js";
-import { InputMessage } from "./types.js";
+import type {
+  InputMessage,
+  SignalMessage,
+  OfferMessage,
+  IceCandidateMessage,
+} from "../../shared/types.js";
 
 const { RTCPeerConnection, RTCSessionDescription } = wrtc;
 
-const SIGNAL_SERVER_URL =
-  process.env.SIGNAL_URL || "ws://localhost:8080?role=pod";
+if (!process.env.SIGNAL_URL) {
+  console.error("SIGNAL_URL environment variable is required");
+  process.exit(1);
+}
+const SIGNAL_SERVER_URL = process.env.SIGNAL_URL;
 
 type PC = InstanceType<typeof RTCPeerConnection>;
 type DataChannel = ReturnType<PC["createDataChannel"]>;
@@ -34,7 +42,7 @@ async function createPeerConnection(): Promise<PC> {
     videoHandler.onData((data) => {
       if (videoChannel && videoChannel.readyState === "open") {
         // Convert Node Buffer to Uint8Array for WebRTC
-        videoChannel.send(new Uint8Array(data));
+        videoChannel.send(new Uint8Array(data)); // todo look at speed effects this will have
       }
     });
   };
@@ -66,12 +74,11 @@ async function createPeerConnection(): Promise<PC> {
       signalSocket &&
       signalSocket.readyState === WebSocket.OPEN
     ) {
-      signalSocket.send(
-        JSON.stringify({
-          type: "ice-candidate",
-          candidate: event.candidate,
-        })
-      );
+      const iceMsg: IceCandidateMessage = {
+        type: "ice-candidate",
+        candidate: event.candidate.toJSON(),
+      };
+      signalSocket.send(JSON.stringify(iceMsg));
     }
   };
 
@@ -81,7 +88,7 @@ async function createPeerConnection(): Promise<PC> {
       pc.connectionState === "disconnected" ||
       pc.connectionState === "failed"
     ) {
-      cleanup();
+      cleanup(); // todo for much later, change this to just become a open pod again.
     }
   };
 
@@ -113,7 +120,7 @@ async function connectToSignalServer() {
   });
 
   signalSocket.on("message", async (data) => {
-    const msg = JSON.parse(data.toString());
+    const msg: SignalMessage = JSON.parse(data.toString());
     console.log("Signal message:", msg.type);
 
     switch (msg.type) {
@@ -125,12 +132,11 @@ async function connectToSignalServer() {
         const offer = await peerConnection!.createOffer();
         await peerConnection!.setLocalDescription(offer);
 
-        signalSocket!.send(
-          JSON.stringify({
-            type: "offer",
-            sdp: offer.sdp,
-          })
-        );
+        const offerMsg: OfferMessage = {
+          type: "offer",
+          sdp: offer.sdp!,
+        };
+        signalSocket!.send(JSON.stringify(offerMsg));
         break;
       }
 

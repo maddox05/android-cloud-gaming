@@ -1,7 +1,7 @@
 import net from "net";
 import { scrcpy_config } from "./config.js";
 import { redroidRunner } from "./redriod_runner.js";
-import { InputMessage } from "./types.js";
+import { InputMessage } from "../../shared/types.js";
 
 // scrcpy control message types (from control_msg.h)
 const SC_CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT = 2;

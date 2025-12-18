@@ -1,6 +1,16 @@
 import { WebSocketServer, WebSocket } from "ws";
+import type {
+  SignalMessage,
+  StartMessage,
+  ErrorMessage,
+  ClientDisconnectedMessage,
+} from "../shared/types.js";
 
-const PORT = 8080;
+if (!process.env.SIGNAL_PORT) {
+  console.error("SIGNAL_PORT environment variable is required");
+  process.exit(1);
+}
+const PORT = parseInt(process.env.SIGNAL_PORT, 10);
 
 // Store connected pods and clients
 let pod: WebSocket | null = null;
@@ -18,7 +28,7 @@ wss.on("connection", (ws, req) => {
 
     ws.on("message", (data) => {
       // Forward pod messages to client (SDP answer, ICE candidates)
-      const msg = JSON.parse(data.toString());
+      const msg: SignalMessage = JSON.parse(data.toString());
       console.log("Pod ->", msg.type);
       if (client && client.readyState === WebSocket.OPEN) {
         client.send(data.toString());
@@ -35,17 +45,19 @@ wss.on("connection", (ws, req) => {
     client = ws;
 
     ws.on("message", (data) => {
-      const msg = JSON.parse(data.toString());
+      const msg: SignalMessage = JSON.parse(data.toString());
       console.log("Client ->", msg.type);
 
       if (msg.type === "start") {
         // Client wants to start a session
         if (!pod || pod.readyState !== WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "error", message: "No pod available" }));
+          const error: ErrorMessage = { type: "error", message: "No pod available" };
+          ws.send(JSON.stringify(error));
           return;
         }
         // Tell pod to create offer
-        pod.send(JSON.stringify({ type: "start" }));
+        const start: StartMessage = { type: "start" };
+        pod.send(JSON.stringify(start));
       } else {
         // Forward client messages to pod (SDP answer, ICE candidates)
         if (pod && pod.readyState === WebSocket.OPEN) {
@@ -59,7 +71,8 @@ wss.on("connection", (ws, req) => {
       client = null;
       // Notify pod that client left
       if (pod && pod.readyState === WebSocket.OPEN) {
-        pod.send(JSON.stringify({ type: "client-disconnected" }));
+        const disconnected: ClientDisconnectedMessage = { type: "client-disconnected" };
+        pod.send(JSON.stringify(disconnected));
       }
     });
   }
