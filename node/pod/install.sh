@@ -61,9 +61,6 @@ fi
 echo "Installing ADB..."
 sudo apt-get install -y android-tools-adb android-tools-fastboot
 
-# Install scrcpy
-echo "Installing scrcpy..."
-sudo apt-get install -y scrcpy
 
 # Install Node.js and npm
 echo "Installing Node.js and npm..."
