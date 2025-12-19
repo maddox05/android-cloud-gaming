@@ -35,6 +35,18 @@ echo -e "  Frontend port: $FRONTEND_PORT"
 echo -e "  Signal URL:    $SIGNAL_URL"
 echo ""
 
+# Kill any leftover processes from previous runs
+echo -e "${YELLOW}Cleaning up any existing processes...${NC}"
+# Kill processes on signal port
+fuser -k ${SIGNAL_PORT}/tcp 2>/dev/null || true
+# Kill processes on frontend port
+fuser -k ${FRONTEND_PORT}/tcp 2>/dev/null || true
+# Stop docker container if running
+sudo docker stop redroid-worker 2>/dev/null || true
+sudo docker rm redroid-worker 2>/dev/null || true
+echo -e "${GREEN}Cleanup complete${NC}"
+echo ""
+
 # Generate frontend config.js from env vars
 echo -e "${YELLOW}Generating frontend config...${NC}"
 cat > "$SCRIPT_DIR/frontend/config.js" << EOF
@@ -119,7 +131,8 @@ echo -e "  Frontend PID:      $FRONTEND_PID"
 echo ""
 echo -e "${GREEN}Frontend available at: http://localhost:$FRONTEND_PORT${NC}"
 echo ""
-echo -e "Press Ctrl+C to stop all services..."
+echo -e "Type 'exit' or 'quit' to stop all services..."
+echo ""
 
 # Kill a process tree using SIGTERM, wait, then SIGKILL if needed
 kill_tree() {
@@ -167,5 +180,15 @@ cleanup() {
 
 trap cleanup SIGINT SIGTERM
 
-# Wait for all background processes (ignore errors from killed processes)
-wait 2>/dev/null || true
+# Wait for user to type exit/quit
+while true; do
+    read -r cmd
+    case "$cmd" in
+        exit|quit|q|stop)
+            cleanup
+            ;;
+        *)
+            echo -e "Type 'exit' or 'quit' to stop all services"
+            ;;
+    esac
+done

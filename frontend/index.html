@@ -108,15 +108,57 @@
         this.configured = false;
         this.videoWidth = 0;
         this.videoHeight = 0;
+        this.metadataReceived = false;
       }
 
       // Append incoming data to buffer
       appendData(data) {
         const incoming = new Uint8Array(data);
         console.log('Received chunk:', incoming.length, 'bytes, first 8:', Array.from(incoming.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' '));
-        const newBuffer = new Uint8Array(this.buffer.length + incoming.length);
+
+        // Skip metadata packet (device name, starts with ASCII text like "redroid")
+        // Also skip any tiny initial handshake packets
+        if (!this.metadataReceived) {
+          // Tiny packets before metadata - skip
+          if (incoming.length < 8) {
+            console.log('Skipping tiny pre-metadata packet');
+            return;
+          }
+          // Check if this looks like metadata (starts with printable ASCII, not 0x00 or 0x80/0x40)
+          if (incoming[0] >= 0x20 && incoming[0] <= 0x7E) {
+            console.log('Skipping metadata packet (device name)');
+            this.metadataReceived = true;
+            return;
+          }
+          this.metadataReceived = true;
+        }
+
+        // Each scrcpy raw_stream packet has 8-byte header:
+        // - Bit 63 (0x80): CONFIG flag (SPS/PPS)
+        // - Bit 62 (0x40): KEY_FRAME flag
+        // - Bits 0-61: PTS in microseconds
+        if (incoming.length < 8) {
+          console.log('Packet too small, skipping');
+          return;
+        }
+
+        const flags = incoming[0];
+        const isConfig = (flags & 0x80) !== 0;
+        const isKeyframe = (flags & 0x40) !== 0;
+
+        // Extract PTS from bytes 0-7 (big-endian, masking out flag bits)
+        const ptsBytes = incoming.slice(0, 8);
+        ptsBytes[0] &= 0x3F; // Clear flag bits
+        const pts = Number(new DataView(ptsBytes.buffer).getBigUint64(0, false));
+
+        console.log('Packet header:', { isConfig, isKeyframe, pts: pts / 1000 + 'ms' });
+
+        // Strip 8-byte header, keep only H.264 data
+        const h264Data = incoming.slice(8);
+
+        const newBuffer = new Uint8Array(this.buffer.length + h264Data.length);
         newBuffer.set(this.buffer, 0);
-        newBuffer.set(incoming, this.buffer.length);
+        newBuffer.set(h264Data, this.buffer.length);
         this.buffer = newBuffer;
         this.processBuffer();
       }
@@ -310,11 +352,40 @@
       }
 
       // Configure decoder once we have SPS and PPS
-      tryConfigureDecoder() {
+      async tryConfigureDecoder() {
         if (!this.sps || !this.pps || this.configured) return;
 
         const codec = this.parseCodecFromSPS(this.sps);
         console.log('Configuring decoder with codec:', codec);
+
+        // Get dimensions (use parsed or default)
+        const width = this.videoWidth || 360;
+        const height = this.videoHeight || 640;
+
+        const config = {
+          codec: codec,
+          codedWidth: width,
+          codedHeight: height,
+          optimizeForLatency: true,
+        };
+
+        // Check if codec is supported first
+        try {
+          const support = await VideoDecoder.isConfigSupported(config);
+          console.log('Codec support check:', support);
+          if (!support.supported) {
+            // Try fallback
+            config.codec = 'avc1.42E01E';
+            const fallbackSupport = await VideoDecoder.isConfigSupported(config);
+            if (!fallbackSupport.supported) {
+              console.error('No supported codec found');
+              return;
+            }
+            console.log('Using fallback codec: avc1.42E01E');
+          }
+        } catch (e) {
+          console.warn('isConfigSupported failed, trying anyway:', e);
+        }
 
         this.decoder = new VideoDecoder({
           output: (frame) => {
@@ -322,30 +393,20 @@
             frame.close();
           },
           error: (e) => {
-            console.error('Decoder error:', e);
+            console.error('Decoder error:', e.message);
+            // Reset and try again on next keyframe
+            this.configured = false;
+            this.decoder = null;
           }
         });
 
         try {
-          this.decoder.configure({
-            codec: codec,
-            optimizeForLatency: true,
-          });
+          this.decoder.configure(config);
           this.configured = true;
-          console.log('Decoder configured successfully');
+          console.log('Decoder configured successfully with', config.codec, width + 'x' + height);
         } catch (e) {
           console.error('Failed to configure decoder:', e);
-          // Try fallback codec
-          try {
-            this.decoder.configure({
-              codec: 'avc1.42E01E', // Baseline Profile Level 3.0
-              optimizeForLatency: true,
-            });
-            this.configured = true;
-            console.log('Decoder configured with fallback codec');
-          } catch (e2) {
-            console.error('Fallback codec also failed:', e2);
-          }
+          this.decoder = null;
         }
       }
 
@@ -368,6 +429,19 @@
         }
 
         try {
+          // Debug: log what we're feeding the decoder
+          const nalType = frameData[4] & 0x1F;
+          console.log('Feeding decoder:', {
+            isKeyframe,
+            size: frameData.length,
+            nalType,
+            firstBytes: Array.from(frameData.slice(0, 10)).map(b => b.toString(16).padStart(2, '0')).join(' '),
+            hasSPS: !!this.sps,
+            hasPPS: !!this.pps,
+            decoderState: this.decoder.state,
+            queueSize: this.decoder.decodeQueueSize
+          });
+
           const chunk = new EncodedVideoChunk({
             type: isKeyframe ? 'key' : 'delta',
             timestamp: this.timestamp,
@@ -376,7 +450,7 @@
           this.decoder.decode(chunk);
           this.timestamp += 33333; // ~30fps in microseconds
         } catch (e) {
-          // Skip invalid chunks silently
+          console.error('Sync decode error:', e.name, e.message);
         }
       }
 
@@ -391,6 +465,7 @@
         this.timestamp = 0;
         this.configured = false;
         this.videoWidth = 0;
+        this.metadataReceived = false;
         this.videoHeight = 0;
       }
     }

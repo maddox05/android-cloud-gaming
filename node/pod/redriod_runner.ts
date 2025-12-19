@@ -57,7 +57,7 @@ class RedroidRunner {
 
     // Start redroid container
     console.log("Starting Redroid container...");
-    const dockerCmd = `docker run -itd --rm --privileged --name ${redroid_docker_container_name} -v ~/data:/data -p ${redroid_docker_port}:5555 ${redroid_docker_image_name}:${redroid_docker_image_tag} androidboot.redroid_width=${redroid_width} androidboot.redroid_height=${redroid_height} androidboot.redroid_dpi=${redroid_dpi} androidboot.redroid_fps=${redroid_fps}`;
+    const dockerCmd = `sudo docker run -itd --rm --privileged --name ${redroid_docker_container_name} -v ~/data:/data -p ${redroid_docker_port}:5555 ${redroid_docker_image_name}:${redroid_docker_image_tag} androidboot.redroid_width=${redroid_width} androidboot.redroid_height=${redroid_height} androidboot.redroid_dpi=${redroid_dpi} androidboot.redroid_fps=${redroid_fps}`;
 
     await this.execAsync(dockerCmd);
     console.log("Container started, waiting for boot...");
@@ -94,11 +94,11 @@ class RedroidRunner {
     // Push scrcpy server
     console.log("Pushing scrcpy server...");
     await this.execAsync(
-      `adb -s localhost:${redroid_docker_port} push /opt/scrcpy/scrcpy-server /data/local/tmp/scrcpy-server.jar`
+      `adb -s localhost:${redroid_docker_port} push /usr/share/scrcpy/scrcpy-server /data/local/tmp/scrcpy-server.jar`
     );
 
     // Get scrcpy version
-    const scrcpyVersion = (await this.execAsync("cat /opt/scrcpy/version")).trim();
+    const scrcpyVersion = (await this.execAsync("scrcpy --version")).match(/scrcpy ([\d.]+)/)?.[1] ?? "3.1";
     console.log(`Using scrcpy version: ${scrcpyVersion}`);
 
     // Setup port forward for scrcpy abstract socket
