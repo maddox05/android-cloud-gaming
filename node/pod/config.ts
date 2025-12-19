@@ -3,9 +3,9 @@ export const redroid_config = {
   redroid_docker_container_name: "redroid-worker",
   redroid_docker_port: 9999,
 
-  // Docker image
-  redroid_docker_image_name: "redroid/redroid",
-  redroid_docker_image_tag: "12.0.0_64only-latest",
+  // Docker image (configurable via environment variables)
+  redroid_docker_image_name: process.env.REDROID_IMAGE,
+  redroid_docker_image_tag: process.env.REDROID_TAG,
 
   // Volume mount
   redroid_data_volume: "~/data:/data",

@@ -207,14 +207,21 @@ async function main() {
   console.log("Pod ready!");
 
   // Handle graceful shutdown
-  process.on("SIGINT", async () => {
+  let isShuttingDown = false;
+  const shutdown = async () => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+
     console.log("\nShutting down...");
     cleanup();
     videoHandler.disconnect();
     inputHandler.disconnect();
     await redroidRunner.stop();
     process.exit(0);
-  });
+  };
+
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 }
 
 main().catch(console.error);

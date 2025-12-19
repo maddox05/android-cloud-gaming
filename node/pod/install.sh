@@ -4,6 +4,17 @@
 
 set -e  # Exit on error
 
+# Load environment variables from .env file if it exists
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="$SCRIPT_DIR/../../.env"
+if [ -f "$ENV_FILE" ]; then
+    source "$ENV_FILE"
+fi
+
+# Redroid image configuration (can be overridden via .env)
+REDROID_IMAGE="${REDROID_IMAGE:-redroid/redroid}"
+REDROID_TAG="${REDROID_TAG:-12.0.0_64only-latest}"
+
 echo "Starting Android Cloud Gaming Server Setup..."
 
 # Update system packages
@@ -54,9 +65,7 @@ sudo apt-get install -y android-tools-adb android-tools-fastboot
 echo "Installing scrcpy..."
 sudo apt-get install -y scrcpy
 
-# Install Go
-echo "Installing Go..."
-sudo snap install go --classic
+
 
 # Install kernel modules (needed for Redroid)
 echo "Installing kernel extra modules..."
@@ -100,8 +109,8 @@ if [ "$MODULES_LOADED" = false ]; then
 fi
 
 # Pull Redroid Docker image
-echo "Pulling Redroid Docker image..."
-sudo docker pull redroid/redroid:12.0.0-latest
+echo "Pulling Redroid Docker image: ${REDROID_IMAGE}:${REDROID_TAG}"
+sudo docker pull "${REDROID_IMAGE}:${REDROID_TAG}"
 
 # Enable and start Docker service
 echo "Enabling Docker service..."
@@ -112,26 +121,4 @@ echo ""
 echo "============================================"
 echo "Installation completed successfully!"
 echo "============================================"
-echo ""
-echo "Installed components:"
-echo "  - Docker (with Redroid image)"
-echo "  - ADB (Android Debug Bridge)"
-echo "  - scrcpy"
-echo "  - Go (for backend worker)"
-echo ""
-echo "Next steps:"
-echo "  1. Start Redroid container (using sudo):"
-echo "     sudo docker run -itd --rm --privileged \\"
-echo "       -v ~/data:/data \\"
-echo "       -p 5555:5555 \\"
-echo "       redroid/redroid:12.0.0-latest"
-echo ""
-echo "  2. Connect ADB: adb connect localhost:5555"
-echo "  3. Start scrcpy: scrcpy --serial localhost:5555"
-echo "  4. Build and run the worker: cd worker && go run main.go"
-echo ""
-echo "Troubleshooting:"
-echo "  - If Redroid fails to start, check logs: sudo docker logs <container_id>"
-echo "  - Ensure port 5555 is not already in use: sudo lsof -i :5555"
-echo "  - For GPU acceleration, add: --device /dev/dri:/dev/dri"
-echo ""
+

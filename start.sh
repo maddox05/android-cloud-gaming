@@ -80,7 +80,7 @@ wait_for_port() {
 # Start signal server
 echo -e "${YELLOW}[1/3] Starting signal server on port $SIGNAL_PORT...${NC}"
 cd "$SCRIPT_DIR/signal"
-SIGNAL_PORT=$SIGNAL_PORT npm run start &
+(trap '' INT; exec env SIGNAL_PORT=$SIGNAL_PORT npm run start) &
 SIGNAL_PID=$!
 
 if ! wait_for_port "$SIGNAL_PORT" "signal server"; then
@@ -91,7 +91,7 @@ echo -e "${GREEN}       Signal server ready${NC}"
 # Start pod server
 echo -e "${YELLOW}[2/3] Starting pod server...${NC}"
 cd "$SCRIPT_DIR/node/pod"
-SIGNAL_URL="${SIGNAL_URL}?role=pod" npm run start &
+(trap '' INT; exec env SIGNAL_URL="${SIGNAL_URL}?role=pod" npm run start) &
 POD_PID=$!
 # Pod doesn't listen on a port, give it a moment to connect
 sleep 1
@@ -100,10 +100,10 @@ if ! kill -0 $POD_PID 2>/dev/null; then
 fi
 echo -e "${GREEN}       Pod server ready${NC}"
 
-# Start frontend (simple HTTP server)
+# Start frontend
 echo -e "${YELLOW}[3/3] Starting frontend server on port $FRONTEND_PORT...${NC}"
 cd "$SCRIPT_DIR/frontend"
-python3 -m http.server $FRONTEND_PORT &
+(trap '' INT; exec python3 -m http.server $FRONTEND_PORT) &
 FRONTEND_PID=$!
 
 if ! wait_for_port "$FRONTEND_PORT" "frontend server"; then
@@ -121,27 +121,51 @@ echo -e "${GREEN}Frontend available at: http://localhost:$FRONTEND_PORT${NC}"
 echo ""
 echo -e "Press Ctrl+C to stop all services..."
 
-# Kill a process and all its children
+# Kill a process tree using SIGTERM, wait, then SIGKILL if needed
 kill_tree() {
     local pid=$1
-    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-        pkill -P "$pid" 2>/dev/null
-        kill "$pid" 2>/dev/null
-        wait "$pid" 2>/dev/null
+    local name=$2
+
+    if [ -z "$pid" ] || ! kill -0 "$pid" 2>/dev/null; then
+        return 0  # Already dead
     fi
+
+    # Send SIGTERM to process group (negative PID)
+    kill -TERM -$pid 2>/dev/null || kill -TERM $pid 2>/dev/null
+
+    # Wait up to 3 seconds for graceful shutdown
+    local i=0
+    while [ $i -lt 30 ] && kill -0 "$pid" 2>/dev/null; do
+        sleep 0.1
+        i=$((i + 1))
+    done
+
+    # Force kill if still alive
+    if kill -0 "$pid" 2>/dev/null; then
+        echo -e "${YELLOW}Force killing $name...${NC}"
+        kill -KILL -$pid 2>/dev/null || kill -KILL $pid 2>/dev/null
+    fi
+
+    wait "$pid" 2>/dev/null
 }
 
 # Cleanup function
 cleanup() {
     echo -e "\n${RED}Stopping all services...${NC}"
-    kill_tree $FRONTEND_PID
-    kill_tree $POD_PID
-    kill_tree $SIGNAL_PID
+
+    # Send SIGTERM to each service and wait for graceful shutdown
+    kill_tree $FRONTEND_PID "frontend"
+    kill_tree $POD_PID "pod"
+    kill_tree $SIGNAL_PID "signal"
+
+    # Also ensure docker container is stopped (in case pod didn't clean up)
+    docker stop redroid-worker 2>/dev/null || true
+
     echo -e "${GREEN}All services stopped.${NC}"
     exit 0
 }
 
-trap cleanup SIGINT SIGTERM EXIT
+trap cleanup SIGINT SIGTERM
 
-# Wait for all background processes
-wait
+# Wait for all background processes (ignore errors from killed processes)
+wait 2>/dev/null || true
