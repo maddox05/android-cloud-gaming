@@ -1,0 +1,15 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: android-cloud-gaming
+  region: us-west-2
+  version: "1.31"
+
+# Enable EKS Auto Mode
+autoModeConfig:
+  enabled: true
+
+# IAM OIDC provider for service accounts
+iam:
+  withOIDC: true

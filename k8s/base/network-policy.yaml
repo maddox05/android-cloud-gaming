@@ -1,0 +1,45 @@
+# Optional: Restrict network access for gaming pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gaming-network-policy
+  namespace: gaming
+spec:
+  podSelector:
+    matchLabels:
+      app: gaming-session
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Only allow traffic from signal server
+    - from:
+        - podSelector:
+            matchLabels:
+              app: signal-server
+  egress:
+    # Allow traffic to signal server
+    - to:
+        - podSelector:
+            matchLabels:
+              app: signal-server
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow WebRTC STUN/TURN
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: UDP
+          port: 19302  # Google STUN
+        - protocol: UDP
+          port: 3478   # TURN
+        - protocol: TCP
+          port: 3478   # TURN

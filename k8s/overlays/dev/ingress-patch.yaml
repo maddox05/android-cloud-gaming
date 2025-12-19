@@ -1,0 +1,25 @@
+# Dev ingress - use nginx ingress instead of ALB
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gaming-ingress
+  namespace: gaming
+  annotations:
+    # Remove ALB annotations for local dev
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # WebSocket support
+    nginx.ingress.kubernetes.io/websocket-services: "signal-service"
+spec:
+  ingressClassName: nginx  # minikube uses nginx, not alb
+  rules:
+    - host: gaming.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: signal-service
+                port:
+                  number: 6969

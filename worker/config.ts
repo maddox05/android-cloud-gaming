@@ -11,6 +11,3 @@ export const scrcpy_config = {
   port: 6767,
 };
 
-export const pod_config = {
-  pod_server_port: 6969,
-};

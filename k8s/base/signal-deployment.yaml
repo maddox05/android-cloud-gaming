@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signal-server
+  namespace: gaming
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: signal-server
+  template:
+    metadata:
+      labels:
+        app: signal-server
+    spec:
+      serviceAccountName: signal-server
+      containers:
+        - name: signal
+          image: signal:latest  # Overridden per environment
+          ports:
+            - containerPort: 6969
+          env:
+            - name: SIGNAL_PORT
+              value: "6969"
+            - name: NAMESPACE
+              value: "gaming"
+            - name: WARM_POOL_SIZE
+              value: "3"
+            - name: REDROID_WIDTH
+              value: "720"
+            - name: REDROID_HEIGHT
+              value: "1280"
+            # WORKER_IMAGE and REDROID_IMAGE set per environment
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: signal-service
+  namespace: gaming
+spec:
+  selector:
+    app: signal-server
+  ports:
+    - port: 6969
+      targetPort: 6969
+  type: ClusterIP
