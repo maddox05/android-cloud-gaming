@@ -8,7 +8,7 @@ import type {
   SignalMessage,
   OfferMessage,
   IceCandidateMessage,
-} from "../../shared/types.js";
+} from "../shared/types.js";
 
 const { RTCPeerConnection, RTCSessionDescription } = wrtc;
 
