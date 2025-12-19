@@ -60,8 +60,8 @@ export interface DragInputMessage {
   type: "drag";
   action: "start" | "move" | "end" | "cancel";
   pointerId: number;
-  x: number;
-  y: number;
+  xPercent: number;
+  yPercent: number;
 }
 
 /** Click/mouse button event */
@@ -69,8 +69,8 @@ export interface ClickInputMessage {
   type: "click";
   action: "down" | "up";
   button: 0 | 1 | 2; // left, middle, right
-  x: number;
-  y: number;
+  xPercent: number;
+  yPercent: number;
 }
 
 /** Union of all input messages */

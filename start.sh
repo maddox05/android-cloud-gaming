@@ -9,6 +9,20 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Parse arguments
+DEV_MODE=false
+for arg in "$@"; do
+  case $arg in
+    --dev|-d)
+      DEV_MODE=true
+      ;;
+  esac
+done
+
+if [ "$DEV_MODE" = true ]; then
+  echo -e "${YELLOW}Running in DEV mode (hot reload enabled)${NC}"
+fi
+
 # Load .env file (required)
 if [ -f "$SCRIPT_DIR/.env" ]; then
   echo -e "${GREEN}Loading .env file...${NC}"
@@ -92,7 +106,11 @@ wait_for_port() {
 # Start signal server
 echo -e "${YELLOW}[1/3] Starting signal server on port $SIGNAL_PORT...${NC}"
 cd "$SCRIPT_DIR/signal"
-(trap '' INT; exec env SIGNAL_PORT=$SIGNAL_PORT npm run start) &
+if [ "$DEV_MODE" = true ]; then
+  (trap '' INT; exec env SIGNAL_PORT=$SIGNAL_PORT npm run dev) &
+else
+  (trap '' INT; exec env SIGNAL_PORT=$SIGNAL_PORT npm run start) &
+fi
 SIGNAL_PID=$!
 
 if ! wait_for_port "$SIGNAL_PORT" "signal server"; then
@@ -103,7 +121,11 @@ echo -e "${GREEN}       Signal server ready${NC}"
 # Start pod server
 echo -e "${YELLOW}[2/3] Starting pod server...${NC}"
 cd "$SCRIPT_DIR/node/pod"
-(trap '' INT; exec env SIGNAL_URL="${SIGNAL_URL}?role=pod" npm run start) &
+if [ "$DEV_MODE" = true ]; then
+  (trap '' INT; exec env SIGNAL_URL="${SIGNAL_URL}?role=pod" npm run dev) &
+else
+  (trap '' INT; exec env SIGNAL_URL="${SIGNAL_URL}?role=pod" npm run start) &
+fi
 POD_PID=$!
 # Pod doesn't listen on a port, give it a moment to connect
 sleep 1
@@ -115,7 +137,12 @@ echo -e "${GREEN}       Pod server ready${NC}"
 # Start frontend
 echo -e "${YELLOW}[3/3] Starting frontend server on port $FRONTEND_PORT...${NC}"
 cd "$SCRIPT_DIR/frontend"
-(trap '' INT; exec python3 -m http.server $FRONTEND_PORT) &
+if [ "$DEV_MODE" = true ]; then
+  # Use live-server for hot reload in dev mode
+  (trap '' INT; exec npx live-server --port=$FRONTEND_PORT --no-browser --quiet) &
+else
+  (trap '' INT; exec python3 -m http.server $FRONTEND_PORT) &
+fi
 FRONTEND_PID=$!
 
 if ! wait_for_port "$FRONTEND_PORT" "frontend server"; then
@@ -129,6 +156,9 @@ echo -e "  Signal server PID: $SIGNAL_PID"
 echo -e "  Pod server PID:    $POD_PID"
 echo -e "  Frontend PID:      $FRONTEND_PID"
 echo ""
+if [ "$DEV_MODE" = true ]; then
+  echo -e "${GREEN}Hot reload enabled - changes will auto-reload${NC}"
+fi
 echo -e "${GREEN}Frontend available at: http://localhost:$FRONTEND_PORT${NC}"
 echo ""
 echo -e "Type 'exit' or 'quit' to stop all services..."

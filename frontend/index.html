@@ -516,13 +516,6 @@
     // Input handling - scale coordinates to actual video dimensions
     function sendInput(msg) {
       if (inputChannel && inputChannel.readyState === 'open') {
-        // Scale coordinates from canvas space to video space
-        if (h264Decoder && h264Decoder.videoWidth && h264Decoder.videoHeight) {
-          const scaleX = h264Decoder.videoWidth / SCREEN_WIDTH;
-          const scaleY = h264Decoder.videoHeight / SCREEN_HEIGHT;
-          msg.x = Math.floor(msg.x * scaleX);
-          msg.y = Math.floor(msg.y * scaleY);
-        }
         inputChannel.send(JSON.stringify(msg));
       }
     }
@@ -530,19 +523,23 @@
     // Touch/Mouse events
     let isPointerDown = false;
 
+    function getPercentDiff(clientPressedLoc, startingLoc,totalDimension){
+      const percent = (clientPressedLoc-startingLoc)/totalDimension
+      return percent;
+    }
+
     canvas.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       isPointerDown = true;
       const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) * (SCREEN_WIDTH / rect.width);
-      const y = (e.clientY - rect.top) * (SCREEN_HEIGHT / rect.height);
-
+      const xPercent = getPercentDiff(e.clientX, rect.left, rect.width);
+      const yPercent = getPercentDiff(e.clientY, rect.top, rect.height);
       sendInput({
         type: 'drag',
         action: 'start',
         pointerId: e.pointerId,
-        x: Math.floor(x),
-        y: Math.floor(y)
+        xPercent,
+        yPercent
       });
     });
 
@@ -550,15 +547,14 @@
       if (!isPointerDown) return;
       e.preventDefault();
       const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) * (SCREEN_WIDTH / rect.width);
-      const y = (e.clientY - rect.top) * (SCREEN_HEIGHT / rect.height);
-
+      const xPercent = getPercentDiff(e.clientX, rect.left, rect.width);
+      const yPercent = getPercentDiff(e.clientY, rect.top, rect.height);
       sendInput({
         type: 'drag',
         action: 'move',
         pointerId: e.pointerId,
-        x: Math.floor(x),
-        y: Math.floor(y)
+        xPercent,
+        yPercent
       });
     });
 
@@ -566,15 +562,14 @@
       e.preventDefault();
       isPointerDown = false;
       const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) * (SCREEN_WIDTH / rect.width);
-      const y = (e.clientY - rect.top) * (SCREEN_HEIGHT / rect.height);
-
+      const xPercent = getPercentDiff(e.clientX, rect.left, rect.width);
+      const yPercent = getPercentDiff(e.clientY, rect.top, rect.height);
       sendInput({
         type: 'drag',
         action: 'end',
         pointerId: e.pointerId,
-        x: Math.floor(x),
-        y: Math.floor(y)
+        xPercent,
+        yPercent
       });
     });
 
@@ -584,28 +579,15 @@
         type: 'drag',
         action: 'cancel',
         pointerId: e.pointerId,
-        x: 0,
-        y: 0
+        xPercent: 0,
+        yPercent: 0
       });
     });
 
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     connectBtn.addEventListener('click', connect);
 
-    // Test tap button - sends a properly timed tap to center of screen
-    document.getElementById('test-tap-btn').addEventListener('click', () => {
-      if (inputChannel && inputChannel.readyState === 'open' && h264Decoder) {
-        // Use actual video dimensions for center tap
-        const videoW = h264Decoder.videoWidth || SCREEN_WIDTH;
-        const videoH = h264Decoder.videoHeight || SCREEN_HEIGHT;
-        const testX = Math.floor(videoW / 2);
-        const testY = Math.floor(videoH / 2);
-        console.log('Sending test tap to:', testX, testY, 'video:', videoW, 'x', videoH);
-        inputChannel.send(JSON.stringify({ type: 'testTap', x: testX, y: testY }));
-      } else {
-        alert('Not connected');
-      }
-    });
+   
   </script>
 </body>
 </html>

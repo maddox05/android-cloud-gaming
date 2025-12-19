@@ -17,7 +17,7 @@ class VideoHandler {
     return VideoHandler.instance;
   }
 
-  onData(callback: (data: Buffer) => void): void {
+  setCallback(callback: (data: Buffer) => void): void {
     this.onDataCallback = callback;
 
     // Flush any buffered data

@@ -1,5 +1,5 @@
 import net from "net";
-import { scrcpy_config } from "./config.js";
+import { scrcpy_config, redroid_config } from "./config.js";
 import { InputMessage } from "../../shared/types.js";
 
 // scrcpy control message types
@@ -11,16 +11,16 @@ const ACTION_UP = 1;
 const ACTION_MOVE = 2;
 
 // Touch pointer ID - use simple ID for finger touch
-const POINTER_ID_FINGER = BigInt(0);
+const POINTER_ID_FINGER = BigInt(0); // todo allow for multiple inputs at same time
 
 class InputHandler {
   private static instance: InputHandler;
   private socket: net.Socket | null = null;
   private connected = false;
-  private videoWidth = 0;
-  private videoHeight = 0;
-
+  private screenWidth = redroid_config.redroid_width;
+  private screenHeight = redroid_config.redroid_height;
   private constructor() {}
+
 
   static getInstance(): InputHandler {
     if (!InputHandler.instance) {
@@ -29,11 +29,6 @@ class InputHandler {
     return InputHandler.instance;
   }
 
-  setVideoDimensions(width: number, height: number): void {
-    this.videoWidth = width;
-    this.videoHeight = height;
-    console.log(`Input handler using video dimensions: ${width}x${height}`);
-  }
 
   async connect(): Promise<void> {
     if (this.connected) return;
@@ -78,18 +73,14 @@ class InputHandler {
    */
   private buildTouchMessage(
     action: number,
-    x: number,
-    y: number
+    xPercent: number,
+    yPercent: number
   ): Buffer {
     const buf = Buffer.alloc(32);
     let offset = 0;
 
-    const screenWidth = this.videoWidth || 360;
-    const screenHeight = this.videoHeight || 640;
-
-    // Clamp coordinates
-    x = Math.max(0, Math.min(x, screenWidth));
-    y = Math.max(0, Math.min(y, screenHeight));
+    const x = xPercent * this.screenWidth;
+    const y = yPercent * this.screenHeight;
 
     // Message type (1 byte)
     buf.writeUInt8(SC_CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT, offset);
@@ -112,11 +103,11 @@ class InputHandler {
     offset += 4;
 
     // Screen width (2 bytes)
-    buf.writeUInt16BE(screenWidth, offset);
+    buf.writeUInt16BE(this.screenWidth, offset);
     offset += 2;
 
     // Screen height (2 bytes)
-    buf.writeUInt16BE(screenHeight, offset);
+    buf.writeUInt16BE(this.screenHeight, offset);
     offset += 2;
 
     // Pressure (2 bytes) - 0xFFFF for full pressure, 0 for UP
@@ -141,12 +132,12 @@ class InputHandler {
     }
 
     let action: number;
-    let x: number;
-    let y: number;
+    let xPercent: number;
+    let yPercent: number;
 
     if (msg.type === "drag") {
-      x = msg.x;
-      y = msg.y;
+      xPercent = msg.xPercent;
+      yPercent = msg.yPercent;
 
       switch (msg.action) {
         case "start":
@@ -163,52 +154,21 @@ class InputHandler {
           return;
       }
     } else if (msg.type === "click") {
-      x = msg.x;
-      y = msg.y;
+      xPercent = msg.xPercent;
+      yPercent = msg.yPercent;
       action = msg.action === "down" ? ACTION_DOWN : ACTION_UP;
     } else {
       return;
     }
 
     const actionName = action === ACTION_DOWN ? "DOWN" : action === ACTION_UP ? "UP" : "MOVE";
-    const buf = this.buildTouchMessage(action, x, y);
-    console.log(`Touch ${actionName}: (${Math.floor(x)}, ${Math.floor(y)}) screen=${this.videoWidth}x${this.videoHeight}`);
-    console.log(`  HEX: ${buf.toString('hex')}`);
+    const buf = this.buildTouchMessage(action, xPercent, yPercent);
+    const x = Math.floor(xPercent * this.screenWidth);
+    const y = Math.floor(yPercent * this.screenHeight);
+    console.log(`Touch ${actionName}: (${x}, ${y}) [${(xPercent * 100).toFixed(1)}%, ${(yPercent * 100).toFixed(1)}%] screen=${this.screenWidth}x${this.screenHeight}`);
     this.socket.write(buf);
   }
 
-  // Test function - sends a complete tap with proper timing
-  async testTap(x: number, y: number): Promise<void> {
-    if (!this.socket || !this.connected) {
-      console.warn("Cannot test tap - socket not connected");
-      return;
-    }
-
-    console.log(`\n=== TEST TAP at (${x}, ${y}) ===`);
-
-    // DOWN
-    const downBuf = this.buildTouchMessage(ACTION_DOWN, x, y);
-    console.log(`DOWN: ${downBuf.toString('hex')}`);
-    this.socket.write(downBuf);
-
-    // Wait 50ms
-    await new Promise(r => setTimeout(r, 50));
-
-    // MOVE (same position)
-    const moveBuf = this.buildTouchMessage(ACTION_MOVE, x, y);
-    console.log(`MOVE: ${moveBuf.toString('hex')}`);
-    this.socket.write(moveBuf);
-
-    // Wait 50ms
-    await new Promise(r => setTimeout(r, 50));
-
-    // UP
-    const upBuf = this.buildTouchMessage(ACTION_UP, x, y);
-    console.log(`UP:   ${upBuf.toString('hex')}`);
-    this.socket.write(upBuf);
-
-    console.log(`=== TEST TAP COMPLETE ===\n`);
-  }
 
   disconnect(): void {
     if (this.socket) {

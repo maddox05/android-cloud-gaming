@@ -115,7 +115,7 @@ class RedroidRunner {
         "-s",
         `localhost:${redroid_docker_port}`,
         "shell",
-        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${redroid_width}`,
+        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${redroid_height}`, // max size limits the bigger dimension. todo when deice goes in 16:9 youll have to rellook here
       ],
       { stdio: "pipe" }
     );
