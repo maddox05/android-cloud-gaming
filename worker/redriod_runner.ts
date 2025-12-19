@@ -38,36 +38,15 @@ class RedroidRunner {
       return;
     }
 
-    const {
-      redroid_docker_container_name,
-      redroid_docker_port,
-      redroid_docker_image_name,
-      redroid_docker_image_tag,
-      redroid_width,
-      redroid_height,
-      redroid_dpi,
-      redroid_fps,
-    } = redroid_config;
+    const { host, port, height } = redroid_config;
+    const adbTarget = `${host}:${port}`;
 
-    // Stop existing container if any
-    try {
-      await this.execAsync(`docker stop ${redroid_docker_container_name} 2>/dev/null || true`);
-      await this.execAsync(`docker rm ${redroid_docker_container_name} 2>/dev/null || true`);
-    } catch {}
-
-    // Start redroid container
-    console.log("Starting Redroid container...");
-    const dockerCmd = `docker run -itd --rm --privileged --name ${redroid_docker_container_name} -v ~/data:/data -p ${redroid_docker_port}:5555 ${redroid_docker_image_name}:${redroid_docker_image_tag} androidboot.redroid_width=${redroid_width} androidboot.redroid_height=${redroid_height} androidboot.redroid_dpi=${redroid_dpi} androidboot.redroid_fps=${redroid_fps}`;
-
-    await this.execAsync(dockerCmd);
-    console.log("Container started, waiting for boot...");
-
-    // Wait for adb to be ready
+    console.log("Waiting for Redroid container to be ready...");
     await this.sleep(5000);
 
     // Connect adb
-    console.log("Connecting ADB...");
-    await this.execAsync(`adb connect localhost:${redroid_docker_port}`);
+    console.log(`Connecting ADB to ${adbTarget}...`);
+    await this.execAsync(`adb connect ${adbTarget}`);
     await this.sleep(2000);
 
     // Wait for device to be fully booted
@@ -76,7 +55,7 @@ class RedroidRunner {
     for (let i = 0; i < 30; i++) {
       try {
         const result = await this.execAsync(
-          `adb -s localhost:${redroid_docker_port} shell getprop sys.boot_completed`
+          `adb -s ${adbTarget} shell getprop sys.boot_completed`
         );
         if (result === "1") {
           booted = true;
@@ -94,7 +73,7 @@ class RedroidRunner {
     // Push scrcpy server
     console.log("Pushing scrcpy server...");
     await this.execAsync(
-      `adb -s localhost:${redroid_docker_port} push ./assets/scrcpy/scrcpy-server /data/local/tmp/scrcpy-server.jar`
+      `adb -s ${adbTarget} push ./assets/scrcpy/scrcpy-server /data/local/tmp/scrcpy-server.jar`
     );
 
     // Get scrcpy version
@@ -104,18 +83,18 @@ class RedroidRunner {
     // Setup port forward for scrcpy abstract socket
     console.log("Setting up port forward...");
     await this.execAsync(
-      `adb -s localhost:${redroid_docker_port} forward tcp:${scrcpy_config.port} localabstract:scrcpy`
+      `adb -s ${adbTarget} forward tcp:${scrcpy_config.port} localabstract:scrcpy`
     );
 
-    // Start scrcpy server with tunnel_forward=true, audio=false, control=true, raw_stream=true
+    // Start scrcpy server
     console.log("Starting scrcpy server...");
     this.scrcpyProc = spawn(
       "adb",
       [
         "-s",
-        `localhost:${redroid_docker_port}`,
+        adbTarget,
         "shell",
-        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${redroid_height}`, // max size limits the bigger dimension. todo when deice goes in 16:9 youll have to rellook here
+        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${height}`,
       ],
       { stdio: "pipe" }
     );
@@ -131,7 +110,7 @@ class RedroidRunner {
     this.scrcpyProc.on("error", (err) => console.error("scrcpy error:", err));
     this.scrcpyProc.on("exit", (code) => console.log("scrcpy exited with code:", code));
 
-    // Wait for scrcpy to be ready (it starts listening on the abstract socket)
+    // Wait for scrcpy to be ready
     await this.sleep(2000);
 
     this.running = true;
@@ -144,11 +123,11 @@ class RedroidRunner {
   }
 
   getScreenWidth(): number {
-    return redroid_config.redroid_width;
+    return redroid_config.width;
   }
 
   getScreenHeight(): number {
-    return redroid_config.redroid_height;
+    return redroid_config.height;
   }
 
   async stop(): Promise<void> {
@@ -158,10 +137,6 @@ class RedroidRunner {
       this.scrcpyProc.kill();
       this.scrcpyProc = null;
     }
-
-    try {
-      await this.execAsync(`docker stop ${redroid_config.redroid_docker_container_name}`);
-    } catch {}
 
     this.running = false;
     console.log("RedroidRunner stopped");

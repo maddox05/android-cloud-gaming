@@ -17,8 +17,8 @@ class InputHandler {
   private static instance: InputHandler;
   private socket: net.Socket | null = null;
   private connected = false;
-  private screenWidth = redroid_config.redroid_width;
-  private screenHeight = redroid_config.redroid_height;
+  private screenWidth = redroid_config.width;
+  private screenHeight = redroid_config.height;
   private constructor() {}
 
 

@@ -1,0 +1,33 @@
+services:
+  redroid:
+    image: ${REDROID_IMAGE}:${REDROID_TAG}
+    privileged: true
+    volumes:
+      - redroid-data:/data
+    command:
+      - androidboot.redroid_width=${REDROID_WIDTH}
+      - androidboot.redroid_height=${REDROID_HEIGHT}
+      - androidboot.redroid_dpi=${REDROID_DPI}
+      - androidboot.redroid_fps=${REDROID_FPS}
+
+  signal:
+    build: ./signal
+    ports:
+      - "${SIGNAL_PORT}:${SIGNAL_PORT}"
+    environment:
+      SIGNAL_PORT: ${SIGNAL_PORT}
+
+  worker:
+    build: ./worker
+    environment:
+      SIGNAL_URL: ws://signal:${SIGNAL_PORT}?role=pod
+      REDROID_HOST: redroid
+      REDROID_WIDTH: ${REDROID_WIDTH}
+      REDROID_HEIGHT: ${REDROID_HEIGHT}
+    depends_on:
+      - redroid
+      - signal
+
+
+volumes:
+  redroid-data:
