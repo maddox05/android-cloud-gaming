@@ -22,7 +22,7 @@ services:
   worker:
     build: ./worker
     environment:
-      SIGNAL_URL: ws://signal:${SIGNAL_PORT}?role=pod
+      SIGNAL_URL: ws://signal:${SIGNAL_PORT}
       REDROID_HOST: redroid
       REDROID_WIDTH: ${REDROID_WIDTH}
       REDROID_HEIGHT: ${REDROID_HEIGHT}
