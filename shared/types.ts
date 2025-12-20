@@ -39,6 +39,33 @@ export interface ClientDisconnectedMessage {
   type: "client-disconnected";
 }
 
+/** Worker registers with signal server */
+export interface RegisterMessage {
+  type: "register";
+  game: string;
+}
+
+/** Ping message from signal server */
+export interface PingMessage {
+  type: "ping";
+}
+
+/** Pong response to signal server */
+export interface PongMessage {
+  type: "pong";
+}
+
+/** Signal server tells worker/client to shutdown */
+export interface ShutdownMessage {
+  type: "shutdown";
+  reason: string;
+}
+
+/** Signal server notifies client that worker disconnected */
+export interface WorkerDisconnectedMessage {
+  type: "worker-disconnected";
+}
+
 /** Union of all signal messages */
 export type SignalMessage =
   | StartMessage
@@ -46,7 +73,12 @@ export type SignalMessage =
   | AnswerMessage
   | IceCandidateMessage
   | ErrorMessage
-  | ClientDisconnectedMessage;
+  | ClientDisconnectedMessage
+  | RegisterMessage
+  | PingMessage
+  | PongMessage
+  | ShutdownMessage
+  | WorkerDisconnectedMessage;
 
 /** Signal message types for type guards */
 export type SignalMessageType = SignalMessage["type"];
@@ -98,7 +130,12 @@ export function isSignalMessage(msg: unknown): msg is SignalMessage {
     type === "answer" ||
     type === "ice-candidate" ||
     type === "error" ||
-    type === "client-disconnected"
+    type === "client-disconnected" ||
+    type === "register" ||
+    type === "ping" ||
+    type === "pong" ||
+    type === "shutdown" ||
+    type === "worker-disconnected"
   );
 }
 

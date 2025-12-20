@@ -8,6 +8,8 @@ import type {
   SignalMessage,
   OfferMessage,
   IceCandidateMessage,
+  RegisterMessage,
+  PongMessage,
 } from "../shared/types.js";
 
 const { RTCPeerConnection, RTCSessionDescription } = wrtc;
@@ -16,7 +18,11 @@ if (!process.env.SIGNAL_URL) {
   console.error("SIGNAL_URL environment variable is required");
   process.exit(1);
 }
-const SIGNAL_SERVER_URL = process.env.SIGNAL_URL;
+const SIGNAL_SERVER_URL = `${process.env.SIGNAL_URL}?role=worker`;
+
+const GAME = "com.supercell.clashroyale";
+const MAX_RECONNECT_DELAY = 30000;
+let reconnectDelay = 1000;
 
 type PC = InstanceType<typeof RTCPeerConnection>;
 type DataChannel = ReturnType<PC["createDataChannel"]>;
@@ -43,7 +49,9 @@ async function createPeerConnection(): Promise<PC> {
     videoHandler.setCallback((data) => {
       if (videoChannel && videoChannel.readyState === "open") {
         videoChunkCount++;
-        console.log(`Video sent: chunk #${videoChunkCount}, ${data.length} bytes`);
+        console.log(
+          `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`
+        );
         // Convert Node Buffer to Uint8Array for WebRTC
         videoChannel.send(new Uint8Array(data));
       }
@@ -64,10 +72,9 @@ async function createPeerConnection(): Promise<PC> {
 
   inputChannel.onmessage = (event) => {
     try {
-      const msg : InputMessage = JSON.parse(event.data);
-     
-        inputHandler.sendInput(msg as InputMessage);
-      
+      const msg: InputMessage = JSON.parse(event.data);
+
+      inputHandler.sendInput(msg as InputMessage);
     } catch (e) {
       console.error("Invalid input message:", e);
     }
@@ -93,7 +100,7 @@ async function createPeerConnection(): Promise<PC> {
       pc.connectionState === "disconnected" ||
       pc.connectionState === "failed"
     ) {
-      cleanup(); // todo for much later, change this to just become a open pod again.
+      restart();
     }
   };
 
@@ -115,6 +122,37 @@ function cleanup() {
   }
 }
 
+let isRestarting = false;
+
+async function restart() {
+  if (isRestarting) return;
+  isRestarting = true;
+
+  console.log("Restarting worker...");
+
+  // Cleanup WebRTC
+  cleanup();
+
+  // Close signal socket
+  if (signalSocket) {
+    signalSocket.removeAllListeners();
+    signalSocket.close();
+    signalSocket = null;
+  }
+
+  // Disconnect from scrcpy
+  videoHandler.disconnect();
+  inputHandler.disconnect();
+
+  // Stop redroid
+  await redroidRunner.stop();
+
+  // Wait a bit before restarting
+  console.log("Waiting 2s before restart...");
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  main();
+}
+
 let signalSocket: WebSocket | null = null;
 
 async function connectToSignalServer() {
@@ -122,13 +160,28 @@ async function connectToSignalServer() {
 
   signalSocket.on("open", () => {
     console.log("Connected to signal server");
+    // Reset reconnect delay on successful connection
+    reconnectDelay = 1000;
+    // Register with signal server
+    const register: RegisterMessage = { type: "register", game: GAME };
+    signalSocket!.send(JSON.stringify(register));
+    console.log(`Registered with game: ${GAME}`);
   });
 
   signalSocket.on("message", async (data) => {
     const msg: SignalMessage = JSON.parse(data.toString());
-    console.log("Signal message:", msg.type);
+    if (msg.type !== "ping") {
+      console.log("Signal message:", msg.type);
+    }
 
     switch (msg.type) {
+      case "ping": {
+        // Respond with pong
+        const pong: PongMessage = { type: "pong" };
+        signalSocket!.send(JSON.stringify(pong));
+        break;
+      }
+
       case "start": {
         // Client wants to connect, create offer
         console.log("Creating peer connection and offer...");
@@ -163,15 +216,25 @@ async function connectToSignalServer() {
         break;
 
       case "client-disconnected":
-        console.log("Client disconnected, cleaning up...");
-        cleanup();
+        console.log("Client disconnected, restarting worker...");
+        restart();
         break;
+
+      case "shutdown":
+        console.log(`Shutdown requested: ${msg.reason}`);
+        cleanup();
+        process.exit(0);
     }
   });
 
   signalSocket.on("close", () => {
-    console.log("Signal server disconnected, reconnecting in 3s...");
-    setTimeout(connectToSignalServer, 3000);
+    console.log(
+      `Signal server disconnected, reconnecting in ${reconnectDelay / 1000}s...`
+    );
+    cleanup();
+    setTimeout(connectToSignalServer, reconnectDelay);
+    // Exponential backoff
+    reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
   });
 
   signalSocket.on("error", (err) => {
@@ -197,7 +260,9 @@ async function main() {
   console.log("Connecting to signal server...");
   await connectToSignalServer();
 
-  console.log("Pod ready!");
+  console.log("Worker ready!");
+  isRestarting = false;
+  reconnectDelay = 1000;
 
   // Handle graceful shutdown
   let isShuttingDown = false;
