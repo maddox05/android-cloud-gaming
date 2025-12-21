@@ -291,4 +291,7 @@ async function main() {
   process.on("SIGTERM", shutdown);
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  console.error("Fatal error in main():", err);
+  process.exit(1); // docker should restart the container after this exits it
+});

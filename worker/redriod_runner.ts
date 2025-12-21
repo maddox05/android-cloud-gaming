@@ -131,6 +131,7 @@ class RedroidRunner {
 
     this.scrcpyProc.stderr?.on("data", (data) => {
       console.error("scrcpy err:", data.toString().trim());
+      throw new Error(`scrcpy error: ${data.toString().trim()}`);
     });
 
     this.scrcpyProc.on("error", (err) => console.error("scrcpy error:", err));
