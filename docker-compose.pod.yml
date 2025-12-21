@@ -4,14 +4,16 @@ services:
     privileged: true
     ports: [5555]
     volumes:
-      - redroid-data:/data
+      - redroid-base:/data-base   # Shared golden image (read-only layer)
+      - redroid-diff:/data-diff   # Per-instance changes (writable layer)
     command:
+      - androidboot.use_redroid_overlayfs=1
       - androidboot.redroid_width=${REDROID_WIDTH}
       - androidboot.redroid_height=${REDROID_HEIGHT}
       - androidboot.redroid_dpi=${REDROID_DPI}
       - androidboot.redroid_fps=${REDROID_FPS}
     networks:
-      - cloud-gaming
+      - internal   # Only on internal network (isolated per pod)
 
   worker:
     build: ./worker
@@ -24,13 +26,16 @@ services:
     depends_on:
       - redroid
     networks:
-      - cloud-gaming
+      - cloud-gaming   # For signal server communication
+      - internal       # For redroid communication (isolated per pod)
 
 volumes:
-    redroid-data:
-      external: true
-      name: redroid-data-shared
+  redroid-base:
+    external: true
+    name: redroid-base   # Shared golden image (create once, use by all pods)
+  redroid-diff:          # Per-instance writable layer (created per project)
 
 networks:
   cloud-gaming:
-    external: true
+    external: true    # Shared across all pods (for signal server)
+  internal:           # Created per project (pod1_internal, pod2_internal) - isolated
