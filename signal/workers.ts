@@ -6,6 +6,7 @@ import type {
   PingMessage,
   ShutdownMessage,
   ClientDisconnectedMessage,
+  ClientConnectedMessage,
   StartMessage,
   AnswerMessage,
   IceCandidateMessage,
@@ -106,6 +107,11 @@ export function sendIceCandidateToWorker(
 
 export function sendClientDisconnectedToWorker(worker: Worker): void {
   const msg: ClientDisconnectedMessage = { type: "client-disconnected" };
+  sendToWorker(worker, msg);
+}
+
+export function sendClientConnectedToWorker(worker: Worker): void {
+  const msg: ClientConnectedMessage = { type: "client-connected" };
   sendToWorker(worker, msg);
 }
 

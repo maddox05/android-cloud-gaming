@@ -1,0 +1,13 @@
+services:
+  signal:
+    build: ./signal
+    ports:
+      - "${SIGNAL_PORT}:${SIGNAL_PORT}"
+    environment:
+      SIGNAL_PORT: ${SIGNAL_PORT}
+    networks:
+      - cloud-gaming
+
+networks:
+  cloud-gaming:
+    external: true

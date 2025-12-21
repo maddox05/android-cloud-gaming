@@ -125,10 +125,14 @@ function cleanup() {
 let isRestarting = false;
 
 async function restart() {
-  if (isRestarting) return;
+  console.log(">>> restart() called, isRestarting:", isRestarting);
+  if (isRestarting) {
+    console.log(">>> Already restarting, skipping");
+    return;
+  }
   isRestarting = true;
 
-  console.log("Restarting worker...");
+  console.log(">>> Restarting worker - exiting for Docker to restart container...");
 
   // Cleanup WebRTC
   cleanup();
@@ -144,13 +148,9 @@ async function restart() {
   videoHandler.disconnect();
   inputHandler.disconnect();
 
-  // Stop redroid
-  await redroidRunner.stop();
-
-  // Wait a bit before restarting
-  console.log("Waiting 2s before restart...");
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  main();
+  // Exit - Docker restart policy will restart the container fresh
+  console.log(">>> Calling process.exit(0) NOW");
+  process.exit(0);
 }
 
 let signalSocket: WebSocket | null = null;
@@ -220,6 +220,12 @@ async function connectToSignalServer() {
         restart();
         break;
 
+      case "client-connected":
+        // Client's WebRTC is connected, reset video to send fresh IDR frame
+        console.log("Client connected, resetting video for fresh IDR frame...");
+        inputHandler.resetVideo();
+        break;
+
       case "shutdown":
         console.log(`Shutdown requested: ${msg.reason}`);
         cleanup();
@@ -255,6 +261,9 @@ async function main() {
   await videoHandler.connect();
   console.log("Connecting to scrcpy control socket (second)...");
   await inputHandler.connect();
+
+  // Note: Don't call resetVideo() here - scrcpy isn't fully initialized yet
+  // The RESET_VIDEO will be sent when client-connected is received
 
   // Connect to signal server
   console.log("Connecting to signal server...");

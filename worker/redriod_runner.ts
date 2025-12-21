@@ -41,13 +41,22 @@ class RedroidRunner {
     const { host, port, height } = redroid_config;
     const adbTarget = `${host}:${port}`;
 
-    console.log("Waiting for Redroid container to be ready...");
-    await this.sleep(5000);
-
-    // Connect adb
+    // Connect adb (retry a few times in case redroid isn't ready yet)
     console.log(`Connecting ADB to ${adbTarget}...`);
-    await this.execAsync(`adb connect ${adbTarget}`);
-    await this.sleep(2000);
+    let adbConnected = false;
+    for (let i = 0; i < 10; i++) {
+      try {
+        await this.execAsync(`adb connect ${adbTarget}`);
+        adbConnected = true;
+        break;
+      } catch {
+        console.log(`ADB connect attempt ${i + 1} failed, retrying...`);
+        await this.sleep(1000);
+      }
+    }
+    if (!adbConnected) {
+      throw new Error("Failed to connect ADB");
+    }
 
     // Wait for device to be fully booted
     console.log("Waiting for device to boot...");
@@ -69,6 +78,23 @@ class RedroidRunner {
       throw new Error("Device failed to boot");
     }
     console.log("Device booted!");
+
+    // Kill any existing scrcpy processes (from previous worker runs)
+    console.log("Killing any existing scrcpy processes...");
+    try {
+      await this.execAsync(`adb -s ${adbTarget} shell pkill -f scrcpy`);
+    } catch {
+      // Ignore error if no process found
+    }
+    await this.sleep(500);
+
+    // Remove old port forward
+    console.log("Removing old port forwards...");
+    try {
+      await this.execAsync(`adb -s ${adbTarget} forward --remove-all`);
+    } catch {
+      // Ignore error
+    }
 
     // Push scrcpy server
     console.log("Pushing scrcpy server...");
@@ -94,7 +120,7 @@ class RedroidRunner {
         "-s",
         adbTarget,
         "shell",
-        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${height}`,
+        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${height} video_codec_options=i-frame-interval:int=2`,
       ],
       { stdio: "pipe" }
     );
@@ -133,9 +159,28 @@ class RedroidRunner {
   async stop(): Promise<void> {
     if (!this.running) return;
 
+    const { host, port } = redroid_config;
+    const adbTarget = `${host}:${port}`;
+
+    // Kill local process handle
     if (this.scrcpyProc) {
       this.scrcpyProc.kill();
       this.scrcpyProc = null;
+    }
+
+    // Kill scrcpy on the device
+    console.log("Killing scrcpy on device...");
+    try {
+      await this.execAsync(`adb -s ${adbTarget} shell pkill -f scrcpy`);
+    } catch {
+      // Ignore error if no process found
+    }
+
+    // Remove port forwards
+    try {
+      await this.execAsync(`adb -s ${adbTarget} forward --remove-all`);
+    } catch {
+      // Ignore error
     }
 
     this.running = false;

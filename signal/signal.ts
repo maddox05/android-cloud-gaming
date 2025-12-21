@@ -13,6 +13,7 @@ import {
   sendAnswerToWorker,
   sendIceCandidateToWorker,
   sendClientDisconnectedToWorker,
+  sendClientConnectedToWorker,
   sendPingToWorker,
   sendShutdownToWorker,
   getAllWorkers,
@@ -114,6 +115,11 @@ function handleWorkerMessage(worker: Worker, msg: SignalMessage): void {
 }
 
 function handleWorkerDisconnect(worker: Worker): void {
+  // Check if already removed (e.g., by timeout handler)
+  if (!getWorker(worker.id)) {
+    return;
+  }
+
   console.log(`Worker ${worker.id} disconnected`);
 
   // Notify connected client
@@ -180,6 +186,16 @@ function handleClientMessage(client: Client, msg: SignalMessage): void {
       }
       break;
 
+    case "connected":
+      // Client's WebRTC connection is established, notify worker
+      if (client.workerId) {
+        const worker = getWorker(client.workerId);
+        if (worker) {
+          sendClientConnectedToWorker(worker);
+        }
+      }
+      break;
+
     default:
       // Discard other messages but they still reset timeout
       break;
@@ -192,6 +208,9 @@ function handleClientStart(client: Client): void {
 
   if (!worker) {
     sendErrorToClient(client, "No workers available");
+    // Remove client and close connection - don't keep them waiting
+    removeClient(client.id);
+    client.ws.close();
     return;
   }
 
@@ -204,6 +223,11 @@ function handleClientStart(client: Client): void {
 }
 
 function handleClientDisconnect(client: Client): void {
+  // Check if already removed (e.g., by timeout handler)
+  if (!getClient(client.id)) {
+    return;
+  }
+
   console.log(`Client ${client.id} disconnected`);
 
   // Notify connected worker - worker will restart itself
@@ -219,53 +243,76 @@ function handleClientDisconnect(client: Client): void {
   removeClient(client.id);
 }
 
-function disconnectWorker(worker: Worker, reason: string): void {
-  sendShutdownToWorker(worker, reason);
-  worker.ws.close();
-}
 
-function disconnectClient(client: Client, reason: string): void {
-  sendShutdownToClient(client, reason);
-  client.ws.close();
-}
 
 function checkTimeouts(): void {
   const now = Date.now();
 
-  // Check workers
+  // Collect timed out workers and clients first, then process
+  // This avoids issues with modifying collections during iteration
+  const timedOutWorkers: string[] = [];
+  const timedOutClients: string[] = [];
+
   for (const worker of getAllWorkers()) {
     if (now - worker.lastPing > TIMEOUT_THRESHOLD) {
-      console.log(`Worker ${worker.id} timed out`);
-
-      // Disconnect paired client first
-      if (worker.clientId) {
-        const client = getClient(worker.clientId);
-        if (client) {
-          disconnectClient(client, "Worker timed out");
-        }
-      }
-
-      disconnectWorker(worker, "Timeout");
+      timedOutWorkers.push(worker.id);
     }
   }
 
-  // Check clients
   for (const client of getAllClients()) {
     if (now - client.lastPing > TIMEOUT_THRESHOLD) {
-      console.log(`Client ${client.id} timed out`);
-
-      // Notify paired worker - it will restart itself
-      // Remove worker from pool since it needs to restart
-      if (client.workerId) {
-        const worker = getWorker(client.workerId);
-        if (worker) {
-          sendClientDisconnectedToWorker(worker);
-          removeWorker(worker.id);
-        }
-      }
-
-      disconnectClient(client, "Timeout");
+      timedOutClients.push(client.id);
     }
+  }
+
+  // Process timed out workers
+  for (const workerId of timedOutWorkers) {
+    const worker = getWorker(workerId);
+    if (!worker) continue; // Already removed
+
+    console.log(`Worker ${worker.id} timed out`);
+
+    // Disconnect paired client first
+    if (worker.clientId) {
+      const client = getClient(worker.clientId);
+      if (client) {
+        // Clear the client's workerId to prevent close handler from double-processing
+        client.workerId = null;
+        // Remove client from map BEFORE closing to prevent close handler duplicate work
+        removeClient(client.id);
+        sendShutdownToClient(client, "Worker timed out");
+        client.ws.close();
+      }
+    }
+
+    // Remove worker from map BEFORE closing
+    removeWorker(worker.id);
+    sendShutdownToWorker(worker, "Timeout");
+    worker.ws.close();
+  }
+
+  // Process timed out clients
+  for (const clientId of timedOutClients) {
+    const client = getClient(clientId);
+    if (!client) continue; // Already removed (e.g., paired worker timed out first)
+
+    console.log(`Client ${client.id} timed out`);
+
+    // Notify paired worker - it will restart itself
+    if (client.workerId) {
+      const worker = getWorker(client.workerId);
+      if (worker) {
+        // Clear worker's clientId to prevent close handler from double-processing
+        worker.clientId = null;
+        sendClientDisconnectedToWorker(worker);
+        removeWorker(worker.id);
+      }
+    }
+
+    // Remove client from map BEFORE closing
+    removeClient(client.id);
+    sendShutdownToClient(client, "Timeout");
+    client.ws.close();
   }
 }
 

@@ -66,6 +66,16 @@ export interface WorkerDisconnectedMessage {
   type: "worker-disconnected";
 }
 
+/** Client notifies signal server that WebRTC is connected */
+export interface ConnectedMessage {
+  type: "connected";
+}
+
+/** Signal server notifies worker that client WebRTC is connected */
+export interface ClientConnectedMessage {
+  type: "client-connected";
+}
+
 /** Union of all signal messages */
 export type SignalMessage =
   | StartMessage
@@ -78,7 +88,9 @@ export type SignalMessage =
   | PingMessage
   | PongMessage
   | ShutdownMessage
-  | WorkerDisconnectedMessage;
+  | WorkerDisconnectedMessage
+  | ConnectedMessage
+  | ClientConnectedMessage;
 
 /** Signal message types for type guards */
 export type SignalMessageType = SignalMessage["type"];
@@ -135,7 +147,9 @@ export function isSignalMessage(msg: unknown): msg is SignalMessage {
     type === "ping" ||
     type === "pong" ||
     type === "shutdown" ||
-    type === "worker-disconnected"
+    type === "worker-disconnected" ||
+    type === "connected" ||
+    type === "client-connected"
   );
 }
 

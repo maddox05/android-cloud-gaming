@@ -4,6 +4,7 @@ import { InputMessage } from "../shared/types.js";
 
 // scrcpy control message types
 const SC_CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT = 2;
+const SC_CONTROL_MSG_TYPE_RESET_VIDEO = 17;
 
 // Android MotionEvent actions
 const ACTION_DOWN = 0;
@@ -176,6 +177,23 @@ class InputHandler {
       this.socket = null;
       this.connected = false;
     }
+  }
+
+  /**
+   * Send RESET_VIDEO control message to scrcpy
+   * This forces scrcpy to send a fresh SPS/PPS/IDR sequence
+   * Useful when a new client connects and needs an immediate keyframe
+   */
+  resetVideo(): void {
+    if (!this.socket || !this.connected) {
+      console.warn("Cannot reset video: control socket not connected");
+      return;
+    }
+
+    const buf = Buffer.alloc(1);
+    buf.writeUInt8(SC_CONTROL_MSG_TYPE_RESET_VIDEO, 0);
+    this.socket.write(buf);
+    console.log("Sent RESET_VIDEO to scrcpy");
   }
 }
 

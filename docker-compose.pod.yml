@@ -3,7 +3,6 @@ services:
     image: ${REDROID_IMAGE}:${REDROID_TAG}
     privileged: true
     ports: [5555]
-
     volumes:
       - redroid-data:/data
     command:
@@ -11,16 +10,12 @@ services:
       - androidboot.redroid_height=${REDROID_HEIGHT}
       - androidboot.redroid_dpi=${REDROID_DPI}
       - androidboot.redroid_fps=${REDROID_FPS}
-
-  signal:
-    build: ./signal
-    ports:
-      - "${SIGNAL_PORT}:${SIGNAL_PORT}"
-    environment:
-      SIGNAL_PORT: ${SIGNAL_PORT}
+    networks:
+      - cloud-gaming
 
   worker:
     build: ./worker
+    restart: always
     environment:
       SIGNAL_URL: ws://signal:${SIGNAL_PORT}
       REDROID_HOST: redroid
@@ -28,8 +23,14 @@ services:
       REDROID_HEIGHT: ${REDROID_HEIGHT}
     depends_on:
       - redroid
-      - signal
-
+    networks:
+      - cloud-gaming
 
 volumes:
-  redroid-data:
+    redroid-data:
+      external: true
+      name: redroid-data-shared
+
+networks:
+  cloud-gaming:
+    external: true

@@ -80,6 +80,7 @@ class VideoHandler {
       this.socket = null;
       this.connected = false;
     }
+    this.onDataCallback = null;
     this.pendingData = [];
   }
 }

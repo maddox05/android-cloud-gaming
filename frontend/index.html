@@ -414,6 +414,9 @@
         console.log('Signal:', msg.type);
 
         switch (msg.type) {
+          case 'ping':
+            ws.send(JSON.stringify({ type: 'pong' }));
+            break;
           case 'offer':
             await handleOffer(msg);
             break;
@@ -458,6 +461,10 @@
           channel.onopen = () => {
             setStatus('Streaming', 'connected');
             h264Decoder = new H264Decoder(canvas);
+            // Notify signal server that WebRTC is connected
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'connected' }));
+            }
           };
 
           channel.onmessage = (e) => {
