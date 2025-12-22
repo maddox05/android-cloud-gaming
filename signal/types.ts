@@ -14,6 +14,7 @@ export interface Worker {
 
 export interface Client {
   id: string;
+  userId: string;
   ws: WebSocket;
   workerId: string | null;
   lastPing: number;

@@ -10,6 +10,7 @@ import type {
   IceCandidateMessage,
   RegisterMessage,
   PongMessage,
+  WorkerCrashedMessage,
 } from "../shared/types.js";
 
 const { RTCPeerConnection, RTCSessionDescription } = wrtc;
@@ -120,6 +121,27 @@ function cleanup() {
     peerConnection.close();
     peerConnection = null;
   }
+}
+
+function notifyCrashAndExit(reason: string): void {
+  console.error(`Worker crashed: ${reason}`);
+
+  // Notify signal server of crash so it can disconnect the client
+  if (signalSocket && signalSocket.readyState === WebSocket.OPEN) {
+    const crashMsg: WorkerCrashedMessage = {
+      type: "worker-crashed",
+      reason: reason,
+    };
+    signalSocket.send(JSON.stringify(crashMsg));
+  }
+
+  // Cleanup resources
+  cleanup();
+  videoHandler.disconnect();
+  inputHandler.disconnect();
+
+  // Exit with error code - Docker will restart the container
+  process.exit(1);
 }
 
 let isRestarting = false;
@@ -292,6 +314,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("Fatal error in main():", err);
-  process.exit(1); // docker should restart the container after this exits it
+  const errorMessage = err instanceof Error ? err.message : String(err);
+  notifyCrashAndExit(errorMessage);
 });

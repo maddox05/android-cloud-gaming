@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cloud Gaming - Playing</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <div class="app-header">
+      <h1 id="game-title">Loading...</h1>
+      <button class="back-btn" onclick="goHome()">Exit</button>
+    </div>
+
+    <!-- Status -->
+    <div id="status" class="status-bar">Connecting...</div>
+
+    <!-- Stream Container -->
+    <div class="stream-container">
+      <canvas id="stream-canvas" class="stream-canvas" width="360" height="640"></canvas>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="spinner"></div>
+      <p id="loading-message">Connecting...</p>
+    </div>
+  </div>
+
+  <!-- Scripts - order matters! -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/signal.js"></script>
+  <script src="js/decoder.js"></script>
+  <script src="js/webrtc.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

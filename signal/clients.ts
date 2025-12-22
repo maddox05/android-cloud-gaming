@@ -18,9 +18,10 @@ function generateClientId(): string {
   return `client-${++clientIdCounter}`;
 }
 
-export function createClient(ws: WebSocket): Client {
+export function createClient(ws: WebSocket, userId: string): Client {
   const client: Client = {
     id: generateClientId(),
+    userId,
     ws,
     workerId: null,
     lastPing: Date.now(),
@@ -28,7 +29,7 @@ export function createClient(ws: WebSocket): Client {
     connectionState: "waiting",
   };
   clients.set(client.id, client);
-  console.log(`Client ${client.id} connected`);
+  console.log(`Client ${client.id} (user: ${userId}) connected`);
   return client;
 }
 

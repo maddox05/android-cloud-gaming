@@ -62,25 +62,6 @@ echo "Installing ADB..."
 sudo apt-get install -y android-tools-adb android-tools-fastboot
 
 
-# Install Node.js and npm
-echo "Installing Node.js and npm..."
-if ! command -v node &> /dev/null; then
-    # Install Node.js 20.x LTS via NodeSource
-    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-    sudo apt-get install -y nodejs
-    echo "Node.js $(node --version) and npm $(npm --version) installed successfully."
-else
-    echo "Node.js is already installed: $(node --version)"
-fi
-
-# Install tsx globally
-echo "Installing tsx..."
-if ! command -v tsx &> /dev/null; then
-    sudo npm install -g tsx
-    echo "tsx installed successfully."
-else
-    echo "tsx is already installed."
-fi
 
 # Install kernel modules (needed for Redroid)
 echo "Installing kernel extra modules..."

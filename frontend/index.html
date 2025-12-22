@@ -1,600 +1,112 @@
-<!DOCTYPE html> <!-- balls-->
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Android Cloud Gaming</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      background: #1a1a2e;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      color: #fff;
-    }
-    h1 {
-      margin-bottom: 20px;
-      color: #eee;
-    }
-    #status {
-      margin-bottom: 10px;
-      padding: 8px 16px;
-      background: #16213e;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    #status.connected { background: #1b4332; }
-    #status.error { background: #7f1d1d; }
-    #container {
-      position: relative;
-      border: 2px solid #333;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    #canvas {
-      display: block;
-      background: #000;
-      touch-action: none;
-    }
-    #connect-btn {
-      margin-top: 20px;
-      padding: 12px 32px;
-      font-size: 16px;
-      background: #4361ee;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    #connect-btn:hover {
-      background: #3a56d4;
-    }
-    #connect-btn:disabled {
-      background: #555;
-      cursor: not-allowed;
-    }
-  </style>
+  <title>Cloud Gaming</title>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <h1>Android Cloud Gaming</h1>
-  <div id="status">Disconnected</div>
-  <div id="container">
-    <canvas id="canvas" width="360" height="640"></canvas>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <input type="text" placeholder="Search games..." disabled>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="level-badge">
+        <span class="level">LEVEL 3</span>
+        <span class="streak">3 DAY STREAK</span>
+        <div class="progress-bar">
+          <div class="fill"></div>
+        </div>
+      </div>
+
+      <div class="coins">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="10" fill="#ffd700"/>
+        </svg>
+        <span>300</span>
+      </div>
+
+      <!-- Auth UI -->
+      <button id="login-btn" class="login-btn" onclick="signInWithGoogle()">Sign In</button>
+      <div id="user-info" class="user-info" style="display: none;">
+        <span id="user-name" class="user-name"></span>
+        <button class="logout-btn" onclick="signOut()">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Category Navigation -->
+  <nav class="category-nav">
+    <ul class="category-list">
+      <li class="active">ROBLOX</li>
+      <li>MULTIPLAYER</li>
+      <li>3D</li>
+      <li>FLASH</li>
+      <li>HORROR</li>
+      <li>PLATFORMER</li>
+      <li>PUZZLE</li>
+      <li>FIGHTING</li>
+      <li>SPORTS</li>
+      <li>DRIVING</li>
+    </ul>
+  </nav>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+        <line x1="8" y1="21" x2="16" y2="21"></line>
+        <line x1="12" y1="17" x2="12" y2="21"></line>
+      </svg>
+      250+ GAMES
+    </div>
+    <div class="stat-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+      </svg>
+      150,000+ DAILY GAMERS
+    </div>
+    <div class="stat-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+      </svg>
+      GAME INSTANTLY
+    </div>
+    <div class="stat-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+      </svg>
+      FREE TO PLAY
+    </div>
   </div>
-  <button id="connect-btn">Connect</button>
-  <button id="test-tap-btn" style="margin-top:10px;padding:12px 32px;font-size:16px;background:#e63946;color:white;border:none;border-radius:6px;cursor:pointer;">Test Tap (center)</button>
 
+  <!-- Main Content -->
+  <main class="main-content">
+    <section>
+      <h2 class="section-title">Available Games</h2>
+      <div class="game-grid" id="game-grid">
+        <!-- Games will be rendered here by JavaScript -->
+      </div>
+    </section>
+  </main>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <script>
-    const SIGNAL_URL = window.CONFIG?.SIGNAL_URL || 'ws://localhost:8080';
-    const SCREEN_WIDTH = 360;
-    const SCREEN_HEIGHT = 640;
-
-    let ws = null;
-    let pc = null;
-    let videoChannel = null;
-    let inputChannel = null;
-    let decoder = null;
-
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const statusEl = document.getElementById('status');
-    const connectBtn = document.getElementById('connect-btn');
-
-    function setStatus(text, type = '') {
-      statusEl.textContent = text;
-      statusEl.className = type;
-    }
-
-    // H.264 NAL Parser and Decoder
-    class H264Decoder {
-      constructor(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
-        this.decoder = null;
-        this.buffer = new Uint8Array(0);
-        this.sps = null;
-        this.pps = null;
-        this.timestamp = 0;
-        this.configured = false;
-        this.videoWidth = 0;
-        this.videoHeight = 0;
-      }
-
-      // Append incoming data to buffer
-      appendData(data) {
-        const incoming = new Uint8Array(data);
-        console.log('Received chunk:', incoming.length, 'bytes, first 8:', Array.from(incoming.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' '));
-        const newBuffer = new Uint8Array(this.buffer.length + incoming.length);
-        newBuffer.set(this.buffer, 0);
-        newBuffer.set(incoming, this.buffer.length);
-        this.buffer = newBuffer;
-        this.processBuffer();
-      }
-
-      // Find NAL units in buffer and process them
-      processBuffer() {
-        const nalUnits = [];
-        let lastStart = -1;
-
-        // Find all NAL start codes
-        for (let i = 0; i < this.buffer.length - 4; i++) {
-          // Check for 4-byte start code (00 00 00 01)
-          if (this.buffer[i] === 0 && this.buffer[i+1] === 0 &&
-              this.buffer[i+2] === 0 && this.buffer[i+3] === 1) {
-            if (lastStart !== -1) {
-              nalUnits.push(this.buffer.slice(lastStart, i));
-            }
-            lastStart = i;
-            i += 3;
-          }
-          // Check for 3-byte start code (00 00 01)
-          else if (this.buffer[i] === 0 && this.buffer[i+1] === 0 && this.buffer[i+2] === 1) {
-            if (lastStart !== -1) {
-              nalUnits.push(this.buffer.slice(lastStart, i));
-            }
-            lastStart = i;
-            i += 2;
-          }
-        }
-
-        // Keep incomplete data in buffer (from last start code to end)
-        if (lastStart !== -1 && nalUnits.length > 0) {
-          this.buffer = this.buffer.slice(lastStart);
-        } else if (lastStart === -1) {
-          // No start codes found, clear buffer if it's getting too large
-          if (this.buffer.length > 1024 * 1024) {
-            console.warn('Buffer overflow, clearing');
-            this.buffer = new Uint8Array(0);
-          }
-        }
-
-        // Process found NAL units
-        if (nalUnits.length > 0) {
-          console.log('Found', nalUnits.length, 'NAL units');
-        }
-        for (const nal of nalUnits) {
-          this.processNAL(nal);
-        }
-      }
-
-      // Process a single NAL unit
-      processNAL(nal) {
-        if (nal.length < 5) return;
-
-        // Get NAL type (5 bits after start code)
-        const startCodeLen = (nal[2] === 1) ? 3 : 4;
-        const nalType = nal[startCodeLen] & 0x1F;
-
-        switch (nalType) {
-          case 7: // SPS
-            this.sps = nal;
-            console.log('Got SPS, length:', nal.length);
-            try {
-              const dims = this.parseDimensionsFromSPS(nal);
-              this.videoWidth = dims.width;
-              this.videoHeight = dims.height;
-              console.log('Video dimensions:', dims.width, 'x', dims.height);
-              // Send dimensions to server
-              if (inputChannel && inputChannel.readyState === 'open') {
-                inputChannel.send(JSON.stringify({ type: 'videoDimensions', width: dims.width, height: dims.height }));
-              }
-            } catch (e) {
-              console.error('Failed to parse SPS dimensions:', e);
-            }
-            this.tryConfigureDecoder();
-            break;
-          case 8: // PPS
-            this.pps = nal;
-            console.log('Got PPS, length:', nal.length);
-            this.tryConfigureDecoder();
-            break;
-          case 5: // IDR (keyframe)
-            this.decodeFrame(nal, true);
-            break;
-          case 1: // Non-IDR (P-frame)
-            this.decodeFrame(nal, false);
-            break;
-        }
-      }
-
-      // Parse SPS to get codec string
-      parseCodecFromSPS(sps) {
-        const startCodeLen = (sps[2] === 1) ? 3 : 4;
-        const profileIdc = sps[startCodeLen + 1];
-        const constraints = sps[startCodeLen + 2];
-        const levelIdc = sps[startCodeLen + 3];
-
-        const hex = (n) => n.toString(16).padStart(2, '0').toUpperCase();
-        return `avc1.${hex(profileIdc)}${hex(constraints)}${hex(levelIdc)}`;
-      }
-
-      // Parse SPS to get video dimensions
-      parseDimensionsFromSPS(sps) {
-        const startCodeLen = (sps[2] === 1) ? 3 : 4;
-        const rbsp = this.removeEmulationPrevention(sps.slice(startCodeLen + 1));
-
-        let bitPos = 0;
-        const readBits = (n) => {
-          let val = 0;
-          for (let i = 0; i < n; i++) {
-            const byteIdx = Math.floor(bitPos / 8);
-            const bitIdx = 7 - (bitPos % 8);
-            val = (val << 1) | ((rbsp[byteIdx] >> bitIdx) & 1);
-            bitPos++;
-          }
-          return val;
-        };
-        const readUE = () => {
-          let zeros = 0;
-          while (readBits(1) === 0) zeros++;
-          if (zeros === 0) return 0;
-          return (1 << zeros) - 1 + readBits(zeros);
-        };
-
-        const profileIdc = readBits(8);
-        readBits(8); // constraints
-        readBits(8); // level
-        readUE(); // seq_parameter_set_id
-
-        if ([100,110,122,244,44,83,86,118,128,138,139,134].includes(profileIdc)) {
-          const chromaFormat = readUE();
-          if (chromaFormat === 3) readBits(1);
-          readUE(); readUE();
-          readBits(1);
-          if (readBits(1)) {
-            for (let i = 0; i < (chromaFormat !== 3 ? 8 : 12); i++) {
-              if (readBits(1)) {
-                const size = i < 6 ? 16 : 64;
-                let last = 8, next = 8;
-                for (let j = 0; j < size; j++) {
-                  if (next !== 0) next = (last + readUE()) & 255;
-                  last = next === 0 ? last : next;
-                }
-              }
-            }
-          }
-        }
-
-        readUE(); // log2_max_frame_num
-        const picOrderCntType = readUE();
-        if (picOrderCntType === 0) readUE();
-        else if (picOrderCntType === 1) {
-          readBits(1); readUE(); readUE();
-          const n = readUE();
-          for (let i = 0; i < n; i++) readUE();
-        }
-        readUE(); // max_num_ref_frames
-        readBits(1); // gaps_in_frame_num_allowed
-
-        const picWidthInMbs = readUE() + 1;
-        const picHeightInMapUnits = readUE() + 1;
-        const frameMbsOnly = readBits(1);
-        if (!frameMbsOnly) readBits(1);
-        readBits(1); // direct_8x8_inference
-
-        let cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
-        if (readBits(1)) {
-          cropLeft = readUE();
-          cropRight = readUE();
-          cropTop = readUE();
-          cropBottom = readUE();
-        }
-
-        const width = picWidthInMbs * 16 - (cropLeft + cropRight) * 2;
-        const height = (2 - frameMbsOnly) * picHeightInMapUnits * 16 - (cropTop + cropBottom) * 2;
-
-        return { width, height };
-      }
-
-      removeEmulationPrevention(data) {
-        const result = [];
-        for (let i = 0; i < data.length; i++) {
-          if (i + 2 < data.length && data[i] === 0 && data[i+1] === 0 && data[i+2] === 3) {
-            result.push(0, 0);
-            i += 2;
-          } else {
-            result.push(data[i]);
-          }
-        }
-        return new Uint8Array(result);
-      }
-
-      // Configure decoder once we have SPS and PPS
-      tryConfigureDecoder() {
-        if (!this.sps || !this.pps || this.configured) return;
-
-        const codec = this.parseCodecFromSPS(this.sps);
-        console.log('Configuring decoder with codec:', codec);
-
-        this.decoder = new VideoDecoder({
-          output: (frame) => {
-            this.ctx.drawImage(frame, 0, 0, this.canvas.width, this.canvas.height);
-            frame.close();
-          },
-          error: (e) => {
-            console.error('Decoder error:', e);
-          }
-        });
-
-        try {
-          this.decoder.configure({
-            codec: codec,
-            optimizeForLatency: true,
-          });
-          this.configured = true;
-          console.log('Decoder configured successfully');
-        } catch (e) {
-          console.error('Failed to configure decoder:', e);
-          // Try fallback codec
-          try {
-            this.decoder.configure({
-              codec: 'avc1.42E01E', // Baseline Profile Level 3.0
-              optimizeForLatency: true,
-            });
-            this.configured = true;
-            console.log('Decoder configured with fallback codec');
-          } catch (e2) {
-            console.error('Fallback codec also failed:', e2);
-          }
-        }
-      }
-
-      // Decode a video frame
-      decodeFrame(nal, isKeyframe) {
-        if (!this.decoder || this.decoder.state !== 'configured') {
-          console.log('Decoder not ready, state:', this.decoder?.state);
-          return;
-        }
-        console.log('Decoding frame:', isKeyframe ? 'KEY' : 'delta', 'size:', nal.length);
-
-        // For keyframes, prepend SPS and PPS
-        let frameData = nal;
-        if (isKeyframe && this.sps && this.pps) {
-          const combined = new Uint8Array(this.sps.length + this.pps.length + nal.length);
-          combined.set(this.sps, 0);
-          combined.set(this.pps, this.sps.length);
-          combined.set(nal, this.sps.length + this.pps.length);
-          frameData = combined;
-        }
-
-        try {
-          const chunk = new EncodedVideoChunk({
-            type: isKeyframe ? 'key' : 'delta',
-            timestamp: this.timestamp,
-            data: frameData,
-          });
-          this.decoder.decode(chunk);
-          this.timestamp += 33333; // ~30fps in microseconds
-        } catch (e) {
-          // Skip invalid chunks silently
-        }
-      }
-
-      reset() {
-        if (this.decoder) {
-          this.decoder.close();
-          this.decoder = null;
-        }
-        this.buffer = new Uint8Array(0);
-        this.sps = null;
-        this.pps = null;
-        this.timestamp = 0;
-        this.configured = false;
-        this.videoWidth = 0;
-        this.videoHeight = 0;
-      }
-    }
-
-    let h264Decoder = null;
-
-    // WebRTC setup
-    async function connect() {
-      connectBtn.disabled = true;
-      setStatus('Connecting...');
-
-      ws = new WebSocket(SIGNAL_URL);
-
-      ws.onopen = () => {
-        setStatus('Connected to signal server');
-        ws.send(JSON.stringify({ type: 'start' }));
-      };
-
-      ws.onmessage = async (event) => {
-        const msg = JSON.parse(event.data);
-        console.log('Signal:', msg.type);
-
-        switch (msg.type) {
-          case 'ping':
-            ws.send(JSON.stringify({ type: 'pong' }));
-            break;
-          case 'offer':
-            await handleOffer(msg);
-            break;
-          case 'ice-candidate':
-            if (pc && msg.candidate) {
-              await pc.addIceCandidate(msg.candidate);
-            }
-            break;
-          case 'error':
-            setStatus(msg.message, 'error');
-            connectBtn.disabled = false;
-            break;
-        }
-      };
-
-      ws.onerror = (e) => {
-        console.error('WebSocket error:', e);
-        setStatus('Connection error', 'error');
-        connectBtn.disabled = false;
-      };
-
-      ws.onclose = () => {
-        setStatus('Disconnected');
-        connectBtn.disabled = false;
-        cleanup();
-      };
-    }
-
-    async function handleOffer(msg) {
-      pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-      });
-
-      pc.ondatachannel = (event) => {
-        const channel = event.channel;
-        console.log('Data channel:', channel.label);
-
-        if (channel.label === 'video') {
-          videoChannel = channel;
-          channel.binaryType = 'arraybuffer';
-
-          channel.onopen = () => {
-            setStatus('Streaming', 'connected');
-            h264Decoder = new H264Decoder(canvas);
-            // Notify signal server that WebRTC is connected
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'connected' }));
-            }
-          };
-
-          channel.onmessage = (e) => {
-            if (h264Decoder) {
-              h264Decoder.appendData(e.data);
-            }
-          };
-        } else if (channel.label === 'input') {
-          inputChannel = channel;
-          channel.onopen = () => {
-            console.log('Input channel ready');
-          };
-        }
-      };
-
-      pc.onicecandidate = (event) => {
-        if (event.candidate && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            type: 'ice-candidate',
-            candidate: event.candidate
-          }));
-        }
-      };
-
-      pc.onconnectionstatechange = () => {
-        console.log('Connection state:', pc.connectionState);
-        if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-          setStatus('Disconnected', 'error');
-          cleanup();
-        }
-      };
-
-      await pc.setRemoteDescription({ type: 'offer', sdp: msg.sdp });
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-
-      ws.send(JSON.stringify({
-        type: 'answer',
-        sdp: answer.sdp
-      }));
-    }
-
-    function cleanup() {
-      if (h264Decoder) {
-        h264Decoder.reset();
-        h264Decoder = null;
-      }
-      if (pc) {
-        pc.close();
-        pc = null;
-      }
-      videoChannel = null;
-      inputChannel = null;
-    }
-
-    // Input handling - scale coordinates to actual video dimensions
-    function sendInput(msg) {
-      if (inputChannel && inputChannel.readyState === 'open') {
-        inputChannel.send(JSON.stringify(msg));
-      }
-    }
-
-    // Touch/Mouse events
-    let isPointerDown = false;
-
-    function getPercentDiff(clientPressedLoc, startingLoc,totalDimension){
-      const percent = (clientPressedLoc-startingLoc)/totalDimension
-      return percent;
-    }
-
-    canvas.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      isPointerDown = true;
-      const rect = canvas.getBoundingClientRect();
-      const xPercent = getPercentDiff(e.clientX, rect.left, rect.width);
-      const yPercent = getPercentDiff(e.clientY, rect.top, rect.height);
-      sendInput({
-        type: 'drag',
-        action: 'start',
-        pointerId: e.pointerId,
-        xPercent,
-        yPercent
-      });
-    });
-
-    canvas.addEventListener('pointermove', (e) => {
-      if (!isPointerDown) return;
-      e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      const xPercent = getPercentDiff(e.clientX, rect.left, rect.width);
-      const yPercent = getPercentDiff(e.clientY, rect.top, rect.height);
-      sendInput({
-        type: 'drag',
-        action: 'move',
-        pointerId: e.pointerId,
-        xPercent,
-        yPercent
-      });
-    });
-
-    canvas.addEventListener('pointerup', (e) => {
-      e.preventDefault();
-      isPointerDown = false;
-      const rect = canvas.getBoundingClientRect();
-      const xPercent = getPercentDiff(e.clientX, rect.left, rect.width);
-      const yPercent = getPercentDiff(e.clientY, rect.top, rect.height);
-      sendInput({
-        type: 'drag',
-        action: 'end',
-        pointerId: e.pointerId,
-        xPercent,
-        yPercent
-      });
-    });
-
-    canvas.addEventListener('pointercancel', (e) => {
-      isPointerDown = false;
-      sendInput({
-        type: 'drag',
-        action: 'cancel',
-        pointerId: e.pointerId,
-        xPercent: 0,
-        yPercent: 0
-      });
-    });
-
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-    connectBtn.addEventListener('click', connect);
-
-   
-  </script>
+  <script src="js/auth.js"></script>
+  <script src="js/home.js"></script>
 </body>
 </html>

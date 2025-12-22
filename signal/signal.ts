@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { SignalMessage } from "../shared/types.js";
 import type { Worker, Client } from "./types.js";
+import { authenticateUser } from "./auth.js";
 import {
   createWorker,
   registerWorker,
@@ -34,11 +35,16 @@ import {
   getAllClients,
 } from "./clients.js";
 
-if (!process.env.SIGNAL_PORT) {
-  console.error("SIGNAL_PORT environment variable is required");
+// Verify required environment variables
+const requiredEnvVars = ["SIGNAL_PORT", "SUPABASE_URL", "SUPABASE_SERVICE_KEY"];
+const missingEnvVars = requiredEnvVars.filter((v) => !process.env[v]);
+
+if (missingEnvVars.length > 0) {
+  console.error("Missing required environment variables:", missingEnvVars.join(", "));
   process.exit(1);
 }
-const PORT = parseInt(process.env.SIGNAL_PORT, 10);
+
+const PORT = parseInt(process.env.SIGNAL_PORT!, 10);
 
 const PING_INTERVAL = 5000;
 const TIMEOUT_THRESHOLD = 15000;
@@ -52,11 +58,44 @@ const wss = new WebSocketServer({ port: PORT });
 wss.on("connection", (ws, req) => {
   const url = new URL(req.url || "/", `http://localhost:${PORT}`);
   const role = url.searchParams.get("role");
+  const token = url.searchParams.get("token");
 
   if (role === "worker") {
     handleWorkerConnection(ws);
   } else {
-    handleClientConnection(ws);
+    // Buffer messages while authenticating
+    const messageQueue: string[] = [];
+    const bufferHandler = (data: Buffer) => {
+      messageQueue.push(data.toString());
+    };
+    ws.on("message", bufferHandler);
+
+    // Clients must be authenticated
+    if (!token) {
+      ws.send(JSON.stringify({ type: "error", message: "Authentication required" }));
+      ws.close();
+      return;
+    }
+
+    authenticateUser(token).then((user) => {
+      // Remove buffer handler
+      ws.off("message", bufferHandler);
+
+      if (!user) {
+        ws.send(JSON.stringify({ type: "error", message: "Invalid or expired token" }));
+        ws.close();
+        return;
+      }
+
+      console.log(`Client authenticated: ${user.id}`);
+      const client = handleClientConnection(ws, user.id);
+
+      // Process buffered messages
+      for (const data of messageQueue) {
+        const msg: SignalMessage = JSON.parse(data);
+        handleClientMessage(client, msg);
+      }
+    });
   }
 });
 
@@ -109,6 +148,19 @@ function handleWorkerMessage(worker: Worker, msg: SignalMessage): void {
       }
       break;
 
+    case "worker-crashed":
+      // Worker is crashing, notify connected client and clean up
+      console.log(`Worker ${worker.id} crashed: ${msg.reason}`);
+      if (worker.clientId) {
+        const client = getClient(worker.clientId);
+        if (client) {
+          sendWorkerDisconnectedToClient(client);
+          releaseClient(client);
+        }
+      }
+      removeWorker(worker.id);
+      break;
+
     default:
       console.log(`Worker ${worker.id} sent unknown message:`, msg.type);
   }
@@ -134,8 +186,8 @@ function handleWorkerDisconnect(worker: Worker): void {
   removeWorker(worker.id);
 }
 
-function handleClientConnection(ws: WebSocket): void {
-  const client = createClient(ws);
+function handleClientConnection(ws: WebSocket, userId: string): Client {
+  const client = createClient(ws, userId);
   wsToClient.set(ws, client);
 
   ws.on("message", (data) => {
@@ -151,6 +203,8 @@ function handleClientConnection(ws: WebSocket): void {
   ws.on("error", (err) => {
     console.error(`Client ${client.id} error:`, err.message);
   });
+
+  return client;
 }
 
 function handleClientMessage(client: Client, msg: SignalMessage): void {
