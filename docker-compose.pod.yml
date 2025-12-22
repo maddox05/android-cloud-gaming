@@ -22,7 +22,7 @@ services:
     build: ./worker
     restart: always
     environment:
-      SIGNAL_URL: ws://signal:${SIGNAL_PORT}
+      SIGNAL_URL: ws://${SIGNAL_URL}
       REDROID_HOST: redroid
       REDROID_WIDTH: ${REDROID_WIDTH}
       REDROID_HEIGHT: ${REDROID_HEIGHT}
