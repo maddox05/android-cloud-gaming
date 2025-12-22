@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { SignalMessage } from "../shared/types.js";
 import type { Worker, Client } from "./types.js";
-import { authenticateUser } from "./auth.js";
+import { verifyToken, checkSubscription } from "./auth.js";
 import {
   createWorker,
   registerWorker,
@@ -77,12 +77,26 @@ wss.on("connection", (ws, req) => {
       return;
     }
 
-    authenticateUser(token).then((user) => {
+    // Two-step auth: verify token first, then check subscription
+    verifyToken(token).then(async (user) => {
       // Remove buffer handler
       ws.off("message", bufferHandler);
 
       if (!user) {
         ws.send(JSON.stringify({ type: "error", message: "Invalid or expired token" }));
+        ws.close();
+        return;
+      }
+
+      // Check subscription status
+      const hasSubscription = await checkSubscription(user.id, user.email);
+      if (!hasSubscription) {
+        console.log(`User ${user.id} (${user.email}) rejected - no active subscription`);
+        ws.send(JSON.stringify({
+          type: "error",
+          message: "Active subscription required. Please subscribe to play.",
+          code: "NO_SUBSCRIPTION"
+        }));
         ws.close();
         return;
       }

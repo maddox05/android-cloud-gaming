@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MaddoxCloud</title>
+  <title>MaddoxCloud | Pricing</title>
   <link rel="icon" type="image/png" href="imgs/favicon.png">
   <link rel="stylesheet" href="css/styles.css">
+  <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
 </head>
 <body>
   <!-- Header -->
@@ -18,7 +19,7 @@
     </div>
 
     <div class="header-right">
-      <a href="/pricing.html" class="nav-link">Pricing</a>
+      <a href="/" class="nav-link">Home</a>
 
       <!-- Auth UI -->
       <button id="login-btn" class="login-btn" onclick="signInWithGoogle()">Sign In</button>
@@ -36,26 +37,62 @@
   </header>
 
   <!-- Main Content -->
-  <main class="main-content">
-    <!-- Hero -->
-    <section class="hero">
-      <h1>Play Android games in your browser</h1>
-      <p>Stream games instantly. No downloads, no installs, no waiting.</p>
-    </section>
+  <main class="pricing-page">
+    <div class="pricing-header">
+      <h1>Choose Your Plan</h1>
+      <p>Unlock premium cloud gaming with faster streaming and priority access.</p>
+    </div>
 
-    <!-- Games -->
-    <section>
-      <h2 class="section-title">Available Games</h2>
-      <div class="game-grid" id="game-grid">
-        <!-- Games will be rendered here by JavaScript -->
-      </div>
-    </section>
+    <div class="pricing-container" id="pricing-container">
+      <!-- Stripe pricing table or login prompt will be rendered here -->
+    </div>
   </main>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
   <script src="js/auth.js"></script>
-  <script src="js/home.js"></script>
+  <script>
+    // Render Stripe pricing table with user info
+    async function renderPricingTable() {
+      const container = document.getElementById('pricing-container');
+      container.innerHTML = '';
+
+      // Get current user
+      const user = await window.getCurrentUser();
+
+      if (!user) {
+        // Show login prompt if not logged in
+        container.innerHTML = `
+          <div class="login-prompt">
+            <h2>Sign in to view pricing</h2>
+            <p>Please sign in to see our subscription plans.</p>
+            <button class="login-btn" onclick="signInWithGoogle()">Sign In with Google</button>
+          </div>
+        `;
+        return;
+      }
+
+      // Create pricing table with user info
+      const pricingTable = document.createElement('stripe-pricing-table');
+      pricingTable.setAttribute('pricing-table-id', 'prctbl_1ShC2bIo5niLkgKCBTAs0yzK');
+      pricingTable.setAttribute('publishable-key', 'pk_live_51ShAGcIo5niLkgKCCwvIhzBqI2xLDdOZ3CxzDEwegRTHpfWzCwJkyTBc7cGNhlF9Tej0O5nmc7jQ2uJr2TJiOgSw00aACeMl1e');
+
+      // client-reference-id links the Stripe subscription to your Supabase user ID
+      pricingTable.setAttribute('client-reference-id', user.id);
+
+      // Pre-fill the customer's email
+      if (user.email) {
+        pricingTable.setAttribute('customer-email', user.email);
+      }
+
+      container.appendChild(pricingTable);
+    }
+
+    // Wait for auth to initialize, then render pricing table
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(renderPricingTable, 100);
+    });
+  </script>
 </body>
 </html>

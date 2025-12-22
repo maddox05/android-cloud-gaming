@@ -94,6 +94,12 @@ class SignalConnection {
 
       case 'error':
         console.error('Signal error:', msg.message);
+        // Handle subscription required error - redirect to pricing
+        if (msg.code === 'NO_SUBSCRIPTION') {
+          alert('You need an active subscription to play. Redirecting to pricing...');
+          window.location.href = '/pricing.html';
+          return;
+        }
         if (this.onError) {
           this.onError(msg.message);
         }
