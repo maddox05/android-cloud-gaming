@@ -1,4 +1,5 @@
 import { WebSocketServer, WebSocket } from "ws";
+import { createServer } from "http";
 import type { SignalMessage } from "../shared/types.js";
 import type { Worker, Client } from "./types.js";
 import { verifyToken, checkSubscription } from "./auth.js";

@@ -2,10 +2,11 @@ services:
   redroid:
     image: ${REDROID_IMAGE}:${REDROID_TAG}
     privileged: true
+    stop_grace_period: 2s   # Don't wait long - tmpfs discards data anyway
     volumes:
       - redroid-base:/data-base:ro   # Shared golden image (read-only)
     tmpfs:
-      - /data-diff:size=2G           # Ephemeral diff in RAM (auto-deleted on stop)
+      - /data-diff:size=1G           # Ephemeral diff in RAM (auto-deleted on stop)
     command:
       - androidboot.use_redroid_overlayfs=1
       - androidboot.redroid_overlayfs_lower=/data-base

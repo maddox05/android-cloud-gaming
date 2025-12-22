@@ -108,6 +108,30 @@ fi
 echo "Pulling Redroid Docker image: ${REDROID_IMAGE}:${REDROID_TAG}"
 sudo docker pull "${REDROID_IMAGE}:${REDROID_TAG}"
 
+# Set up redroid-base volume from golden image
+echo "Setting up redroid-base volume..."
+GOLDEN_IMAGE="$SCRIPT_DIR/redroid-base.tar.gz"
+
+if [ -f "$GOLDEN_IMAGE" ]; then
+    # Create the volume if it doesn't exist
+    if ! sudo docker volume inspect redroid-base &>/dev/null; then
+        echo "Creating redroid-base volume..."
+        sudo docker volume create redroid-base
+    else
+        echo "redroid-base volume already exists, recreating..."
+        sudo docker volume rm redroid-base
+        sudo docker volume create redroid-base
+    fi
+
+    # Import the golden image into the volume
+    echo "Importing golden image into redroid-base volume (this may take a while)..."
+    sudo docker run --rm -v redroid-base:/data -v "$SCRIPT_DIR":/backup alpine sh -c "cd /data && tar xzf /backup/redroid-base.tar.gz"
+    echo "✓ Golden image imported successfully"
+else
+    echo "⚠ Golden image not found at $GOLDEN_IMAGE"
+    echo "  You'll need to set up the redroid-base volume manually."
+fi
+
 # Enable and start Docker service
 echo "Enabling Docker service..."
 sudo systemctl enable docker

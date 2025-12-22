@@ -112,3 +112,27 @@ export function getAllClients(): Client[] {
 export function getClientCount(): number {
   return clients.size;
 }
+
+export function getConnectedClientCount(): number {
+  let count = 0;
+  for (const client of clients.values()) {
+    if (client.connectionState === "connected") count++;
+  }
+  return count;
+}
+
+export function getConnectingClientCount(): number {
+  let count = 0;
+  for (const client of clients.values()) {
+    if (client.connectionState === "connecting") count++;
+  }
+  return count;
+}
+
+export function getWaitingClientCount(): number {
+  let count = 0;
+  for (const client of clients.values()) {
+    if (client.connectionState === "waiting") count++;
+  }
+  return count;
+}
