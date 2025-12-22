@@ -305,6 +305,7 @@ async function connectToSignalServer() {
 
   signalSocket.on("close", () => {
     console.log("Disconnected from signal server, restarting myself!");
+// TODO wait for 2 secs
     process.exit(0);})
 
   signalSocket.on("error", (err) => {
