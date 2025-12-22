@@ -176,6 +176,34 @@ async function restart() {
 }
 
 let signalSocket: WebSocket | null = null;
+let sessionStarted = false;
+
+/**
+ * Initialize the session - start redroid, connect video/input, create peer connection
+ * Called when a client wants to connect (receives "start" message)
+ */
+async function initializeSession(): Promise<void> {
+  if (sessionStarted) {
+    console.log("Session already started");
+    return;
+  }
+  sessionStarted = true;
+
+  console.log("Client wants to connect, initializing session...");
+
+  // Start Redroid with the game package (kiosk mode)
+  console.log(`Starting Redroid with game: ${GAME}...`);
+  await redroidRunner.start(GAME);
+
+  // Connect to scrcpy sockets in ORDER: video first, then control
+  // scrcpy uses a single abstract socket - connections are served in order
+  console.log("Connecting to scrcpy video socket (first)...");
+  await videoHandler.connect();
+  console.log("Connecting to scrcpy control socket (second)...");
+  await inputHandler.connect();
+
+  console.log("Session initialized!");
+}
 
 async function connectToSignalServer() {
   signalSocket = new WebSocket(SIGNAL_SERVER_URL);
@@ -188,6 +216,7 @@ async function connectToSignalServer() {
     const register: RegisterMessage = { type: "register", game: GAME };
     signalSocket!.send(JSON.stringify(register));
     console.log(`Registered with game: ${GAME}`);
+    console.log("Waiting for client to connect...");
   });
 
   signalSocket.on("message", async (data) => {
@@ -205,7 +234,8 @@ async function connectToSignalServer() {
       }
 
       case "start": {
-        // Client wants to connect, create offer
+        // Client wants to connect - create peer connection and offer
+        // (session initialization happens when WebRTC actually connects)
         console.log("Creating peer connection and offer...");
         peerConnection = await createPeerConnection();
 
@@ -243,9 +273,16 @@ async function connectToSignalServer() {
         break;
 
       case "client-connected":
-        // Client's WebRTC is connected, reset video to send fresh IDR frame
-        console.log("Client connected, resetting video for fresh IDR frame...");
-        inputHandler.resetVideo();
+        // Client's WebRTC is connected - NOW initialize the session
+        console.log("Client WebRTC connected, initializing session...");
+        try {
+          await initializeSession();
+
+          // inputHandler.resetVideo();
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          notifyCrashAndExit(`Failed to initialize session: ${errorMessage}`);
+        }
         break;
 
       case "shutdown":
@@ -256,14 +293,8 @@ async function connectToSignalServer() {
   });
 
   signalSocket.on("close", () => {
-    console.log(
-      `Signal server disconnected, reconnecting in ${reconnectDelay / 1000}s...`
-    );
-    cleanup();
-    setTimeout(connectToSignalServer, reconnectDelay);
-    // Exponential backoff
-    reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
-  });
+    console.log("Disconnected from signal server, restarting myself!");
+    process.exit(0);})
 
   signalSocket.on("error", (err) => {
     console.error("Signal socket error:", err);
@@ -271,27 +302,15 @@ async function connectToSignalServer() {
 }
 
 async function main() {
-  console.log("Starting Pod...");
+  console.log("Starting Worker...");
+  console.log(`Game: ${GAME}`);
 
-  // Start Redroid
-  console.log("Starting Redroid...");
-  await redroidRunner.start();
-
-  // Connect to scrcpy sockets in ORDER: video first, then control
-  // scrcpy uses a single abstract socket - connections are served in order
-  console.log("Connecting to scrcpy video socket (first)...");
-  await videoHandler.connect();
-  console.log("Connecting to scrcpy control socket (second)...");
-  await inputHandler.connect();
-
-  // Note: Don't call resetVideo() here - scrcpy isn't fully initialized yet
-  // The RESET_VIDEO will be sent when client-connected is received
-
-  // Connect to signal server
+  // Only connect to signal server initially
+  // Redroid/video/input will be started when a client connects
   console.log("Connecting to signal server...");
   await connectToSignalServer();
 
-  console.log("Worker ready!");
+  console.log("Worker ready and waiting for client!");
   isRestarting = false;
   reconnectDelay = 1000;
 

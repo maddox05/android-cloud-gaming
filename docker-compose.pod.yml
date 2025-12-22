@@ -4,10 +4,13 @@ services:
     privileged: true
     ports: [5555]
     volumes:
-      - redroid-base:/data-base   # Shared golden image (read-only layer)
-      - redroid-diff:/data-diff   # Per-instance changes (writable layer)
+      - redroid-base:/data-base:ro   # Shared golden image (read-only)
+    tmpfs:
+      - /data-diff:size=2G           # Ephemeral diff in RAM (auto-deleted on stop)
     command:
       - androidboot.use_redroid_overlayfs=1
+      - androidboot.redroid_overlayfs_lower=/data-base
+      - androidboot.redroid_overlayfs_upper=/data-diff
       - androidboot.redroid_width=${REDROID_WIDTH}
       - androidboot.redroid_height=${REDROID_HEIGHT}
       - androidboot.redroid_dpi=${REDROID_DPI}
@@ -33,7 +36,6 @@ volumes:
   redroid-base:
     external: true
     name: redroid-base   # Shared golden image (create once, use by all pods)
-  redroid-diff:          # Per-instance writable layer (created per project)
 
 networks:
   cloud-gaming:

@@ -371,8 +371,6 @@ body {
 
 .stream-container {
   position: relative;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
   overflow: hidden;
   background: #000;
 }

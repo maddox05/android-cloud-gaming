@@ -5,8 +5,12 @@ class RedroidRunner {
   private static instance: RedroidRunner;
   private running = false;
   private scrcpyProc: ReturnType<typeof spawn> | null = null;
+  private adbTarget: string;
 
-  private constructor() {}
+  private constructor() {
+    const { host, port } = redroid_config;
+    this.adbTarget = `${host}:${port}`;
+  }
 
   static getInstance(): RedroidRunner {
     if (!RedroidRunner.instance) {
@@ -28,25 +32,44 @@ class RedroidRunner {
     });
   }
 
+  /**
+   * Execute command but don't throw on non-zero exit - just return output
+   * Useful for commands that print to stderr but still succeed
+   */
+  private execAsyncSafe(cmd: string): Promise<{ stdout: string; stderr: string; code: number }> {
+    return new Promise((resolve) => {
+      exec(cmd, (error, stdout, stderr) => {
+        resolve({
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
+          code: error ? (error as any).code || 1 : 0,
+        });
+      });
+    });
+  }
+
   private sleep(ms: number): Promise<void> {
     return new Promise((r) => setTimeout(r, ms));
   }
 
-  async start(): Promise<void> {
+  /**
+   * Start the redroid runner with a specific game package.
+   * Sets up kiosk mode - hides navigation, launches game, and locks user in.
+   */
+  async start(packageName: string): Promise<void> {
     if (this.running) {
       console.log("RedroidRunner already running");
       return;
     }
 
-    const { host, port, height } = redroid_config;
-    const adbTarget = `${host}:${port}`;
+    const { height } = redroid_config;
 
     // Connect adb (retry a few times in case redroid isn't ready yet)
-    console.log(`Connecting ADB to ${adbTarget}...`);
+    console.log(`Connecting ADB to ${this.adbTarget}...`);
     let adbConnected = false;
     for (let i = 0; i < 10; i++) {
       try {
-        await this.execAsync(`adb connect ${adbTarget}`);
+        await this.execAsync(`adb connect ${this.adbTarget}`);
         adbConnected = true;
         break;
       } catch {
@@ -64,7 +87,7 @@ class RedroidRunner {
     for (let i = 0; i < 30; i++) {
       try {
         const result = await this.execAsync(
-          `adb -s ${adbTarget} shell getprop sys.boot_completed`
+          `adb -s ${this.adbTarget} shell getprop sys.boot_completed`
         );
         if (result === "1") {
           booted = true;
@@ -82,7 +105,7 @@ class RedroidRunner {
     // Kill any existing scrcpy processes (from previous worker runs)
     console.log("Killing any existing scrcpy processes...");
     try {
-      await this.execAsync(`adb -s ${adbTarget} shell pkill -f scrcpy`);
+      await this.execAsync(`adb -s ${this.adbTarget} shell pkill -f scrcpy`);
     } catch {
       // Ignore error if no process found
     }
@@ -91,7 +114,7 @@ class RedroidRunner {
     // Remove old port forward
     console.log("Removing old port forwards...");
     try {
-      await this.execAsync(`adb -s ${adbTarget} forward --remove-all`);
+      await this.execAsync(`adb -s ${this.adbTarget} forward --remove-all`);
     } catch {
       // Ignore error
     }
@@ -99,7 +122,7 @@ class RedroidRunner {
     // Push scrcpy server
     console.log("Pushing scrcpy server...");
     await this.execAsync(
-      `adb -s ${adbTarget} push ./assets/scrcpy/scrcpy-server /data/local/tmp/scrcpy-server.jar`
+      `adb -s ${this.adbTarget} push ./assets/scrcpy/scrcpy-server /data/local/tmp/scrcpy-server.jar`
     );
 
     // Get scrcpy version
@@ -109,7 +132,7 @@ class RedroidRunner {
     // Setup port forward for scrcpy abstract socket
     console.log("Setting up port forward...");
     await this.execAsync(
-      `adb -s ${adbTarget} forward tcp:${scrcpy_config.port} localabstract:scrcpy`
+      `adb -s ${this.adbTarget} forward tcp:${scrcpy_config.port} localabstract:scrcpy`
     );
 
     // Start scrcpy server
@@ -118,7 +141,7 @@ class RedroidRunner {
       "adb",
       [
         "-s",
-        adbTarget,
+        this.adbTarget,
         "shell",
         `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${height} video_codec_options=i-frame-interval:int=2`,
       ],
@@ -143,6 +166,49 @@ class RedroidRunner {
     this.running = true;
     console.log("RedroidRunner started successfully!");
     console.log(`scrcpy port: ${scrcpy_config.port} (connect twice: video first, then control)`);
+
+    // Setup kiosk mode AFTER scrcpy is running
+    await this.setupKioskMode(packageName);
+  }
+
+  /**
+   * Setup kiosk mode - launch game in fullscreen immersive mode
+   */
+  private async setupKioskMode(packageName: string): Promise<void> {
+    console.log(`Setting up kiosk mode for ${packageName}...`);
+
+    // Hide nav bar and status bar with immersive mode
+    await this.execAsyncSafe(
+      `adb -s ${this.adbTarget} shell settings put global policy_control immersive.full=*`
+    );
+
+    // Get the launcher activity for this package
+    console.log(`Finding launcher activity for ${packageName}...`);
+    const activityResult = await this.execAsyncSafe(
+      `adb -s ${this.adbTarget} shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${packageName}`
+    );
+    console.log(`Activity resolve: ${activityResult.stdout}`);
+
+    // Parse the activity (last line of output like "com.package/com.package.Activity")
+    const lines = activityResult.stdout.split('\n').filter(l => l.trim());
+    const activity = lines[lines.length - 1]?.trim();
+
+    if (activity && activity.includes('/')) {
+      console.log(`Launching with am start: ${activity}`);
+      const result = await this.execAsyncSafe(
+        `adb -s ${this.adbTarget} shell am start -n ${activity}`
+      );
+      console.log(`Launch result: ${result.stdout}`);
+      if (result.stderr) console.log(`Launch stderr: ${result.stderr}`);
+    } else {
+      // Fallback to monkey
+      console.log(`Fallback: launching with monkey...`);
+      await this.execAsyncSafe(
+        `adb -s ${this.adbTarget} shell monkey -p ${packageName} --pct-syskeys 0 -c android.intent.category.LAUNCHER 1`
+      );
+    }
+
+    console.log("Kiosk mode setup complete!");
   }
 
   getScrcpyPort(): number {
@@ -160,9 +226,6 @@ class RedroidRunner {
   async stop(): Promise<void> {
     if (!this.running) return;
 
-    const { host, port } = redroid_config;
-    const adbTarget = `${host}:${port}`;
-
     // Kill local process handle
     if (this.scrcpyProc) {
       this.scrcpyProc.kill();
@@ -172,17 +235,22 @@ class RedroidRunner {
     // Kill scrcpy on the device
     console.log("Killing scrcpy on device...");
     try {
-      await this.execAsync(`adb -s ${adbTarget} shell pkill -f scrcpy`);
+      await this.execAsync(`adb -s ${this.adbTarget} shell pkill -f scrcpy`);
     } catch {
       // Ignore error if no process found
     }
 
     // Remove port forwards
     try {
-      await this.execAsync(`adb -s ${adbTarget} forward --remove-all`);
+      await this.execAsync(`adb -s ${this.adbTarget} forward --remove-all`);
     } catch {
       // Ignore error
     }
+
+    // Reset immersive mode
+    await this.execAsyncSafe(
+      `adb -s ${this.adbTarget} shell settings put global policy_control null`
+    );
 
     this.running = false;
     console.log("RedroidRunner stopped");
