@@ -112,6 +112,14 @@ sudo docker pull "${REDROID_IMAGE}:${REDROID_TAG}"
 echo "Setting up redroid-base volume..."
 GOLDEN_IMAGE="$SCRIPT_DIR/redroid-base.tar.gz"
 
+# Download golden image if not present locally
+GOLDEN_IMAGE_URL="${GOLDEN_IMAGE_URL:-https://pub-f7ede192a4e14fcf9bdb7f7126d9f2b4.r2.dev/redroid-bases/redroid-base.tar.gz}"
+
+if [ ! -f "$GOLDEN_IMAGE" ] && [ -n "$GOLDEN_IMAGE_URL" ]; then
+    echo "Downloading golden image from $GOLDEN_IMAGE_URL..."
+    wget -O "$GOLDEN_IMAGE" "$GOLDEN_IMAGE_URL"
+fi
+
 if [ -f "$GOLDEN_IMAGE" ]; then
     # Create the volume if it doesn't exist
     if ! sudo docker volume inspect redroid-base &>/dev/null; then
@@ -129,7 +137,7 @@ if [ -f "$GOLDEN_IMAGE" ]; then
     echo "✓ Golden image imported successfully"
 else
     echo "⚠ Golden image not found at $GOLDEN_IMAGE"
-    echo "  You'll need to set up the redroid-base volume manually."
+    echo "  Set GOLDEN_IMAGE_URL in .env or provide the file manually."
 fi
 
 # Enable and start Docker service
