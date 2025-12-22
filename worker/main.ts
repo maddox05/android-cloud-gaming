@@ -217,7 +217,7 @@ async function initializeSession(): Promise<void> {
 }
 
 async function connectToSignalServer() {
-  signalSocket = new WebSocket(SIGNAL_SERVER_URL);
+  signalSocket = new WebSocket(`ws://${SIGNAL_SERVER_URL}`);
 
   signalSocket.on("open", () => {
     console.log("Connected to signal server");
