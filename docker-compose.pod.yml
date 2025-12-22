@@ -2,7 +2,6 @@ services:
   redroid:
     image: ${REDROID_IMAGE}:${REDROID_TAG}
     privileged: true
-    ports: [5555]
     volumes:
       - redroid-base:/data-base:ro   # Shared golden image (read-only)
     tmpfs:
