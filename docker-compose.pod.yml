@@ -2,7 +2,7 @@ services:
   redroid:
     image: ${REDROID_IMAGE}:${REDROID_TAG}
     privileged: true
-    stop_grace_period: 2s   # Don't wait long - tmpfs discards data anyway
+    stop_grace_period: 1s   # Don't wait long - tmpfs discards data anyway
     volumes:
       - redroid-base:/data-base:ro   # Shared golden image (read-only)
     tmpfs:

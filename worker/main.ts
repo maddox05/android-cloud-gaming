@@ -33,9 +33,20 @@ let videoChannel: DataChannel | null = null;
 let inputChannel: DataChannel | null = null;
 
 async function createPeerConnection(): Promise<PC> {
-  const pc = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-  });
+  const iceServers: RTCIceServer[] = [
+    { urls: "stun:stun.l.google.com:19302" },
+  ];
+
+  // Add TURN server if configured (recommended for reliable connectivity)
+  if (process.env.TURN_URL) {
+    iceServers.push({
+      urls: process.env.TURN_URL,
+      username: process.env.TURN_USERNAME || "",
+      credential: process.env.TURN_CREDENTIAL || "",
+    });
+  }
+
+  const pc = new RTCPeerConnection({ iceServers });
 
   // Create data channel for video (sending H.264)
   videoChannel = pc.createDataChannel("video", {
