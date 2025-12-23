@@ -1,43 +1,48 @@
+# multiple of these will run at the same time, so it needs to ensure that it can be run like this
 services:
   redroid:
     image: ${REDROID_IMAGE}:${REDROID_TAG}
     privileged: true
-    stop_grace_period: 1s   # Don't wait long - tmpfs discards data anyway
+    stop_grace_period: 0s
     volumes:
-      - redroid-base:/data-base:ro   # Shared golden image (read-only)
+      - redroid-base:/data-base      # Shared base data partition
     tmpfs:
-      - /data-diff:size=1G           # Ephemeral diff in RAM (auto-deleted on stop)
+      - /data-diff:size=1G,mode=1777  # RAM-backed, auto-deleted on stop
     command:
       - androidboot.use_redroid_overlayfs=1
-      - androidboot.redroid_overlayfs_lower=/data-base
-      - androidboot.redroid_overlayfs_upper=/data-diff
       - androidboot.redroid_width=${REDROID_WIDTH}
       - androidboot.redroid_height=${REDROID_HEIGHT}
       - androidboot.redroid_dpi=${REDROID_DPI}
       - androidboot.redroid_fps=${REDROID_FPS}
+      - ro.secure=0
     networks:
       - internal   # Only on internal network (isolated per pod)
 
   worker:
     build: ./worker
-    restart: always
+    restart: always # worker exits with proccess.exit(), that means docker restarts it, which clears state. this allows for fresh state after crash or for a new user
+    stop_grace_period: 0s
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       SIGNAL_URL: ${SIGNAL_URL}
       REDROID_HOST: redroid
       REDROID_WIDTH: ${REDROID_WIDTH}
       REDROID_HEIGHT: ${REDROID_HEIGHT}
+      POD_NAME: ${COMPOSE_PROJECT_NAME}
     depends_on:
       - redroid
     networks:
-      - cloud-gaming   # For signal server communication
       - internal       # For redroid communication (isolated per pod)
+      - cloud-gaming   # For signal server communication
 
 volumes:
   redroid-base:
     external: true
-    name: redroid-base   # Shared golden image (create once, use by all pods)
+    name: redroid-base   # Shared base data partition (create once, use by all pods)
 
 networks:
-  cloud-gaming:
-    external: true    # Shared across all pods (for signal server)
   internal:           # Created per project (pod1_internal, pod2_internal) - isolated
+  cloud-gaming:
+    external: true
+    name: cloud-gaming   # Shared network for signal server communication

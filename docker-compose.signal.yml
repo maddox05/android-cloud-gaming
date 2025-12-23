@@ -12,4 +12,4 @@ services:
 
 networks:
   cloud-gaming:
-    external: true
+    name: cloud-gaming

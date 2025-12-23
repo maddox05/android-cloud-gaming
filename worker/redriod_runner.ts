@@ -1,5 +1,11 @@
-import { spawn, exec } from "child_process";
+import { spawn, exec, execSync } from "child_process";
 import { redroid_config, scrcpy_config } from "./config.js";
+
+const POD_NAME = process.env.POD_NAME;
+if (!POD_NAME) {
+  console.error("POD_NAME environment variable is required");
+  process.exit(1);
+}
 
 class RedroidRunner {
   private static instance: RedroidRunner;
@@ -223,37 +229,19 @@ class RedroidRunner {
     return redroid_config.height;
   }
 
-  async stop(): Promise<void> {
-    if (!this.running) return;
-
-    // Kill local process handle
-    if (this.scrcpyProc) {
-      this.scrcpyProc.kill();
-      this.scrcpyProc = null;
-    }
-
-    // Kill scrcpy on the device
-    console.log("Killing scrcpy on device...");
+  /**
+   * Restart the redroid container via Docker.
+   * Used to get a fresh state when worker restarts.
+   */
+  restartContainer(): void {
+    const containerName = `${POD_NAME}-redroid-1`;
+    console.log(`Restarting redroid container: ${containerName}`);
     try {
-      await this.execAsync(`adb -s ${this.adbTarget} shell pkill -f scrcpy`);
-    } catch {
-      // Ignore error if no process found
+      execSync(`docker restart ${containerName}`, { stdio: "inherit" });
+      this.running = false; // Reset state since container is fresh
+    } catch (e) {
+      console.error("Failed to restart redroid container:", e);
     }
-
-    // Remove port forwards
-    try {
-      await this.execAsync(`adb -s ${this.adbTarget} forward --remove-all`);
-    } catch {
-      // Ignore error
-    }
-
-    // Reset immersive mode
-    await this.execAsyncSafe(
-      `adb -s ${this.adbTarget} shell settings put global policy_control null`
-    );
-
-    this.running = false;
-    console.log("RedroidRunner stopped");
   }
 }
 
