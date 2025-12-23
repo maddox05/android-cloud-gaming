@@ -105,10 +105,11 @@ export async function checkSubscription(userId: string, email?: string): Promise
 
     // Method 3: Find customer by email and check subscriptions
     const { data: customers, error: custError } = await client
-      .schema("stripe")
-      .from("customers")
-      .select("id")
-      .eq("email", email);
+  .schema("stripe")
+  .from("customers")
+  .select("id")
+  .ilike("email", email); // todo change later
+
 
     if (custError) {
       console.error("Customer lookup error:", custError.message);
