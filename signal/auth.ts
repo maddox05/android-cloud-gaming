@@ -108,7 +108,7 @@ export async function checkSubscription(userId: string, email?: string): Promise
   .schema("stripe")
   .from("customers")
   .select("id")
-  .ilike("email", email); // todo change later
+  .ilike("email", email); //todo change to be more robust, as this could cuase issues
 
 
     if (custError) {
