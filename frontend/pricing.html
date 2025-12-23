@@ -6,7 +6,6 @@
   <title>MaddoxCloud | Pricing</title>
   <link rel="icon" type="image/png" href="imgs/favicon.png">
   <link rel="stylesheet" href="css/styles.css">
-  <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
 </head>
 <body>
   <!-- Header -->
@@ -44,7 +43,75 @@
     </div>
 
     <div class="pricing-container" id="pricing-container">
-      <!-- Stripe pricing table or login prompt will be rendered here -->
+      <div class="pricing-cards">
+        <!-- Monthly Plan -->
+        <div class="pricing-card">
+          <div class="pricing-card-header">
+            <span class="pricing-badge">Early Access</span>
+            <h2 class="pricing-plan-name">Monthly</h2>
+            <div class="pricing-price">
+              <span class="pricing-amount">$30</span>
+              <span class="pricing-period">/month</span>
+            </div>
+          </div>
+          <ul class="pricing-perks">
+            <li>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Early Server Access
+            </li>
+            <li>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Priority Queue (0 min wait)
+            </li>
+            <li>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Proxy Links Made Weekly
+            </li>
+            <li>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Early Access Perks (Discord Badges, Discounts, Events and more!)
+            </li>
+          </ul>
+          <a href="https://buy.stripe.com/4gMeVdfY5c553jheYeew800" class="pricing-cta">Get Started</a>
+        </div>
+
+        <!-- Lifetime Plan -->
+        <div class="pricing-card pricing-card-featured">
+          <div class="pricing-card-header">
+            <span class="pricing-badge pricing-badge-featured">Best Value</span>
+            <h2 class="pricing-plan-name">Lifetime</h2>
+            <div class="pricing-price">
+              <span class="pricing-amount">$200</span>
+              <span class="pricing-period">one-time</span>
+            </div>
+            <div class="pricing-urgency">Only 19 left!</div>
+          </div>
+          <ul class="pricing-perks">
+            <li>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Everything in Monthly
+            </li>
+            
+            <li>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Lifetime access forever
+            </li>
+          </ul>
+          <a href="https://buy.stripe.com/3cI8wP9zH7OP4nlcQ6ew801" class="pricing-cta pricing-cta-featured">Get Lifetime Access</a>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -53,45 +120,60 @@
   <script src="config.js"></script>
   <script src="js/auth.js"></script>
   <script>
-    // Render Stripe pricing table with user info
-    async function renderPricingTable() {
-      const container = document.getElementById('pricing-container');
-      container.innerHTML = '';
+    const MONTHLY_URL = 'https://buy.stripe.com/4gMeVdfY5c553jheYeew800';
+    const LIFETIME_URL = 'https://buy.stripe.com/3cI8wP9zH7OP4nlcQ6ew801';
 
-      // Get current user
-      const user = await window.getCurrentUser();
+    // Update checkout links with user info
+    function updateCheckoutLinks(user) {
+      const links = document.querySelectorAll('.pricing-cta');
 
       if (!user) {
-        // Show login prompt if not logged in
-        container.innerHTML = `
-          <div class="login-prompt">
-            <h2>Sign in to view pricing</h2>
-            <p>Please sign in to see our subscription plans.</p>
-            <button class="login-btn" onclick="signInWithGoogle()">Sign In with Google</button>
-          </div>
-        `;
+        // Reset to base URLs and intercept clicks
+        links.forEach((link, index) => {
+          link.href = index === 0 ? MONTHLY_URL : LIFETIME_URL;
+          link.onclick = (e) => {
+            e.preventDefault();
+            signInWithGoogle();
+          };
+        });
         return;
       }
 
-      // Create pricing table with user info
-      const pricingTable = document.createElement('stripe-pricing-table');
-      pricingTable.setAttribute('pricing-table-id', 'prctbl_1ShC2bIo5niLkgKCBTAs0yzK');
-      pricingTable.setAttribute('publishable-key', 'pk_live_51ShAGcIo5niLkgKCCwvIhzBqI2xLDdOZ3CxzDEwegRTHpfWzCwJkyTBc7cGNhlF9Tej0O5nmc7jQ2uJr2TJiOgSw00aACeMl1e');
+      // Add client_reference_id and prefilled_email to checkout URLs
+      links.forEach((link, index) => {
+        const baseUrl = index === 0 ? MONTHLY_URL : LIFETIME_URL;
+        const url = new URL(baseUrl);
+        url.searchParams.set('client_reference_id', user.id);
+        if (user.email) {
+          url.searchParams.set('prefilled_email', user.email);
+          url.searchParams.set('customer_email', user.email);
+                    url.searchParams.set('email', user.email);
 
-      // client-reference-id links the Stripe subscription to your Supabase user ID
-      pricingTable.setAttribute('client-reference-id', user.id);
-
-      // Pre-fill the customer's email
-      if (user.email) {
-        pricingTable.setAttribute('customer-email', user.email);
-      }
-
-      container.appendChild(pricingTable);
+        }
+        link.href = url.toString();
+        link.onclick = null; // Remove click interceptor
+        console.log('Updated checkout link:', link.href);
+      });
     }
 
-    // Wait for auth to initialize, then render pricing table
-    document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(renderPricingTable, 100);
+    // Wait for auth to be ready
+    document.addEventListener('DOMContentLoaded', async function() {
+      // Initial check after a delay for auth to initialize
+      setTimeout(async () => {
+        const user = await window.getCurrentUser();
+        updateCheckoutLinks(user);
+      }, 500);
+
+      // Also listen for auth state changes via polling
+      let lastUserId = null;
+      setInterval(async () => {
+        const user = await window.getCurrentUser();
+        const currentId = user?.id || null;
+        if (currentId !== lastUserId) {
+          lastUserId = currentId;
+          updateCheckoutLinks(user);
+        }
+      }, 1000);
     });
   </script>
 </body>

@@ -308,11 +308,9 @@ body {
 .app-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background: var(--bg-primary);
-  padding: 24px;
+  height: 100vh;
+  background: #000;
+  overflow: hidden;
 }
 
 .app-header {
@@ -320,8 +318,10 @@ body {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: 400px;
-  margin-bottom: 16px;
+  padding: 16px 24px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .app-header h1 {
@@ -348,13 +348,12 @@ body {
 }
 
 .status-bar {
-  margin-bottom: 12px;
-  padding: 10px 16px;
+  padding: 10px 24px;
   background: var(--bg-surface);
-  border-radius: var(--radius);
   font-size: 0.875rem;
   color: var(--text-secondary);
-  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .status-bar.connected {
@@ -373,13 +372,21 @@ body {
   position: relative;
   overflow: hidden;
   background: #000;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .stream-canvas {
   display: block;
   touch-action: none;
+  aspect-ratio: 9 / 16;
+  max-height: 100%;
   max-width: 100%;
-  height: auto;
+  width: auto;
+  height: 100%;
 }
 
 /* Loading Overlay */
@@ -547,6 +554,160 @@ body {
 .login-prompt .login-btn {
   padding: 12px 32px;
   font-size: 1rem;
+}
+
+/* Pricing Cards */
+.pricing-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.pricing-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pricing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.4);
+}
+
+.pricing-card-featured {
+  border-color: var(--accent);
+  position: relative;
+}
+
+.pricing-card-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.pricing-badge {
+  display: inline-block;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 6px 12px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+}
+
+.pricing-badge-featured {
+  background: var(--accent);
+  color: white;
+}
+
+.pricing-plan-name {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.pricing-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+
+.pricing-amount {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.pricing-period {
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.pricing-urgency {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  border-radius: var(--radius);
+  color: #ef4444;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.pricing-perks {
+  list-style: none;
+  flex: 1;
+  margin-bottom: 24px;
+}
+
+.pricing-perks li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.pricing-perks li:last-child {
+  border-bottom: none;
+}
+
+.pricing-perks li svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.pricing-cta {
+  display: block;
+  text-align: center;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  text-decoration: none;
+  padding: 14px 24px;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.pricing-cta:hover {
+  background: var(--border);
+}
+
+.pricing-cta-featured {
+  background: var(--accent);
+  color: white;
+}
+
+.pricing-cta-featured:hover {
+  background: var(--accent-hover);
+}
+
+@media (max-width: 640px) {
+  .pricing-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .pricing-card {
+    padding: 24px;
+  }
+
+  .pricing-amount {
+    font-size: 2.5rem;
+  }
 }
 
 /* Empty State */
