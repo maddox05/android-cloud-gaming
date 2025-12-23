@@ -19,7 +19,9 @@ if (!process.env.SIGNAL_URL) {
   console.error("SIGNAL_URL environment variable is required");
   process.exit(1);
 }
-const SIGNAL_SERVER_URL = `${process.env.SIGNAL_URL}?role=worker`;
+const SIGNAL_SERVER_URL = `wss://${process.env.SIGNAL_URL}?role=worker`;
+console.log(`Signal server URL: ${SIGNAL_SERVER_URL}`);
+
 
 const GAME = "com.supercell.clashroyale";
 const MAX_RECONNECT_DELAY = 30000;
@@ -217,7 +219,7 @@ async function initializeSession(): Promise<void> {
 }
 
 async function connectToSignalServer() {
-  signalSocket = new WebSocket(`ws://${SIGNAL_SERVER_URL}`);
+  signalSocket = new WebSocket(SIGNAL_SERVER_URL);
 
   signalSocket.on("open", () => {
     console.log("Connected to signal server");
@@ -348,3 +350,4 @@ main().catch((err) => {
   const errorMessage = err instanceof Error ? err.message : String(err);
   notifyCrashAndExit(errorMessage);
 });
+// todo whenever we proccess.exit make sure the redroid container also exits.
