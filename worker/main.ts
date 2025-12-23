@@ -19,7 +19,7 @@ if (!process.env.SIGNAL_URL) {
   console.error("SIGNAL_URL environment variable is required");
   process.exit(1);
 }
-const SIGNAL_SERVER_URL = `${process.env.SIGNAL_URL.includes("localhost") ? "wss" : "ws"}://${process.env.SIGNAL_URL}?role=worker`;
+const SIGNAL_SERVER_URL = `${process.env.SIGNAL_URL.includes("localhost") ? "ws" : "wss"}://${process.env.SIGNAL_URL}?role=worker`;
 console.log(`Signal server URL: ${SIGNAL_SERVER_URL}`);
 
 
