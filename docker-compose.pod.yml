@@ -30,6 +30,7 @@ services:
       REDROID_WIDTH: ${REDROID_WIDTH}
       REDROID_HEIGHT: ${REDROID_HEIGHT}
       POD_NAME: ${COMPOSE_PROJECT_NAME}
+      REDROID_VIDEO_BIT_RATE: ${REDROID_VIDEO_BIT_RATE}
     depends_on:
       - redroid
     networks:

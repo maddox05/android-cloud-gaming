@@ -68,7 +68,7 @@ class RedroidRunner {
       return;
     }
 
-    const { height } = redroid_config;
+    const { height,video_bit_rate } = redroid_config;
 
     // Connect adb (retry a few times in case redroid isn't ready yet)
     console.log(`Connecting ADB to ${this.adbTarget}...`);
@@ -149,7 +149,7 @@ class RedroidRunner {
         "-s",
         this.adbTarget,
         "shell",
-        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${height} video_codec_options=i-frame-interval:int=2`,
+        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${height} video_bit_rate=${video_bit_rate} video_codec_options=i-frame-interval:int=2`,
       ],
       { stdio: "pipe" }
     );
