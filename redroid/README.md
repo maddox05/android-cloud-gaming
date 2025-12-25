@@ -1,0 +1,1 @@
+system files dont include arm 32bit translation, only 64
