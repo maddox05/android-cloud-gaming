@@ -14,7 +14,7 @@ services:
       - androidboot.redroid_height=${REDROID_HEIGHT}
       - androidboot.redroid_dpi=${REDROID_DPI}
       - androidboot.redroid_fps=${REDROID_FPS}
-      - ro.secure=0
+      - ro.secure=0 # maybe remove this??
     networks:
       - internal # Only on internal network (isolated per pod)
 
