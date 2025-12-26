@@ -1,13 +1,13 @@
 # multiple of these will run at the same time, so it needs to ensure that it can be run like this
 services:
   redroid:
-    build: ./redroid
+    image: ${REDROID_IMAGE}:${REDROID_TAG}
     privileged: true
     stop_grace_period: 0s
     volumes:
-      - redroid-base:/data-base      # Shared base data partition
+      - redroid-base:/data-base # Shared base data partition
     tmpfs:
-      - /data-diff:size=1G,mode=1777  # RAM-backed, auto-deleted on stop
+      - /data-diff:size=1G,mode=1777 # RAM-backed, auto-deleted on stop
     command:
       - androidboot.use_redroid_overlayfs=1
       - androidboot.redroid_width=${REDROID_WIDTH}
@@ -15,12 +15,8 @@ services:
       - androidboot.redroid_dpi=${REDROID_DPI}
       - androidboot.redroid_fps=${REDROID_FPS}
       - ro.secure=0
-      - ro.dalvik.vm.native.bridge=libndk_translation.so
-      - ro.enable.native.bridge.exec=1
-      - persist.sys.nativebridge=1
-      - persist.sys.ndk_translation=1
     networks:
-      - internal   # Only on internal network (isolated per pod)
+      - internal # Only on internal network (isolated per pod)
 
   worker:
     build: ./worker
@@ -30,7 +26,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       SIGNAL_URL: ${SIGNAL_URL}
-      REDROID_HOST: redroidåç
+      REDROID_HOST: redroid
       REDROID_WIDTH: ${REDROID_WIDTH}
       REDROID_HEIGHT: ${REDROID_HEIGHT}
       POD_NAME: ${COMPOSE_PROJECT_NAME}
@@ -38,16 +34,16 @@ services:
     depends_on:
       - redroid
     networks:
-      - internal       # For redroid communication (isolated per pod)
-      - cloud-gaming   # For signal server communication
+      - internal # For redroid communication (isolated per pod)
+      - cloud-gaming # For signal server communication
 
 volumes:
   redroid-base:
     external: true
-    name: redroid-base   # Shared base data partition (create once, use by all pods)
+    name: redroid-base # Shared base data partition (create once, use by all pods)
 
 networks:
-  internal:           # Created per project (pod1_internal, pod2_internal) - isolated
+  internal: # Created per project (pod1_internal, pod2_internal) - isolated
   cloud-gaming:
     external: true
-    name: cloud-gaming   # Shared network for signal server communication
+    name: cloud-gaming # Shared network for signal server communication
