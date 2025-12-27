@@ -1,6 +1,5 @@
 import { WebSocketServer, WebSocket } from "ws";
-import { createServer } from "http";
-import type { SignalMessage } from "../shared/types.js";
+import { ERROR_CODE, MSG, type SignalMessage } from "../shared/types.js";
 import type { Worker, Client } from "./types.js";
 import { verifyToken, checkSubscription } from "./auth.js";
 import {
@@ -8,17 +7,17 @@ import {
   registerWorker,
   getWorker,
   removeWorker,
-  findAvailableWorker,
+  findAvailableWorkerWithGame,
   assignWorkerToClient,
   updateWorkerPing,
   sendStartToWorker,
   sendAnswerToWorker,
   sendIceCandidateToWorker,
   sendClientDisconnectedToWorker,
-  sendClientConnectedToWorker,
   sendPingToWorker,
   sendShutdownToWorker,
   getAllWorkers,
+  sendClientGameToWorker,
 } from "./workers.js";
 import {
   createClient,
@@ -35,6 +34,7 @@ import {
   sendShutdownToClient,
   getAllClients,
 } from "./clients.js";
+import { send } from "process";
 
 // Verify required environment variables
 const requiredEnvVars = ["SIGNAL_PORT", "SUPABASE_URL", "SUPABASE_SERVICE_KEY"];
@@ -96,7 +96,7 @@ wss.on("connection", (ws, req) => {
         ws.send(JSON.stringify({
           type: "error",
           message: "Active subscription required. Please subscribe to play.",
-          code: "NO_SUBSCRIPTION"
+          code: ERROR_CODE.NO_SUBSCRIPTION,
         }));
         ws.close();
         return;
@@ -135,15 +135,15 @@ function handleWorkerConnection(ws: WebSocket): void {
 
 function handleWorkerMessage(worker: Worker, msg: SignalMessage): void {
   switch (msg.type) {
-    case "register":
+    case MSG.REGISTER:
       registerWorker(worker, msg);
       break;
 
-    case "pong":
+    case MSG.PONG:
       updateWorkerPing(worker);
       break;
 
-    case "offer":
+    case MSG.OFFER:
       // Forward offer to connected client
       if (worker.clientId) {
         const client = getClient(worker.clientId);
@@ -153,7 +153,7 @@ function handleWorkerMessage(worker: Worker, msg: SignalMessage): void {
       }
       break;
 
-    case "ice-candidate":
+    case MSG.ICE_CANDIDATE:
       // Forward ICE candidate to connected client
       if (worker.clientId) {
         const client = getClient(worker.clientId);
@@ -163,7 +163,7 @@ function handleWorkerMessage(worker: Worker, msg: SignalMessage): void {
       }
       break;
 
-    case "worker-crashed":
+    case MSG.WORKER_CRASHED:
       // Worker is crashing, notify connected client and clean up
       console.log(`Worker ${worker.id} crashed: ${msg.reason}`);
       if (worker.clientId) {
@@ -227,15 +227,20 @@ function handleClientMessage(client: Client, msg: SignalMessage): void {
   updateClientPing(client);
 
   switch (msg.type) {
-    case "start":
+    case MSG.CLIENT_GAME_SELECTED:
+      console.log(`Client ${client.id} selected game: ${msg.gameId}`);
+      client.game = msg.gameId;
+      break;
+    case MSG.START:
+    
       handleClientStart(client);
       break;
 
-    case "pong":
+    case MSG.PONG:
       // Already updated ping above
       break;
 
-    case "answer":
+    case MSG.ANSWER:
       // Forward answer to connected worker
       if (client.workerId) {
         const worker = getWorker(client.workerId);
@@ -245,7 +250,7 @@ function handleClientMessage(client: Client, msg: SignalMessage): void {
       }
       break;
 
-    case "ice-candidate":
+    case MSG.ICE_CANDIDATE:
       // Forward ICE candidate to connected worker
       if (client.workerId) {
         const worker = getWorker(client.workerId);
@@ -255,15 +260,6 @@ function handleClientMessage(client: Client, msg: SignalMessage): void {
       }
       break;
 
-    case "connected":
-      // Client's WebRTC connection is established, notify worker
-      if (client.workerId) {
-        const worker = getWorker(client.workerId);
-        if (worker) {
-          sendClientConnectedToWorker(worker);
-        }
-      }
-      break;
 
     default:
       // Discard other messages but they still reset timeout
@@ -273,10 +269,14 @@ function handleClientMessage(client: Client, msg: SignalMessage): void {
 
 function handleClientStart(client: Client): void {
   // Find first available worker
-  const worker = findAvailableWorker();
+  if(!client.game){ 
+    sendErrorToClient(client, "No game selected. Please select a game before starting. (most likely a server error)");
+    return;
+  }
+  const worker = findAvailableWorkerWithGame(client.game);
 
   if (!worker) {
-    sendErrorToClient(client, "No workers available");
+    sendErrorToClient(client, "No workers available. Please try again later.");
     // Remove client and close connection - don't keep them waiting
     removeClient(client.id);
     client.ws.close();
@@ -289,6 +289,7 @@ function handleClientStart(client: Client): void {
 
   // Tell worker to start WebRTC connection
   sendStartToWorker(worker);
+  sendClientGameToWorker(worker, client.game);
 }
 
 function handleClientDisconnect(client: Client): void {

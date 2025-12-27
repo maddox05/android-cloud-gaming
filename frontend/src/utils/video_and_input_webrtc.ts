@@ -109,8 +109,7 @@ export async function connect(
   });
   unsubscribers.push(unsubDisconnect);
 
-  // Request to start streaming
-  websocketAPI.sendStart();
+
 
   // Return connection control
   return {

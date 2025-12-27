@@ -19,7 +19,9 @@ services:
       - internal # Only on internal network (isolated per pod)
 
   worker:
-    build: ./worker
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
     restart: always # worker exits with proccess.exit(), that means docker restarts it, which clears state. this allows for fresh state after crash or for a new user
     stop_grace_period: 0s
     volumes:

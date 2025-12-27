@@ -25,7 +25,7 @@ export function createClient(ws: WebSocket, userId: string): Client {
     ws,
     workerId: null,
     lastPing: Date.now(),
-    game: "com.supercell.clashroyale",
+    game: null,
     connectionState: "waiting",
   };
   clients.set(client.id, client);

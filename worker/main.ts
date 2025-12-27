@@ -13,6 +13,8 @@ import type {
   WorkerCrashedMessage,
 } from "../shared/types.js";
 
+import { GAMES_LIST, MSG } from "../shared/types.js";
+
 const { RTCPeerConnection, RTCSessionDescription } = wrtc;
 
 if (!process.env.SIGNAL_URL) {
@@ -22,10 +24,6 @@ if (!process.env.SIGNAL_URL) {
 const SIGNAL_SERVER_URL = `${process.env.SIGNAL_URL.includes("localhost") || process.env.SIGNAL_URL.includes("signal") ? "ws" : "wss"}://${process.env.SIGNAL_URL}?role=worker`;
 console.log(`Signal server URL: ${SIGNAL_SERVER_URL}`);
 
-
-const GAME = "com.supercell.clashroyale";
-const MAX_RECONNECT_DELAY = 30000;
-let reconnectDelay = 1000;
 
 type PC = InstanceType<typeof RTCPeerConnection>;
 type DataChannel = ReturnType<PC["createDataChannel"]>;
@@ -40,13 +38,13 @@ async function createPeerConnection(): Promise<PC> {
   ];
 
   // Add TURN server if configured (recommended for reliable connectivity)
-  if (process.env.TURN_URL) {
-    iceServers.push({
-      urls: process.env.TURN_URL,
-      username: process.env.TURN_USERNAME || "",
-      credential: process.env.TURN_CREDENTIAL || "",
-    });
-  }
+  // if (process.env.TURN_URL) {
+  //   iceServers.push({
+  //     urls: process.env.TURN_URL,
+  //     username: process.env.TURN_USERNAME || "",
+  //     credential: process.env.TURN_CREDENTIAL || "",
+  //   });
+  // }
 
   const pc = new RTCPeerConnection({ iceServers });
 
@@ -195,7 +193,7 @@ let sessionStarted = false;
  * Initialize the session - start redroid, connect video/input, create peer connection
  * Called when a client wants to connect (receives "start" message)
  */
-async function initializeSession(): Promise<void> {
+async function initializeSession(gameId:string): Promise<void> {
   if (sessionStarted) {
     console.log("Session already started");
     return;
@@ -205,8 +203,8 @@ async function initializeSession(): Promise<void> {
   console.log("Client wants to connect, initializing session...");
 
   // Start Redroid with the game package (kiosk mode)
-  console.log(`Starting Redroid with game: ${GAME}...`);
-  await redroidRunner.start(GAME);
+  console.log(`Starting Redroid with game: ${gameId}...`);
+  await redroidRunner.start(gameId);
 
   // Connect to scrcpy sockets in ORDER: video first, then control
   // scrcpy uses a single abstract socket - connections are served in order
@@ -223,30 +221,29 @@ async function connectToSignalServer() {
 
   signalSocket.on("open", () => {
     console.log("Connected to signal server");
-    // Reset reconnect delay on successful connection
-    reconnectDelay = 1000;
+
     // Register with signal server
-    const register: RegisterMessage = { type: "register", game: GAME };
+    const register: RegisterMessage = { type: "register", games: GAMES_LIST };
     signalSocket!.send(JSON.stringify(register));
-    console.log(`Registered with game: ${GAME}`);
+    console.log(`Registered with games: ${GAMES_LIST.join(", ")}`);
     console.log("Waiting for client to connect...");
   });
 
   signalSocket.on("message", async (data) => {
     const msg: SignalMessage = JSON.parse(data.toString());
-    if (msg.type !== "ping") {
+    if (msg.type !== MSG.PING) {
       console.log("Signal message:", msg.type);
     }
 
     switch (msg.type) {
-      case "ping": {
+      case MSG.PING: {
         // Respond with pong
-        const pong: PongMessage = { type: "pong" };
+        const pong: PongMessage = { type: MSG.PONG };
         signalSocket!.send(JSON.stringify(pong));
         break;
       }
 
-      case "start": {
+      case MSG.START: {
         // Client wants to connect - create peer connection and offer
         // (session initialization happens when WebRTC actually connects)
         console.log("Creating peer connection and offer...");
@@ -256,14 +253,14 @@ async function connectToSignalServer() {
         await peerConnection!.setLocalDescription(offer);
 
         const offerMsg: OfferMessage = {
-          type: "offer",
+          type: MSG.OFFER,
           sdp: offer.sdp!,
         };
         signalSocket!.send(JSON.stringify(offerMsg));
         break;
       }
 
-      case "answer":
+      case MSG.ANSWER:
         // Client sent answer
         if (peerConnection) {
           await peerConnection.setRemoteDescription(
@@ -273,23 +270,25 @@ async function connectToSignalServer() {
         }
         break;
 
-      case "ice-candidate":
+      case MSG.ICE_CANDIDATE:
         // Client sent ICE candidate
         if (peerConnection && msg.candidate) {
           await peerConnection.addIceCandidate(msg.candidate);
         }
         break;
 
-      case "client-disconnected":
+      case MSG.CLIENT_DISCONNECTED:
         console.log("Client disconnected, restarting worker...");
         restart();
         break;
 
-      case "client-connected":
+
+
+      case MSG.CLIENT_GAME_SELECTED:
         // Client's WebRTC is connected - NOW initialize the session
-        console.log("Client WebRTC connected, initializing session...");
+        console.log("Client choose game, initializing session...");
         try {
-          await initializeSession();
+          await initializeSession(msg.gameId);
 
           // inputHandler.resetVideo();
         } catch (err) {
@@ -298,7 +297,7 @@ async function connectToSignalServer() {
         }
         break;
 
-      case "shutdown":
+      case MSG.SHUTDOWN:
         console.log(`Shutdown requested: ${msg.reason}`);
         cleanup();
         process.exit(0);
@@ -317,7 +316,6 @@ async function connectToSignalServer() {
 
 async function main() {
   console.log("Starting Worker...");
-  console.log(`Game: ${GAME}`);
 
   // Restart redroid on worker startup to ensure fresh state
   redroidRunner.restartContainer();
@@ -329,7 +327,6 @@ async function main() {
 
   console.log("Worker ready and waiting for client!");
   isRestarting = false;
-  reconnectDelay = 1000;
 }
 
 main().catch((err) => {

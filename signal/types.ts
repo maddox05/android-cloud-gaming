@@ -9,7 +9,7 @@ export interface Worker {
   status: WorkerStatus;
   clientId: string | null;
   lastPing: number;
-  game: string;
+  games: string[];
 }
 
 export interface Client {
@@ -18,6 +18,6 @@ export interface Client {
   ws: WebSocket;
   workerId: string | null;
   lastPing: number;
-  game: string;
+  game: string | null;
   connectionState: ClientConnectionState;
 }

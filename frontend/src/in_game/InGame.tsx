@@ -127,6 +127,8 @@ export default function InGame() {
           }
           if (websocketAPI.isConnected()) {
             setStatus(CONNECTION_STATUS.CONNECTED);
+            websocketAPI.sendChosenGame(appId); 
+            websocketAPI.sendStart(); // send start command needs to be after chosen game
             setStatusMessage("Streaming");
             if (intervalRef.current) clearInterval(intervalRef.current);
           }

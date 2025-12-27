@@ -160,6 +160,10 @@ class WebSocketAPI {
   }
 
   // Public API: Send messages
+  sendChosenGame(gameId: string): void {
+    this.send({ type: MSG.CLIENT_GAME_SELECTED, gameId });
+  }
+
   sendStart(): void {
     this.send({ type: MSG.START });
   }

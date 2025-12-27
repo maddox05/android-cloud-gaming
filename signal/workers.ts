@@ -6,10 +6,10 @@ import type {
   PingMessage,
   ShutdownMessage,
   ClientDisconnectedMessage,
-  ClientConnectedMessage,
   StartMessage,
   AnswerMessage,
   IceCandidateMessage,
+  ClientGameSelectedMessage,
 } from "../shared/types.js";
 
 const workers = new Map<string, Worker>();
@@ -27,15 +27,15 @@ export function createWorker(ws: WebSocket): Worker {
     status: "available",
     clientId: null,
     lastPing: Date.now(),
-    game: "",
+    games: [],
   };
   return worker;
 }
 
 export function registerWorker(worker: Worker, msg: RegisterMessage): void {
-  worker.game = msg.game;
+  worker.games = msg.games;
   workers.set(worker.id, worker);
-  console.log(`Worker ${worker.id} registered with game: ${msg.game}`);
+  console.log(`Worker ${worker.id} registered with games: ${msg.games}`);
 }
 
 export function getWorker(id: string): Worker | undefined {
@@ -51,12 +51,17 @@ export function removeWorker(id: string): Worker | undefined {
   return worker;
 }
 
-export function findAvailableWorker(): Worker | undefined {
+export function findAvailableWorkerWithGame(game:string): Worker | undefined {
+  if(!game){
+    console.log("No game selected by client");
+    return undefined;
+  }
   for (const worker of workers.values()) {
-    if (worker.status === "available") {
+    if (worker.status === "available" && worker.games.includes(game)) {
       return worker;
     }
   }
+  console.log(`No available worker found for game: ${game}`);
   return undefined;
 }
 
@@ -97,6 +102,11 @@ export function sendAnswerToWorker(worker: Worker, sdp: string): void {
   sendToWorker(worker, answer);
 }
 
+export function sendClientGameToWorker(worker: Worker, gameId: string): void {
+  const msg: ClientGameSelectedMessage = { type: "client-game-selected", gameId };
+  sendToWorker(worker, msg);
+}
+
 export function sendIceCandidateToWorker(
   worker: Worker,
   candidate: RTCIceCandidateInit | null
@@ -110,10 +120,7 @@ export function sendClientDisconnectedToWorker(worker: Worker): void {
   sendToWorker(worker, msg);
 }
 
-export function sendClientConnectedToWorker(worker: Worker): void {
-  const msg: ClientConnectedMessage = { type: "client-connected" };
-  sendToWorker(worker, msg);
-}
+
 
 export function sendShutdownToWorker(worker: Worker, reason: string): void {
   const shutdown: ShutdownMessage = { type: "shutdown", reason };

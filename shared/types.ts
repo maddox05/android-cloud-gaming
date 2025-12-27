@@ -5,9 +5,13 @@
 // Message Type Constants
 // ============================================
 
+export const GAMES_LIST = [
+  "com.supercell.clashroyale",
+]
+
 export const MSG = {
   // Signal messages
-  START: "start",
+  START: "start", // starts client and worker connection process (they start talking webrtc shit) info has been exchanged through singaling, and we now tell signal server hey we want to talk to each other now
   OFFER: "offer",
   ANSWER: "answer",
   ICE_CANDIDATE: "ice-candidate",
@@ -20,10 +24,10 @@ export const MSG = {
   WORKER_DISCONNECTED: "worker-disconnected",
   WORKER_CRASHED: "worker-crashed",
   CONNECTED: "connected",
-  CLIENT_CONNECTED: "client-connected",
   // Input messages
   DRAG: "drag",
   CLICK: "click",
+  CLIENT_GAME_SELECTED: "client-game-selected",
 } as const;
 
 // ============================================
@@ -81,7 +85,7 @@ export interface ClientDisconnectedMessage {
 /** Worker registers with signal server */
 export interface RegisterMessage {
   type: typeof MSG.REGISTER;
-  game: string;
+  games: string[];
 }
 
 /** Ping message from signal server */
@@ -116,9 +120,12 @@ export interface ConnectedMessage {
   type: typeof MSG.CONNECTED;
 }
 
-/** Signal server notifies worker that client WebRTC is connected */
-export interface ClientConnectedMessage {
-  type: typeof MSG.CLIENT_CONNECTED;
+
+
+/** Client notifies signal server that it has selected a game */
+export interface ClientGameSelectedMessage {
+  type: typeof MSG.CLIENT_GAME_SELECTED;
+  gameId: string;
 }
 
 /** Union of all signal messages */
@@ -136,7 +143,7 @@ export type SignalMessage =
   | WorkerDisconnectedMessage
   | WorkerCrashedMessage
   | ConnectedMessage
-  | ClientConnectedMessage;
+  | ClientGameSelectedMessage;
 
 /** Signal message types for type guards */
 export type SignalMessageType = SignalMessage["type"];
@@ -196,7 +203,7 @@ export function isSignalMessage(msg: unknown): msg is SignalMessage {
     type === MSG.WORKER_DISCONNECTED ||
     type === MSG.WORKER_CRASHED ||
     type === MSG.CONNECTED ||
-    type === MSG.CLIENT_CONNECTED
+    type === MSG.CLIENT_GAME_SELECTED
   );
 }
 

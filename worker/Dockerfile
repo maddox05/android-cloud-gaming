@@ -15,14 +15,15 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy package files first for better caching
-COPY package*.json ./
+COPY worker/package*.json ./
 
 # Install dependencies
 RUN npm ci
 
 # Copy source files
-COPY *.ts ./
-COPY tsconfig.json ./
-COPY assets/ ./assets/
+COPY worker/*.ts ./
+COPY worker/tsconfig.json ./
+COPY worker/assets/ ./assets/
+COPY shared /shared
 
 CMD ["npx", "tsx", "main.ts"]

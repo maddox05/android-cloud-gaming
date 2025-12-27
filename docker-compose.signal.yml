@@ -1,6 +1,8 @@
 services:
   signal:
-    build: ./signal
+    build:
+      context: .
+      dockerfile: signal/Dockerfile
     ports:
       - "${SIGNAL_PORT}:${SIGNAL_PORT}"
     environment:
