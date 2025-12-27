@@ -1,0 +1,88 @@
+/* Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Tilt+Warp&family=Roboto:wght@400;500;600;700&display=swap');
+
+/* CSS Variables - Warm Charcoal Theme */
+:root {
+  --bg-primary: #1C1917;
+  --bg-surface: #292524;
+  --bg-elevated: #3a3633;
+  --border: #44403C;
+  --accent: #F97316;
+  --accent-hover: #ea580c;
+  --text-primary: #E7E5E4;
+  --text-secondary: #A8A29E;
+  --text-muted: #78716C;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+/* Reset */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Base */
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* Main Content - Shared Layout Container */
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+/* Loading Overlay - Shared Utility (used by Home and InGame) */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 25, 23, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.loading-overlay.hidden {
+  display: none;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-overlay p {
+  color: var(--text-secondary);
+  margin-top: 16px;
+  font-size: 0.9375rem;
+}
+
+/* Responsive - Main Content */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 32px 16px;
+  }
+}

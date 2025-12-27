@@ -1,29 +1,26 @@
-/**
- * H.264 Decoder Module
- * Handles NAL unit parsing and video decoding using WebCodecs API
- */
+import { NAL_TYPE } from "../types";
 
-class H264Decoder {
-  constructor(canvas) {
+export class H264Decoder {
+  private canvas: HTMLCanvasElement;
+  private ctx: CanvasRenderingContext2D;
+  private decoder: VideoDecoder | null = null;
+  private buffer: Uint8Array = new Uint8Array(0);
+  private sps: Uint8Array | null = null;
+  private pps: Uint8Array | null = null;
+  private timestamp: number = 0;
+  private configured: boolean = false;
+  private videoWidth: number = 0;
+  private videoHeight: number = 0;
+
+  onDimensionsChanged: ((width: number, height: number) => void) | null = null;
+
+  constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
-    this.decoder = null;
-    this.buffer = new Uint8Array(0);
-    this.sps = null;
-    this.pps = null;
-    this.timestamp = 0;
-    this.configured = false;
-    this.videoWidth = 0;
-    this.videoHeight = 0;
-    this.onDimensionsChanged = null;
+    this.ctx = canvas.getContext("2d")!;
   }
 
-  /**
-   * Append incoming data to buffer and process
-   */
-  appendData(data) {
+  appendData(data: ArrayBuffer): void {
     const incoming = new Uint8Array(data);
-    console.log('Received chunk:', incoming.length, 'bytes');
 
     const newBuffer = new Uint8Array(this.buffer.length + incoming.length);
     newBuffer.set(this.buffer, 0);
@@ -33,18 +30,18 @@ class H264Decoder {
     this.processBuffer();
   }
 
-  /**
-   * Find NAL units in buffer and process them
-   */
-  processBuffer() {
-    const nalUnits = [];
+  private processBuffer(): void {
+    const nalUnits: Uint8Array[] = [];
     let lastStart = -1;
 
-    // Find all NAL start codes
     for (let i = 0; i < this.buffer.length - 4; i++) {
       // Check for 4-byte start code (00 00 00 01)
-      if (this.buffer[i] === 0 && this.buffer[i + 1] === 0 &&
-          this.buffer[i + 2] === 0 && this.buffer[i + 3] === 1) {
+      if (
+        this.buffer[i] === 0 &&
+        this.buffer[i + 1] === 0 &&
+        this.buffer[i + 2] === 0 &&
+        this.buffer[i + 3] === 1
+      ) {
         if (lastStart !== -1) {
           nalUnits.push(this.buffer.slice(lastStart, i));
         }
@@ -52,7 +49,11 @@ class H264Decoder {
         i += 3;
       }
       // Check for 3-byte start code (00 00 01)
-      else if (this.buffer[i] === 0 && this.buffer[i + 1] === 0 && this.buffer[i + 2] === 1) {
+      else if (
+        this.buffer[i] === 0 &&
+        this.buffer[i + 1] === 0 &&
+        this.buffer[i + 2] === 1
+      ) {
         if (lastStart !== -1) {
           nalUnits.push(this.buffer.slice(lastStart, i));
         }
@@ -61,92 +62,75 @@ class H264Decoder {
       }
     }
 
-    // Keep incomplete data in buffer (from last start code to end)
+    // Keep incomplete data in buffer
     if (lastStart !== -1 && nalUnits.length > 0) {
       this.buffer = this.buffer.slice(lastStart);
     } else if (lastStart === -1) {
-      // No start codes found, clear buffer if it's getting too large
+      // No start codes found, clear buffer if too large
       if (this.buffer.length > 1024 * 1024) {
-        console.warn('Buffer overflow, clearing');
+        console.warn("Buffer overflow, clearing");
         this.buffer = new Uint8Array(0);
       }
     }
 
-    // Process found NAL units
     for (const nal of nalUnits) {
       this.processNAL(nal);
     }
   }
 
-  /**
-   * Process a single NAL unit
-   */
-  processNAL(nal) {
+  private processNAL(nal: Uint8Array): void {
     if (nal.length < 5) return;
 
-    // Get NAL type (5 bits after start code)
-    const startCodeLen = (nal[2] === 1) ? 3 : 4;
-    const nalType = nal[startCodeLen] & 0x1F;
+    const startCodeLen = nal[2] === 1 ? 3 : 4;
+    const nalType = nal[startCodeLen] & 0x1f;
 
     switch (nalType) {
-      case 7: // SPS
+      case NAL_TYPE.SPS:
         this.sps = nal;
-        console.log('Got SPS, length:', nal.length);
         try {
           const dims = this.parseDimensionsFromSPS(nal);
           this.videoWidth = dims.width;
           this.videoHeight = dims.height;
-          console.log('Video dimensions:', dims.width, 'x', dims.height);
-          if (this.onDimensionsChanged) {
-            this.onDimensionsChanged(dims.width, dims.height);
-          }
+          console.log("Video dimensions:", dims.width, "x", dims.height);
+          this.onDimensionsChanged?.(dims.width, dims.height);
         } catch (e) {
-          console.error('Failed to parse SPS dimensions:', e);
+          console.error("Failed to parse SPS dimensions:", e);
         }
         this.tryConfigureDecoder();
         break;
 
-      case 8: // PPS
+      case NAL_TYPE.PPS:
         this.pps = nal;
-        console.log('Got PPS, length:', nal.length);
         this.tryConfigureDecoder();
         break;
 
-      case 5: // IDR (keyframe)
+      case NAL_TYPE.IDR:
         this.decodeFrame(nal, true);
         break;
 
-      case 1: // Non-IDR (P-frame)
+      case NAL_TYPE.NON_IDR:
         this.decodeFrame(nal, false);
         break;
     }
   }
 
-  /**
-   * Parse SPS to get codec string
-   */
-  parseCodecFromSPS(sps) {
-    const startCodeLen = (sps[2] === 1) ? 3 : 4;
+  private parseCodecFromSPS(sps: Uint8Array): string {
+    const startCodeLen = sps[2] === 1 ? 3 : 4;
     const profileIdc = sps[startCodeLen + 1];
     const constraints = sps[startCodeLen + 2];
     const levelIdc = sps[startCodeLen + 3];
 
-    function hex(n) {
-      return n.toString(16).padStart(2, '0').toUpperCase();
-    }
+    const hex = (n: number) => n.toString(16).padStart(2, "0").toUpperCase();
     return `avc1.${hex(profileIdc)}${hex(constraints)}${hex(levelIdc)}`;
   }
 
-  /**
-   * Parse SPS to get video dimensions
-   */
-  parseDimensionsFromSPS(sps) {
-    const startCodeLen = (sps[2] === 1) ? 3 : 4;
+  private parseDimensionsFromSPS(sps: Uint8Array): { width: number; height: number } {
+    const startCodeLen = sps[2] === 1 ? 3 : 4;
     const rbsp = this.removeEmulationPrevention(sps.slice(startCodeLen + 1));
 
     let bitPos = 0;
 
-    function readBits(n) {
+    const readBits = (n: number): number => {
       let val = 0;
       for (let i = 0; i < n; i++) {
         const byteIdx = Math.floor(bitPos / 8);
@@ -155,14 +139,14 @@ class H264Decoder {
         bitPos++;
       }
       return val;
-    }
+    };
 
-    function readUE() {
+    const readUE = (): number => {
       let zeros = 0;
       while (readBits(1) === 0) zeros++;
       if (zeros === 0) return 0;
       return (1 << zeros) - 1 + readBits(zeros);
-    }
+    };
 
     const profileIdc = readBits(8);
     readBits(8); // constraints
@@ -179,7 +163,8 @@ class H264Decoder {
         for (let i = 0; i < (chromaFormat !== 3 ? 8 : 12); i++) {
           if (readBits(1)) {
             const size = i < 6 ? 16 : 64;
-            let last = 8, next = 8;
+            let last = 8,
+              next = 8;
             for (let j = 0; j < size; j++) {
               if (next !== 0) next = (last + readUE()) & 255;
               last = next === 0 ? last : next;
@@ -209,7 +194,10 @@ class H264Decoder {
     if (!frameMbsOnly) readBits(1);
     readBits(1); // direct_8x8_inference
 
-    let cropLeft = 0, cropRight = 0, cropTop = 0, cropBottom = 0;
+    let cropLeft = 0,
+      cropRight = 0,
+      cropTop = 0,
+      cropBottom = 0;
     if (readBits(1)) {
       cropLeft = readUE();
       cropRight = readUE();
@@ -223,11 +211,8 @@ class H264Decoder {
     return { width, height };
   }
 
-  /**
-   * Remove emulation prevention bytes from NAL data
-   */
-  removeEmulationPrevention(data) {
-    const result = [];
+  private removeEmulationPrevention(data: Uint8Array): Uint8Array {
+    const result: number[] = [];
     for (let i = 0; i < data.length; i++) {
       if (i + 2 < data.length && data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 3) {
         result.push(0, 0);
@@ -239,14 +224,11 @@ class H264Decoder {
     return new Uint8Array(result);
   }
 
-  /**
-   * Configure decoder once we have SPS and PPS
-   */
-  tryConfigureDecoder() {
+  private tryConfigureDecoder(): void {
     if (!this.sps || !this.pps || this.configured) return;
 
     const codec = this.parseCodecFromSPS(this.sps);
-    console.log('Configuring decoder with codec:', codec);
+    console.log("Configuring decoder with codec:", codec);
 
     this.decoder = new VideoDecoder({
       output: (frame) => {
@@ -254,38 +236,35 @@ class H264Decoder {
         frame.close();
       },
       error: (e) => {
-        console.error('Decoder error:', e);
-      }
+        console.error("Decoder error:", e);
+      },
     });
 
     try {
       this.decoder.configure({
-        codec: codec,
+        codec,
         optimizeForLatency: true,
       });
       this.configured = true;
-      console.log('Decoder configured successfully');
+      console.log("Decoder configured successfully");
     } catch (e) {
-      console.error('Failed to configure decoder:', e);
+      console.error("Failed to configure decoder:", e);
       // Try fallback codec
       try {
         this.decoder.configure({
-          codec: 'avc1.42E01E', // Baseline Profile Level 3.0
+          codec: "avc1.42E01E", // Baseline Profile Level 3.0
           optimizeForLatency: true,
         });
         this.configured = true;
-        console.log('Decoder configured with fallback codec');
+        console.log("Decoder configured with fallback codec");
       } catch (e2) {
-        console.error('Fallback codec also failed:', e2);
+        console.error("Fallback codec also failed:", e2);
       }
     }
   }
 
-  /**
-   * Decode a video frame
-   */
-  decodeFrame(nal, isKeyframe) {
-    if (!this.decoder || this.decoder.state !== 'configured') {
+  private decodeFrame(nal: Uint8Array, isKeyframe: boolean): void {
+    if (!this.decoder || this.decoder.state !== "configured") {
       return;
     }
 
@@ -301,21 +280,18 @@ class H264Decoder {
 
     try {
       const chunk = new EncodedVideoChunk({
-        type: isKeyframe ? 'key' : 'delta',
+        type: isKeyframe ? "key" : "delta",
         timestamp: this.timestamp,
         data: frameData,
       });
       this.decoder.decode(chunk);
       this.timestamp += 33333; // ~30fps in microseconds
-    } catch (e) {
+    } catch {
       // Skip invalid chunks silently
     }
   }
 
-  /**
-   * Reset decoder state
-   */
-  reset() {
+  reset(): void {
     if (this.decoder) {
       this.decoder.close();
       this.decoder = null;
@@ -328,7 +304,8 @@ class H264Decoder {
     this.videoWidth = 0;
     this.videoHeight = 0;
   }
-}
 
-// Export for use in other modules
-window.H264Decoder = H264Decoder;
+  getVideoDimensions(): { width: number; height: number } {
+    return { width: this.videoWidth, height: this.videoHeight };
+  }
+}

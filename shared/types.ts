@@ -2,84 +2,123 @@
 // Used by: signal server, pod server, frontend
 
 // ============================================
+// Message Type Constants
+// ============================================
+
+export const MSG = {
+  // Signal messages
+  START: "start",
+  OFFER: "offer",
+  ANSWER: "answer",
+  ICE_CANDIDATE: "ice-candidate",
+  ERROR: "error",
+  CLIENT_DISCONNECTED: "client-disconnected",
+  REGISTER: "register",
+  PING: "ping",
+  PONG: "pong",
+  SHUTDOWN: "shutdown",
+  WORKER_DISCONNECTED: "worker-disconnected",
+  WORKER_CRASHED: "worker-crashed",
+  CONNECTED: "connected",
+  CLIENT_CONNECTED: "client-connected",
+  // Input messages
+  DRAG: "drag",
+  CLICK: "click",
+} as const;
+
+// ============================================
 // WebSocket Signal Messages
 // ============================================
 
 /** Client requests to start a streaming session */
 export interface StartMessage {
-  type: "start";
+  type: typeof MSG.START;
 }
 
 /** Pod sends SDP offer to client */
 export interface OfferMessage {
-  type: "offer";
+  type: typeof MSG.OFFER;
   sdp: string;
 }
 
 /** Client sends SDP answer to pod */
 export interface AnswerMessage {
-  type: "answer";
+  type: typeof MSG.ANSWER;
   sdp: string;
 }
 
 /** ICE candidate exchange (bidirectional) */
 export interface IceCandidateMessage {
-  type: "ice-candidate";
+  type: typeof MSG.ICE_CANDIDATE;
   candidate: RTCIceCandidateInit | null;
 }
 
+/** Error code constants */
+export const ERROR_CODE = {
+  NO_SUBSCRIPTION: "NO_SUBSCRIPTION",
+  NO_WORKERS_AVAILABLE: "NO_WORKERS_AVAILABLE",
+  AUTH_FAILED: "AUTH_FAILED",
+  CONNECTION_TIMEOUT: "CONNECTION_TIMEOUT",
+  WORKER_CRASHED: "WORKER_CRASHED",
+  WEBRTC_FAILED: "WEBRTC_FAILED",
+} as const;
+
+/** Error codes for error messages */
+export type ErrorCode = (typeof ERROR_CODE)[keyof typeof ERROR_CODE];
+
 /** Error message from signal server */
 export interface ErrorMessage {
-  type: "error";
+  type: typeof MSG.ERROR;
+  code?: ErrorCode;
   message: string;
 }
 
 /** Signal server notifies pod that client disconnected */
 export interface ClientDisconnectedMessage {
-  type: "client-disconnected";
+  type: typeof MSG.CLIENT_DISCONNECTED;
 }
 
 /** Worker registers with signal server */
 export interface RegisterMessage {
-  type: "register";
+  type: typeof MSG.REGISTER;
   game: string;
 }
 
 /** Ping message from signal server */
 export interface PingMessage {
-  type: "ping";
+  type: typeof MSG.PING;
 }
 
 /** Pong response to signal server */
 export interface PongMessage {
-  type: "pong";
+  type: typeof MSG.PONG;
 }
 
 /** Signal server tells worker/client to shutdown */
 export interface ShutdownMessage {
-  type: "shutdown";
+  type: typeof MSG.SHUTDOWN;
   reason: string;
 }
 
 /** Signal server notifies client that worker disconnected */
 export interface WorkerDisconnectedMessage {
-  type: "worker-disconnected";
+  type: typeof MSG.WORKER_DISCONNECTED;
 }
 
 /** Worker notifies signal server that it crashed */
 export interface WorkerCrashedMessage {
-  type: "worker-crashed";
+  type: typeof MSG.WORKER_CRASHED;
   reason: string;
 }
 
 /** Client notifies signal server that WebRTC is connected */
 export interface ConnectedMessage {
-  type: "connected";
+  type: typeof MSG.CONNECTED;
 }
 
 /** Signal server notifies worker that client WebRTC is connected */
 export interface ClientConnectedMessage {
-  type: "client-connected";
+  type: typeof MSG.CLIENT_CONNECTED;
 }
 
 /** Union of all signal messages */
@@ -108,7 +147,7 @@ export type SignalMessageType = SignalMessage["type"];
 
 /** Drag/touch input event */
 export interface DragInputMessage {
-  type: "drag";
+  type: typeof MSG.DRAG;
   action: "start" | "move" | "end" | "cancel";
   pointerId: number;
   xPercent: number;
@@ -117,7 +156,7 @@ export interface DragInputMessage {
 
 /** Click/mouse button event */
 export interface ClickInputMessage {
-  type: "click";
+  type: typeof MSG.CLICK;
   action: "down" | "up";
   button: 0 | 1 | 2; // left, middle, right
   xPercent: number;
@@ -144,25 +183,25 @@ export function isSignalMessage(msg: unknown): msg is SignalMessage {
   if (typeof msg !== "object" || msg === null) return false;
   const type = (msg as { type?: unknown }).type;
   return (
-    type === "start" ||
-    type === "offer" ||
-    type === "answer" ||
-    type === "ice-candidate" ||
-    type === "error" ||
-    type === "client-disconnected" ||
-    type === "register" ||
-    type === "ping" ||
-    type === "pong" ||
-    type === "shutdown" ||
-    type === "worker-disconnected" ||
-    type === "worker-crashed" ||
-    type === "connected" ||
-    type === "client-connected"
+    type === MSG.START ||
+    type === MSG.OFFER ||
+    type === MSG.ANSWER ||
+    type === MSG.ICE_CANDIDATE ||
+    type === MSG.ERROR ||
+    type === MSG.CLIENT_DISCONNECTED ||
+    type === MSG.REGISTER ||
+    type === MSG.PING ||
+    type === MSG.PONG ||
+    type === MSG.SHUTDOWN ||
+    type === MSG.WORKER_DISCONNECTED ||
+    type === MSG.WORKER_CRASHED ||
+    type === MSG.CONNECTED ||
+    type === MSG.CLIENT_CONNECTED
   );
 }
 
 export function isInputMessage(msg: unknown): msg is InputMessage {
   if (typeof msg !== "object" || msg === null) return false;
   const type = (msg as { type?: unknown }).type;
-  return type === "drag" || type === "click";
+  return type === MSG.DRAG || type === MSG.CLICK;
 }
