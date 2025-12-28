@@ -71,11 +71,6 @@ export function assignWorkerToClient(worker: Worker, clientId: string): void {
   console.log(`Worker ${worker.id} assigned to client ${clientId}`);
 }
 
-export function releaseWorker(worker: Worker): void {
-  worker.status = "available";
-  worker.clientId = null;
-  console.log(`Worker ${worker.id} released`);
-}
 
 export function updateWorkerPing(worker: Worker): void {
   worker.lastPing = Date.now();

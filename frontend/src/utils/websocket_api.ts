@@ -7,7 +7,12 @@ import {
   type OfferMessage,
   type IceCandidateMessage,
   type ErrorMessage,
+  type QueueInfoMessage,
 } from "../../../shared/types";
+
+export interface QueueInfo {
+  position: number;
+}
 
 type Unsubscribe = () => void;
 
@@ -19,8 +24,16 @@ class WebSocketAPI {
   private onErrorCallbacks: ((code: ErrorCode | undefined, message: string) => void)[] = [];
   private onDisconnectCallbacks: (() => void)[] = [];
   private onWorkerDisconnectedCallbacks: (() => void)[] = [];
+  private onQueueInfoCallbacks: ((info: QueueInfo) => void)[] = [];
+  private onQueueReadyCallbacks: (() => void)[] = [];
 
   async connect(): Promise<void> {
+    // Already connected or connecting
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      console.log("Already connected/connecting, skipping");
+      return;
+    }
+
     try {
       const token = await getAccessToken();
       if (!token) {
@@ -81,7 +94,7 @@ class WebSocketAPI {
     const msg = JSON.parse(event.data) as SignalMessage;
 
     if (msg.type !== MSG.PING) {
-      console.log("Signal message:", msg.type);
+      console.log("Signal message received:", msg.type, msg);
     }
 
     switch (msg.type) {
@@ -116,6 +129,22 @@ class WebSocketAPI {
       case MSG.SHUTDOWN:
         console.log("Server shutdown:", msg.reason);
         this.notifyError(undefined, "Server shutdown: " + msg.reason);
+        break;
+
+      case MSG.QUEUE_INFO: {
+        console.log("WebSocketAPI received QUEUE_INFO:", msg);
+        const queueMsg = msg as QueueInfoMessage;
+        const info: QueueInfo = {
+          position: queueMsg.position,
+        };
+        console.log("Calling", this.onQueueInfoCallbacks.length, "queue info callbacks");
+        this.onQueueInfoCallbacks.forEach((cb) => cb(info));
+        break;
+      }
+
+      case MSG.QUEUE_READY:
+        console.log("Queue ready - worker assigned");
+        this.onQueueReadyCallbacks.forEach((cb) => cb());
         break;
     }
   }
@@ -170,9 +199,23 @@ class WebSocketAPI {
     };
   }
 
+  onQueueInfo(callback: (info: QueueInfo) => void): Unsubscribe {
+    this.onQueueInfoCallbacks.push(callback);
+    return () => {
+      this.onQueueInfoCallbacks = this.onQueueInfoCallbacks.filter((cb) => cb !== callback);
+    };
+  }
+
+  onQueueReady(callback: () => void): Unsubscribe {
+    this.onQueueReadyCallbacks.push(callback);
+    return () => {
+      this.onQueueReadyCallbacks = this.onQueueReadyCallbacks.filter((cb) => cb !== callback);
+    };
+  }
+
   // Public API: Send messages
-  sendChosenGame(gameId: string): void {
-    this.send({ type: MSG.CLIENT_GAME_SELECTED, gameId });
+  sendQueue(appId: string): void {
+    this.send({ type: MSG.QUEUE, appId });
   }
 
   sendStart(): void {
@@ -210,6 +253,8 @@ class WebSocketAPI {
     this.onErrorCallbacks = [];
     this.onDisconnectCallbacks = [];
     this.onWorkerDisconnectedCallbacks = [];
+    this.onQueueInfoCallbacks = [];
+    this.onQueueReadyCallbacks = [];
   }
 }
 

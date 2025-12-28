@@ -1,29 +1,27 @@
-clients will now after authentication always join a queue (client queue const in global state)
+__flow__
+client opens queue/appId (Queue message should contain the appID (remove message for client selected game))
 
-every 5 secs a function (FUNCA) will run that gives all workers out to all clients that we can based on the queue FIFO
+SIGNAL server auths client , and if success, adds client to the queue
+every 5 secs signal server is running FUNCA
+- FUNCA checks if avaiable worker? send to first client
+if avaible worker, client gets a worker assigned , singal server is also sent the QUEUE_READY message which tells the client to go to the page app/appID which then triggers all of the webRTC shit in inGame.TSX
 
-so thier will be a new message the signaling server and frontend do. will be QUEUE
-- signal server will send queue to client. and when singal sever is ready for client it will send start
-- when client recieves start this means the signal server has assigned a worker to the client, and the client will start sending over its WEBRTC info.
-
-so now thier will be 2 functions handle client queue and handle client start
-
-handle client start will now be called by the FUNCA with the worker id we want to pair with and the client ofc.
-
-handle client queue will just take in the client.
-
-the logic for the frontend will be as follows
-
-we will have a new compoennt queue, which will show general information about the queue, this is the component that would have started the queue.
-/queue/appId
-
-it starts the queue and again shows info like your place in queue and estimated time (3 mins * users infront of me)
-this component will only ever know how many users are in front of me (TODO HOW WILL THIS DATA GET SENT)
-
-on server sending start, we will slap the client over to /app/appId to get started with the worker it now has.
+__FUNCA__
+this will look atn all avaible workers, and if thier is an avaiable worker call, will assign the worker and call QUEUE_READY to the client
 
 
-notes:
-client no longer sends start, server sends it , client just sends queue message (starts the proccess)
+__EXTRAS__
+
+Client on the QUEUE_READY msg will push itself to page /app/appID which calls all neccesary functions.
+
+/app/appId or inGame.tsx will send a start message to the signal server, which if all checks out (client has a worker) it will then tell the worker to start
+
+handle client start will be split into 2 functions 
+
+handleClientWorkerAssign - called after FUNCA finds a match and right before QUEUE_READY is sent to client
+
+HandleCLientWorker start - called after client sends back START (which means it on correct page and ready)
+
+
 
 

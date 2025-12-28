@@ -31,7 +31,7 @@ export default function Home() {
       setShowLoginModal(true);
       return;
     }
-    navigate(`/app/${encodeURIComponent(appId)}`);
+    navigate(`/queue/${encodeURIComponent(appId)}`);
   };
 
   const handleSignIn = async () => {

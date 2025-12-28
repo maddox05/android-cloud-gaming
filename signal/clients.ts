@@ -28,6 +28,7 @@ export function createClient(ws: WebSocket, userId: string): Client {
     lastInput: Date.now(),
     game: null,
     connectionState: "waiting",
+    queuedAt: null,
   };
   clients.set(client.id, client);
   console.log(`Client ${client.id} (user: ${userId}) connected`);

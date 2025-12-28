@@ -112,7 +112,7 @@ export default function InGame() {
 
         const conn = await connect(handleVideoData, handleError, handleDisconnected);
         connectionRef.current = conn;
-        setLoadingMessage("Waiting for worker...");
+        setLoadingMessage("Loading...");
 
         // Initialize decoder if canvas is ready
         if (canvasRef.current && !decoderRef.current) {
@@ -127,9 +127,8 @@ export default function InGame() {
           }
           if (websocketAPI.isConnected()) {
             setStatus(CONNECTION_STATUS.CONNECTED);
-            websocketAPI.sendChosenGame(appId); 
-            websocketAPI.sendStart(); // send start command needs to be after chosen game
-            setStatusMessage("Streaming");
+            websocketAPI.sendStart(); // Game already set during queue process
+            setStatusMessage("Sent start to server...");
             if (intervalRef.current) clearInterval(intervalRef.current);
           }
         }, 100);

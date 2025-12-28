@@ -1,0 +1,141 @@
+/* Queue Page */
+.queue-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--bg-primary);
+}
+
+.queue-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 48px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+}
+
+.queue-title {
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.queue-game {
+  color: var(--accent);
+  font-size: 1.125rem;
+  font-weight: 500;
+  margin-bottom: 32px;
+}
+
+/* Loading State */
+.queue-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.queue-loading p {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+/* Error State */
+.queue-error {
+  margin-bottom: 24px;
+}
+
+.queue-error p {
+  color: #ef4444;
+  font-size: 0.9375rem;
+  margin-bottom: 16px;
+}
+
+/* Queue Info */
+.queue-info {
+  margin-bottom: 32px;
+}
+
+.queue-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.queue-stat:last-of-type {
+  border-bottom: none;
+}
+
+.queue-stat-label {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.queue-stat-value {
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.queue-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.queue-progress p {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+/* Buttons */
+.queue-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+}
+
+.queue-btn:hover {
+  background: var(--accent-hover);
+}
+
+.queue-btn-secondary {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.queue-btn-secondary:hover {
+  background: var(--border);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .queue-card {
+    padding: 32px 24px;
+  }
+
+  .queue-title {
+    font-size: 1.25rem;
+  }
+}

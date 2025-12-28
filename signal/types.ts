@@ -1,7 +1,7 @@
 import type { WebSocket } from "ws";
 
 export type WorkerStatus = "available" | "busy";
-export type ClientConnectionState = "waiting" | "connecting" | "connected";
+export type ClientConnectionState = "waiting" | "queued" | "connecting" | "connected";
 
 export interface Worker {
   id: string;
@@ -21,4 +21,5 @@ export interface Client {
   lastInput: number;
   game: string | null;
   connectionState: ClientConnectionState;
+  queuedAt: number | null; // timestamp when client joined queue
 }

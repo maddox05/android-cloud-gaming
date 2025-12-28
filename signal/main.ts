@@ -1,7 +1,7 @@
 import express from "express";
 import expressWs from "express-ws";
 import type { WebSocket } from "ws";
-import { ERROR_CODE, MSG, type SignalMessage } from "../shared/types.js";
+import { ERROR_CODE, MSG, type SignalMessage, type QueueMessage, type QueueInfoMessage, type QueueReadyMessage } from "../shared/types.js";
 import type { Worker, Client } from "./types.js";
 import { verifyToken, checkSubscription } from "./auth.js";
 import {
@@ -35,8 +35,23 @@ import {
   sendShutdownToClient,
   getAllClients,
   updateClientInput,
+  sendToClient,
 } from "./clients.js";
-import { SERVER_PORT as PORT, INPUT_TIMEOUT_THRESHOLD, PING_INTERVAL, PING_TIMEOUT_THRESHOLD } from "./consts.js";
+import {
+  addToQueue,
+  removeFromQueue,
+  getQueuedClients,
+  getQueuePosition,
+  getAllQueuedClientIds,
+} from "./queue.js";
+import {
+  SERVER_PORT as PORT,
+  INPUT_TIMEOUT_THRESHOLD,
+  PING_INTERVAL,
+  PING_TIMEOUT_THRESHOLD,
+  QUEUE_PROCESS_INTERVAL,
+  QUEUE_TIMEOUT_THRESHOLD,
+} from "./consts.js";
 
 // Verify required environment variables
 const requiredEnvVars = ["SIGNAL_PORT", "SUPABASE_URL", "SUPABASE_SERVICE_KEY"];
@@ -231,16 +246,16 @@ function handleClientMessage(client: Client, msg: SignalMessage): void {
   updateClientPing(client);
 
   switch (msg.type) {
-    case MSG.CLIENT_INPUTED: 
+    case MSG.CLIENT_INPUTED:
       updateClientInput(client)
       break;
-    case MSG.CLIENT_GAME_SELECTED:
-      console.log(`Client ${client.id} selected game: ${msg.gameId}`);
-      client.game = msg.gameId;
+
+    case MSG.QUEUE:
+      handleClientQueue(client, msg as QueueMessage);
       break;
+
     case MSG.START:
-    
-      handleClientStart(client);
+      handleClientWorkerStart(client);
       break;
 
     case MSG.PONG:
@@ -267,36 +282,99 @@ function handleClientMessage(client: Client, msg: SignalMessage): void {
       }
       break;
 
-
     default:
       // Discard other messages but they still reset timeout
       break;
   }
 }
 
-function handleClientStart(client: Client): void {
-  // Find first available worker
-  if(!client.game){ 
-    sendErrorToClient(client, "No game selected. Please select a game before starting. (most likely a server error)");
-    return;
-  }
-  const worker = findAvailableWorkerWithGame(client.game);
+// Handle client joining the queue
+function handleClientQueue(client: Client, msg: QueueMessage): void {
+  const { appId } = msg;
 
-  if (!worker) {
-    sendErrorToClient(client, "No workers available. Please try again later.");
-    // Remove client and close connection - don't keep them waiting
-    removeClient(client.id);
-    client.ws.close();
+  if (!appId) {
+    sendErrorToClient(client, "No game specified in queue request");
     return;
   }
+
+  // Set client game and queue state
+  client.game = appId;
+  client.connectionState = "queued";
+  client.queuedAt = Date.now();
+
+  // Add to queue
+  addToQueue(client.id);
+
+  // Send initial queue info
+  sendQueueInfoToClient(client);
+
+  console.log(`Client ${client.id} queued for game: ${appId}`);
+}
+
+// Send queue info message to client
+function sendQueueInfoToClient(client: Client): void {
+  const position = getQueuePosition(client.id);
+  const msg: QueueInfoMessage = {
+    type: MSG.QUEUE_INFO,
+    position,
+  };
+  console.log(`Sending QUEUE_INFO to client ${client.id}: position ${position}`);
+  sendToClient(client, msg);
+}
+
+// Send queue ready message to client
+function sendQueueReadyToClient(client: Client): void {
+  const msg: QueueReadyMessage = { type: MSG.QUEUE_READY };
+  sendToClient(client, msg);
+}
+
+// Called by FUNCA when matching a client to a worker
+function handleClientWorkerAssign(client: Client, worker: Worker): void {
+  // Remove from queue
+  removeFromQueue(client.id);
 
   // Pair them
   assignWorkerToClient(worker, client.id);
   assignClientToWorker(client, worker.id);
 
+  console.log(`Assigned worker ${worker.id} to client ${client.id} for game ${client.game}`);
+
+  // Tell client they're ready to proceed
+  sendQueueReadyToClient(client);
+}
+
+// Called when client sends START (after receiving QUEUE_READY and navigating to /app)
+function handleClientWorkerStart(client: Client): void {
+  // Client should already have a worker assigned from queue process
+  if (!client.workerId) {
+    sendErrorToClient(client, "No worker assigned. Please rejoin the queue.");
+    removeClient(client.id);
+    client.ws.close();
+    return;
+  }
+
+  const worker = getWorker(client.workerId);
+
+  if (!worker) {
+    // Worker died between QUEUE_READY and START
+    sendErrorToClient(client, "Assigned worker is no longer available. Please rejoin the queue.");
+    removeClient(client.id);
+    client.ws.close();
+    return;
+  }
+
+  if (!client.game) {
+    sendErrorToClient(client, "No game selected. Please rejoin the queue.");
+    removeClient(client.id);
+    client.ws.close();
+    return;
+  }
+
   // Tell worker to start WebRTC connection
   sendStartToWorker(worker);
   sendClientGameToWorker(worker, client.game);
+
+  console.log(`Client ${client.id} started connection with worker ${worker.id}`);
 }
 
 function handleClientDisconnect(client: Client): void {
@@ -306,6 +384,11 @@ function handleClientDisconnect(client: Client): void {
   }
 
   console.log(`Client ${client.id} disconnected`);
+
+  // Remove from queue if queued
+  if (client.connectionState === "queued") {
+    removeFromQueue(client.id);
+  }
 
   // Notify connected worker - worker will restart itself
   // Remove worker from pool since it needs to restart
@@ -391,14 +474,14 @@ function sendPings(): void {
 }
 
 function checkClientTimedOutViaInput(): void {
-    const now = Date.now();
+  const now = Date.now();
 
   for (const client of getAllClients()) {
-    if(now -client.lastInput > INPUT_TIMEOUT_THRESHOLD){
-      handleClientDisconnect(client)
+    // Only check input timeout for connected clients (not queued/waiting)
+    if (client.connectionState === "connected" && now - client.lastInput > INPUT_TIMEOUT_THRESHOLD) {
+      handleClientDisconnect(client);
     }
   }
-
 }
 
 // Heartbeat loop
@@ -408,9 +491,54 @@ setInterval(() => {
   checkClientTimedOutViaInput()
 }, PING_INTERVAL);
 
+// FUNCA - Process queue and match clients to workers
+function processQueue(): void {
+  const queuedClientIds = getAllQueuedClientIds();
+
+  for (const clientId of queuedClientIds) {
+    const client = getClient(clientId);
+    if (!client || !client.game) continue;
+
+    // Find available worker for this client's game
+    const worker = findAvailableWorkerWithGame(client.game);
+
+    if (worker) {
+      // Match found - assign worker to client
+      handleClientWorkerAssign(client, worker);
+    }
+  }
+
+  // Send queue info updates to all remaining queued clients
+  for (const client of getQueuedClients()) {
+    sendQueueInfoToClient(client);
+  }
+}
+
+// Check for clients who have been in queue too long
+function checkQueueTimeouts(): void {
+  const now = Date.now();
+
+  for (const client of getQueuedClients()) {
+    if (client.queuedAt && now - client.queuedAt > QUEUE_TIMEOUT_THRESHOLD) {
+      console.log(`Client ${client.id} timed out in queue`);
+      sendErrorToClient(client, "Queue timeout - you've been waiting too long. Please try again.");
+      removeFromQueue(client.id);
+      removeClient(client.id);
+      client.ws.close();
+    }
+  }
+}
+
+// Queue processing loop (FUNCA)
+setInterval(() => {
+  processQueue();
+  checkQueueTimeouts();
+}, QUEUE_PROCESS_INTERVAL);
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Signal server running on http://localhost:${PORT}`);
   console.log(`WebSocket endpoint: ws://localhost:${PORT}/`);
   console.log(`Ping interval: ${PING_INTERVAL}ms, Timeout: ${PING_TIMEOUT_THRESHOLD}ms`);
+  console.log(`Queue process interval: ${QUEUE_PROCESS_INTERVAL}ms, Queue timeout: ${QUEUE_TIMEOUT_THRESHOLD}ms`);
 });

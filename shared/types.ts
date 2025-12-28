@@ -25,12 +25,16 @@ export const MSG = {
   WORKER_CRASHED: "worker-crashed",
   CONNECTED: "connected",
   AUTHENTICATED: "authenticated",
+  // Queue messages
+  QUEUE: "queue", // client -> server: join queue for a game
+  QUEUE_INFO: "queue-info", // server -> client: queue position updates
+  QUEUE_READY: "queue-ready", // server -> client: worker assigned, proceed to game
   // Input messages
   DRAG: "drag",
   CLICK: "click",
-
   CLIENT_INPUTED: "client-inputed",
-  CLIENT_GAME_SELECTED: "client-game-selected",
+  // Internal messages (signal -> worker)
+  CLIENT_GAME_SELECTED: "client-game-selected", // signal -> worker: which game to launch
 } as const;
 
 // ============================================
@@ -128,17 +132,32 @@ export interface AuthenticatedMessage {
   type: typeof MSG.AUTHENTICATED;
 }
 
+/** Client requests to join queue for a game */
+export interface QueueMessage {
+  type: typeof MSG.QUEUE;
+  appId: string;
+}
 
+/** Server sends queue position updates to client */
+export interface QueueInfoMessage {
+  type: typeof MSG.QUEUE_INFO;
+  position: number;
+}
 
-/** Client notifies signal server that it has selected a game */
-export interface ClientGameSelectedMessage {
-  type: typeof MSG.CLIENT_GAME_SELECTED;
-  gameId: string;
+/** Server notifies client that worker is assigned and ready */
+export interface QueueReadyMessage {
+  type: typeof MSG.QUEUE_READY;
 }
 
 /** Client notifies signal server that it has clicked smth on the screen */
 export interface ClientInputed { // client will send data but server doesnt care.
   type: typeof MSG.CLIENT_INPUTED;
+}
+
+/** Signal server tells worker which game to launch (internal) */
+export interface ClientGameSelectedMessage {
+  type: typeof MSG.CLIENT_GAME_SELECTED;
+  gameId: string;
 }
 /** Union of all signal messages */
 export type SignalMessage =
@@ -156,8 +175,11 @@ export type SignalMessage =
   | WorkerCrashedMessage
   | ConnectedMessage
   | AuthenticatedMessage
-  | ClientGameSelectedMessage
-  | ClientInputed;
+  | QueueMessage
+  | QueueInfoMessage
+  | QueueReadyMessage
+  | ClientInputed
+  | ClientGameSelectedMessage;
 
 /** Signal message types for type guards */
 export type SignalMessageType = SignalMessage["type"];
@@ -218,8 +240,11 @@ export function isSignalMessage(msg: unknown): msg is SignalMessage {
     type === MSG.WORKER_CRASHED ||
     type === MSG.CONNECTED ||
     type === MSG.AUTHENTICATED ||
-    type === MSG.CLIENT_GAME_SELECTED ||
-    type === MSG.CLIENT_INPUTED 
+    type === MSG.QUEUE ||
+    type === MSG.QUEUE_INFO ||
+    type === MSG.QUEUE_READY ||
+    type === MSG.CLIENT_INPUTED ||
+    type === MSG.CLIENT_GAME_SELECTED
   );
 }
 
