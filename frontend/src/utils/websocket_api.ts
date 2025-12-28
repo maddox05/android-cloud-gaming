@@ -191,6 +191,10 @@ class WebSocketAPI {
     this.send({ type: MSG.CONNECTED });
   }
 
+  sendInputEvent(): void {
+    this.send({type: MSG.CLIENT_INPUTED})
+  }
+
   // Public API: Connection management
   isConnected(): boolean {
     return this.ws !== null && this.ws.readyState === WebSocket.OPEN;

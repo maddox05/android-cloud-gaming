@@ -18,6 +18,7 @@ export interface Client {
   ws: WebSocket;
   workerId: string | null;
   lastPing: number;
+  lastInput: number;
   game: string | null;
   connectionState: ClientConnectionState;
 }

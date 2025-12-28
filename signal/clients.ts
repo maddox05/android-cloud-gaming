@@ -25,6 +25,7 @@ export function createClient(ws: WebSocket, userId: string): Client {
     ws,
     workerId: null,
     lastPing: Date.now(),
+    lastInput: Date.now(),
     game: null,
     connectionState: "waiting",
   };
@@ -57,15 +58,14 @@ export function setClientConnected(client: Client): void {
   console.log(`Client ${client.id} connected to worker`);
 }
 
-export function releaseClient(client: Client): void {
-  client.workerId = null;
-  client.connectionState = "waiting";
-}
 
 export function updateClientPing(client: Client): void {
   client.lastPing = Date.now();
 }
 
+export function updateClientInput(client: Client): void {
+  client.lastInput = Date.now();
+}
 export function sendToClient(client: Client, msg: SignalMessage): void {
   if (client.ws.readyState === 1) {
     client.ws.send(JSON.stringify(msg));

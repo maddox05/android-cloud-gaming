@@ -8,9 +8,13 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
+    "express": "^5.2.1",
+    "express-ws": "^5.0.2",
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/express-ws": "^3.0.6",
     "@types/node": "^22.10.2",
     "@types/ws": "^8.5.13",
     "tsx": "^4.19.2",

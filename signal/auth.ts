@@ -3,6 +3,8 @@
  * Verifies Supabase JWT tokens and checks Stripe subscriptions via Supabase tables
  */
 
+// TODO CHECK IF TS EVEN WORKS! I HAVENT CHECK HOW IT RLLY WORKS YET.
+
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;

@@ -115,6 +115,7 @@ export async function connect(
   return {
     sendInput: (msg: InputMessage) => {
       if (inputChannel && inputChannel.readyState === "open") {
+        websocketAPI.sendInputEvent(); // TODO RElook at arcitexture its spagetti code
         inputChannel.send(JSON.stringify(msg));
       }
     },

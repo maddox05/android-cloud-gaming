@@ -1,4 +1,6 @@
-import { WebSocketServer, WebSocket } from "ws";
+import express from "express";
+import expressWs from "express-ws";
+import type { WebSocket } from "ws";
 import { ERROR_CODE, MSG, type SignalMessage } from "../shared/types.js";
 import type { Worker, Client } from "./types.js";
 import { verifyToken, checkSubscription } from "./auth.js";
@@ -24,7 +26,6 @@ import {
   getClient,
   removeClient,
   assignClientToWorker,
-  releaseClient,
   updateClientPing,
   sendOfferToClient,
   sendIceCandidateToClient,
@@ -33,7 +34,9 @@ import {
   sendPingToClient,
   sendShutdownToClient,
   getAllClients,
+  updateClientInput,
 } from "./clients.js";
+import { SERVER_PORT as PORT, INPUT_TIMEOUT_THRESHOLD, PING_INTERVAL, PING_TIMEOUT_THRESHOLD } from "./consts.js";
 
 // Verify required environment variables
 const requiredEnvVars = ["SIGNAL_PORT", "SUPABASE_URL", "SUPABASE_SERVICE_KEY"];
@@ -44,25 +47,29 @@ if (missingEnvVars.length > 0) {
   process.exit(1);
 }
 
-const PORT = parseInt(process.env.SIGNAL_PORT!, 10);
 
-const PING_INTERVAL = 5000;
-const TIMEOUT_THRESHOLD = 15000;
 
 // Track websocket -> worker/client mapping
 const wsToWorker = new Map<WebSocket, Worker>();
 const wsToClient = new Map<WebSocket, Client>();
 
-const wss = new WebSocketServer({ port: PORT });
+// Create Express app with WebSocket support
+const { app } = expressWs(express());
 
-wss.on("connection", (ws, req) => {
-  const url = new URL(req.url || "/", `http://localhost:${PORT}`);
-  const role = url.searchParams.get("role");
-  const token = url.searchParams.get("token");
 
-  if (role === "worker") {
+// WebSocket endpoint
+app.ws("/", (ws, req) => {
+  const role = req.query.role as string | undefined;
+  const token = req.query.token as string | undefined;
+
+  if(!role){
+    console.log("NO ROLE?")
+    return;
+  }
+
+  else if (role === "worker") {
     handleWorkerConnection(ws);
-  } else {
+  } else if (role==="client") {
     // Clients must be authenticated
     if (!token) {
       ws.send(JSON.stringify({ type: "error", message: "Authentication required" }));
@@ -94,9 +101,12 @@ wss.on("connection", (ws, req) => {
       console.log(`Client authenticated: ${user.id}`);
       handleClientConnection(ws, user.id);
 
-      // Send authenticated message - client waits for this before sending messages
+      // Send authenticated message - client waits for this before sending messages (see websocket_api.ts)
       ws.send(JSON.stringify({ type: MSG.AUTHENTICATED }));
     });
+  }else{
+    console.log("incorrect role. skipping");
+    return;
   }
 });
 
@@ -118,6 +128,11 @@ function handleWorkerConnection(ws: WebSocket): void {
     console.error(`Worker ${worker.id} error:`, err.message);
   });
 }
+
+// Health check endpoint
+app.get("/health", (_req, res) => {
+  res.send("OK");
+});
 
 function handleWorkerMessage(worker: Worker, msg: SignalMessage): void {
   switch (msg.type) {
@@ -156,7 +171,7 @@ function handleWorkerMessage(worker: Worker, msg: SignalMessage): void {
         const client = getClient(worker.clientId);
         if (client) {
           sendWorkerDisconnectedToClient(client);
-          releaseClient(client);
+          removeClient(client.id);
         }
       }
       removeWorker(worker.id);
@@ -180,11 +195,14 @@ function handleWorkerDisconnect(worker: Worker): void {
     const client = getClient(worker.clientId);
     if (client) {
       sendWorkerDisconnectedToClient(client);
-      releaseClient(client);
+      removeClient(client.id)
     }
   }
 
-  removeWorker(worker.id);
+  // Remove worker from map BEFORE closing
+    removeWorker(worker.id);
+    sendShutdownToWorker(worker, "Timeout");
+    worker.ws.close();
 }
 
 function handleClientConnection(ws: WebSocket, userId: string): Client {
@@ -213,6 +231,9 @@ function handleClientMessage(client: Client, msg: SignalMessage): void {
   updateClientPing(client);
 
   switch (msg.type) {
+    case MSG.CLIENT_INPUTED: 
+      updateClientInput(client)
+      break;
     case MSG.CLIENT_GAME_SELECTED:
       console.log(`Client ${client.id} selected game: ${msg.gameId}`);
       client.game = msg.gameId;
@@ -292,16 +313,18 @@ function handleClientDisconnect(client: Client): void {
     const worker = getWorker(client.workerId);
     if (worker) {
       sendClientDisconnectedToWorker(worker);
-      removeWorker(worker.id);
+      removeWorker(worker.id)
     }
   }
 
   removeClient(client.id);
+  sendShutdownToClient(client, "Timeout");
+  client.ws.close();
 }
 
 
 
-function checkTimeouts(): void {
+function checkPingPongTimeouts(): void {
   const now = Date.now();
 
   // Collect timed out workers and clients first, then process
@@ -310,13 +333,13 @@ function checkTimeouts(): void {
   const timedOutClients: string[] = [];
 
   for (const worker of getAllWorkers()) {
-    if (now - worker.lastPing > TIMEOUT_THRESHOLD) {
+    if (now - worker.lastPing > PING_TIMEOUT_THRESHOLD) {
       timedOutWorkers.push(worker.id);
     }
   }
 
   for (const client of getAllClients()) {
-    if (now - client.lastPing > TIMEOUT_THRESHOLD) {
+    if (now - client.lastPing > PING_TIMEOUT_THRESHOLD) {
       timedOutClients.push(client.id);
     }
   }
@@ -354,21 +377,7 @@ function checkTimeouts(): void {
 
     console.log(`Client ${client.id} timed out`);
 
-    // Notify paired worker - it will restart itself
-    if (client.workerId) {
-      const worker = getWorker(client.workerId);
-      if (worker) {
-        // Clear worker's clientId to prevent close handler from double-processing
-        worker.clientId = null;
-        sendClientDisconnectedToWorker(worker);
-        removeWorker(worker.id);
-      }
-    }
-
-    // Remove client from map BEFORE closing
-    removeClient(client.id);
-    sendShutdownToClient(client, "Timeout");
-    client.ws.close();
+    handleClientDisconnect(client)
   }
 }
 
@@ -381,11 +390,27 @@ function sendPings(): void {
   }
 }
 
+function checkClientTimedOutViaInput(): void {
+    const now = Date.now();
+
+  for (const client of getAllClients()) {
+    if(now -client.lastInput > INPUT_TIMEOUT_THRESHOLD){
+      handleClientDisconnect(client)
+    }
+  }
+
+}
+
 // Heartbeat loop
 setInterval(() => {
   sendPings();
-  checkTimeouts();
+  checkPingPongTimeouts();
+  checkClientTimedOutViaInput()
 }, PING_INTERVAL);
 
-console.log(`Signal server running on ws://localhost:${PORT}`);
-console.log(`Ping interval: ${PING_INTERVAL}ms, Timeout: ${TIMEOUT_THRESHOLD}ms`);
+// Start server
+app.listen(PORT, () => {
+  console.log(`Signal server running on http://localhost:${PORT}`);
+  console.log(`WebSocket endpoint: ws://localhost:${PORT}/`);
+  console.log(`Ping interval: ${PING_INTERVAL}ms, Timeout: ${PING_TIMEOUT_THRESHOLD}ms`);
+});

@@ -28,6 +28,8 @@ export const MSG = {
   // Input messages
   DRAG: "drag",
   CLICK: "click",
+
+  CLIENT_INPUTED: "client-inputed",
   CLIENT_GAME_SELECTED: "client-game-selected",
 } as const;
 
@@ -134,6 +136,10 @@ export interface ClientGameSelectedMessage {
   gameId: string;
 }
 
+/** Client notifies signal server that it has clicked smth on the screen */
+export interface ClientInputed { // client will send data but server doesnt care.
+  type: typeof MSG.CLIENT_INPUTED;
+}
 /** Union of all signal messages */
 export type SignalMessage =
   | StartMessage
@@ -150,7 +156,8 @@ export type SignalMessage =
   | WorkerCrashedMessage
   | ConnectedMessage
   | AuthenticatedMessage
-  | ClientGameSelectedMessage;
+  | ClientGameSelectedMessage
+  | ClientInputed;
 
 /** Signal message types for type guards */
 export type SignalMessageType = SignalMessage["type"];
@@ -211,7 +218,8 @@ export function isSignalMessage(msg: unknown): msg is SignalMessage {
     type === MSG.WORKER_CRASHED ||
     type === MSG.CONNECTED ||
     type === MSG.AUTHENTICATED ||
-    type === MSG.CLIENT_GAME_SELECTED
+    type === MSG.CLIENT_GAME_SELECTED ||
+    type === MSG.CLIENT_INPUTED 
   );
 }
 
