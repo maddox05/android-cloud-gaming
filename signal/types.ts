@@ -1,26 +1,6 @@
-import type { WebSocket } from "ws";
+// Signal server types
+// Note: Client and Worker are now classes in Client.ts and Worker.ts
+// The type exports below are re-exported from those files for convenience
 
-export type WorkerStatus = "available" | "busy";
-export type ClientConnectionState = "waiting" | "queued" | "connecting" | "connected";
-
-export interface Worker {
-  id: string;
-  ws: WebSocket;
-  status: WorkerStatus;
-  clientId: string | null;
-  lastPing: number;
-  games: string[];
-}
-
-export interface Client {
-  id: string;
-  userId: string;
-  ws: WebSocket;
-  workerId: string | null;
-  lastPing: number;
-  lastInput: number;
-  game: string | null;
-  connectionState: ClientConnectionState;
-  queuedAt: number | null; // timestamp when client joined queue
-  assignedAt: number | null; // timestamp when client was assigned a worker
-}
+export type { ClientConnectionState } from "./Client.js";
+export type { WorkerStatus } from "./Worker.js";
