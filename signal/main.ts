@@ -216,7 +216,7 @@ function handleClientConnection(ws: WebSocket, userId: string): Client {
 
   ws.on("close", () => {
     handleClientDisconnect(client);
-    wsToClient.delete(ws);
+    wsToClient.delete(ws); 
   });
 
   ws.on("error", (err) => {
