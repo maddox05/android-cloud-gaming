@@ -34,16 +34,27 @@ class WebSocketAPI {
 
       await this.waitForOpen();
 
-      console.log("Connected to signal server");
+      // Wait for AUTHENTICATED or ERROR message
+      await new Promise<void>((resolve, reject) => {
+        this.ws!.onmessage = (event) => {
+          const msg = JSON.parse(event.data);
+          if (msg.type === MSG.AUTHENTICATED) {
+            resolve();
+          } else if (msg.type === MSG.ERROR) {
+            reject(new Error(msg.message));
+          }
+        };
+        this.ws!.onclose = () => reject(new Error("Connection closed during authentication"));
+      });
 
+      // Now set up the real handlers
+      this.ws.onmessage = (event) => this.handleMessage(event);
       this.ws.onclose = () => {
         console.log("Disconnected from signal server");
         this.notifyDisconnect();
       };
 
-      this.ws.onmessage = (event) => {
-        this.handleMessage(event);
-      };
+      console.log("Connected and authenticated to signal server");
     } catch (error) {
       console.error("WebSocket connection error:", error);
       this.notifyError(undefined, "Failed to connect to signal server");
@@ -51,7 +62,7 @@ class WebSocketAPI {
     }
   }
 
-  private async waitForOpen(): Promise<void> {
+  private waitForOpen(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.ws) {
         reject(new Error("WebSocket not initialized"));

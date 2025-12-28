@@ -34,7 +34,6 @@ import {
   sendShutdownToClient,
   getAllClients,
 } from "./clients.js";
-import { send } from "process";
 
 // Verify required environment variables
 const requiredEnvVars = ["SIGNAL_PORT", "SUPABASE_URL", "SUPABASE_SERVICE_KEY"];
@@ -64,13 +63,6 @@ wss.on("connection", (ws, req) => {
   if (role === "worker") {
     handleWorkerConnection(ws);
   } else {
-    // Buffer messages while authenticating
-    const messageQueue: string[] = [];
-    const bufferHandler = (data: Buffer) => {
-      messageQueue.push(data.toString());
-    };
-    ws.on("message", bufferHandler);
-
     // Clients must be authenticated
     if (!token) {
       ws.send(JSON.stringify({ type: "error", message: "Authentication required" }));
@@ -80,9 +72,6 @@ wss.on("connection", (ws, req) => {
 
     // Two-step auth: verify token first, then check subscription
     verifyToken(token).then(async (user) => {
-      // Remove buffer handler
-      ws.off("message", bufferHandler);
-
       if (!user) {
         ws.send(JSON.stringify({ type: "error", message: "Invalid or expired token" }));
         ws.close();
@@ -103,13 +92,10 @@ wss.on("connection", (ws, req) => {
       }
 
       console.log(`Client authenticated: ${user.id}`);
-      const client = handleClientConnection(ws, user.id);
+      handleClientConnection(ws, user.id);
 
-      // Process buffered messages
-      for (const data of messageQueue) {
-        const msg: SignalMessage = JSON.parse(data);
-        handleClientMessage(client, msg);
-      }
+      // Send authenticated message - client waits for this before sending messages
+      ws.send(JSON.stringify({ type: MSG.AUTHENTICATED }));
     });
   }
 });

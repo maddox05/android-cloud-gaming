@@ -24,6 +24,7 @@ export const MSG = {
   WORKER_DISCONNECTED: "worker-disconnected",
   WORKER_CRASHED: "worker-crashed",
   CONNECTED: "connected",
+  AUTHENTICATED: "authenticated",
   // Input messages
   DRAG: "drag",
   CLICK: "click",
@@ -120,6 +121,11 @@ export interface ConnectedMessage {
   type: typeof MSG.CONNECTED;
 }
 
+/** Signal server confirms client authentication */
+export interface AuthenticatedMessage {
+  type: typeof MSG.AUTHENTICATED;
+}
+
 
 
 /** Client notifies signal server that it has selected a game */
@@ -143,6 +149,7 @@ export type SignalMessage =
   | WorkerDisconnectedMessage
   | WorkerCrashedMessage
   | ConnectedMessage
+  | AuthenticatedMessage
   | ClientGameSelectedMessage;
 
 /** Signal message types for type guards */
@@ -203,6 +210,7 @@ export function isSignalMessage(msg: unknown): msg is SignalMessage {
     type === MSG.WORKER_DISCONNECTED ||
     type === MSG.WORKER_CRASHED ||
     type === MSG.CONNECTED ||
+    type === MSG.AUTHENTICATED ||
     type === MSG.CLIENT_GAME_SELECTED
   );
 }
