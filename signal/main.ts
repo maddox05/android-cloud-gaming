@@ -51,6 +51,7 @@ import {
   PING_TIMEOUT_THRESHOLD,
   QUEUE_PROCESS_INTERVAL,
   QUEUE_TIMEOUT_THRESHOLD,
+  CONNECTING_TIMEOUT_THRESHOLD,
 } from "./consts.js";
 
 // Verify required environment variables
@@ -297,6 +298,23 @@ function handleClientQueue(client: Client, msg: QueueMessage): void {
     return;
   }
 
+  // If client already has a worker assigned, clean up first
+  if (client.workerId) {
+    const oldWorker = getWorker(client.workerId);
+    if (oldWorker) {
+      sendClientDisconnectedToWorker(oldWorker);
+      removeWorker(oldWorker.id);
+    }
+    client.workerId = null;
+  }
+
+  // If client is already in queue, just update game and send info
+  if (client.connectionState === "queued") {
+    client.game = appId;
+    sendQueueInfoToClient(client);
+    return;
+  }
+
   // Set client game and queue state
   client.game = appId;
   client.connectionState = "queued";
@@ -337,6 +355,9 @@ function handleClientWorkerAssign(client: Client, worker: Worker): void {
   assignWorkerToClient(worker, client.id);
   assignClientToWorker(client, worker.id);
 
+  // Track when assignment happened (for connecting timeout)
+  client.assignedAt = Date.now();
+
   console.log(`Assigned worker ${worker.id} to client ${client.id} for game ${client.game}`);
 
   // Tell client they're ready to proceed
@@ -345,6 +366,12 @@ function handleClientWorkerAssign(client: Client, worker: Worker): void {
 
 // Called when client sends START (after receiving QUEUE_READY and navigating to /app)
 function handleClientWorkerStart(client: Client): void {
+  // Prevent double START
+  if (client.connectionState === "connected") {
+    console.log(`Client ${client.id} already started, ignoring duplicate START`);
+    return;
+  }
+
   // Client should already have a worker assigned from queue process
   if (!client.workerId) {
     sendErrorToClient(client, "No worker assigned. Please rejoin the queue.");
@@ -370,7 +397,8 @@ function handleClientWorkerStart(client: Client): void {
     return;
   }
 
-  // Tell worker to start WebRTC connection
+  // Mark as connected and tell worker to start WebRTC
+  client.connectionState = "connected";
   sendStartToWorker(worker);
   sendClientGameToWorker(worker, client.game);
 
@@ -529,10 +557,26 @@ function checkQueueTimeouts(): void {
   }
 }
 
+// Check for clients stuck in "connecting" state (got QUEUE_READY but never sent START)
+function checkConnectingTimeouts(): void {
+  const now = Date.now();
+
+  for (const client of getAllClients()) {
+    if (client.connectionState === "connecting" && client.assignedAt) {
+      if (now - client.assignedAt > CONNECTING_TIMEOUT_THRESHOLD) {
+        console.log(`Client ${client.id} timed out in connecting state`);
+        sendErrorToClient(client, "Connection timeout - please try again.");
+        handleClientDisconnect(client);
+      }
+    }
+  }
+}
+
 // Queue processing loop (FUNCA)
 setInterval(() => {
   processQueue();
   checkQueueTimeouts();
+  checkConnectingTimeouts();
 }, QUEUE_PROCESS_INTERVAL);
 
 // Start server

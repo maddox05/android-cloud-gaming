@@ -22,4 +22,5 @@ export interface Client {
   game: string | null;
   connectionState: ClientConnectionState;
   queuedAt: number | null; // timestamp when client joined queue
+  assignedAt: number | null; // timestamp when client was assigned a worker
 }

@@ -8,3 +8,4 @@ export const INPUT_TIMEOUT_THRESHOLD = 180000; // if client doesnt send input in
 // Queue settings
 export const QUEUE_PROCESS_INTERVAL = 5000; // how often to run FUNCA (process queue)
 export const QUEUE_TIMEOUT_THRESHOLD = 20 * 60 * 1000; // 20 minutes max in queue
+export const CONNECTING_TIMEOUT_THRESHOLD = 30 * 1000; // 30 seconds to send START after QUEUE_READY
