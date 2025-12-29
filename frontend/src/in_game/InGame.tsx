@@ -141,7 +141,6 @@ export default function InGame() {
           handleDisconnected
         );
         connectionRef.current = conn;
-        setLoadingMessage("Loading...");
 
         // Initialize decoder if canvas is ready
         if (canvasRef.current && !decoderRef.current) {
@@ -158,7 +157,7 @@ export default function InGame() {
             setStatus(CONNECTION_STATUS.CONNECTED);
             websocketAPI.onError(handleSignalError);
             websocketAPI.sendStart(); // Game already set during queue process
-            setStatusMessage("Sent start to server...");
+            setStatusMessage("Starting...");
             if (intervalRef.current) clearInterval(intervalRef.current);
           }
         }, 100);

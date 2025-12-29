@@ -65,6 +65,8 @@ class WebSocketAPI {
             resolve();
           } else if (msg.type === MSG.ERROR) {
             reject(new Error(msg.message));
+            window.alert(`Authentication error: ${msg.message}`);
+            window.location.href = "/";
           }
         };
         this.ws!.onclose = () =>
