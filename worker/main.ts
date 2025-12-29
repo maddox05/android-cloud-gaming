@@ -37,16 +37,14 @@ let videoChannel: DataChannel | null = null;
 let inputChannel: DataChannel | null = null;
 
 async function createPeerConnection(): Promise<PC> {
-  const iceServers: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
-
-  // Add TURN server if configured (recommended for reliable connectivity)
-  // if (process.env.TURN_URL) {
-  //   iceServers.push({
-  //     urls: process.env.TURN_URL,
-  //     username: process.env.TURN_USERNAME || "",
-  //     credential: process.env.TURN_CREDENTIAL || "",
-  //   });
-  // }
+  const iceServers: RTCIceServer[] = [
+    { urls: "stun:stun.l.google.com:19302" },
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+  ];
 
   const pc = new RTCPeerConnection({ iceServers });
 

@@ -15,10 +15,18 @@ export async function connect(
   onError: (code: ErrorCode | undefined, message: string) => void,
   onDisconnected: () => void
 ): Promise<WebRTCConnection> {
+  // ICE servers config with TURN for NAT traversal
+  const iceServers: RTCIceServer[] = [
+    { urls: "stun:stun.l.google.com:19302" },
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+  ];
+
   // Create peer connection
-  const pc = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-  });
+  const pc = new RTCPeerConnection({ iceServers });
 
   let inputChannel: RTCDataChannel | null = null;
   let videoChannel: RTCDataChannel | null = null;
