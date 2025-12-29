@@ -59,13 +59,13 @@ async function createPeerConnection(): Promise<PC> {
   videoChannel.onopen = () => {
     console.log("Video channel open");
     // Start piping video data
-    // let videoChunkCount = 0;
+    let videoChunkCount = 0;
     videoHandler.setCallback((data) => {
       if (videoChannel && videoChannel.readyState === "open") {
-        // videoChunkCount++;
-        // console.log(
-        //   `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`
-        // );
+        videoChunkCount++;
+        console.log(
+          `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`
+        );
         // this used to be new Uint8Array(data) but thats a copy, it still works without a copy, so why copt it.
 
         /* @ts-ignore */
@@ -355,7 +355,6 @@ async function connectToSignalServer() {
         console.log(`Shutdown requested: ${msg.reason}`);
         restart();
         break;
-      
     }
   });
 
