@@ -75,8 +75,6 @@ class WebSocketAPI {
       // Now set up the real handlers
       this.ws.onmessage = (event) => this.handleMessage(event);
       this.ws.onclose = () => {
-        console.log("Disconnected from signal server");
-        window.alert("Disconnected from signal server");
         this.notifyShutdown("signal_server_connection_closed");
       };
 

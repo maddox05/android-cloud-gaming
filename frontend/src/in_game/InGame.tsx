@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   connect,
@@ -27,32 +27,44 @@ export default function InGame() {
   const connectionRef = useRef<WebRTCConnection | null>(null);
   const decoderRef = useRef<H264Decoder | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const hasStartedConnection = useRef(false);
+  const initialized = useRef(false);
   const timeoutRef = useRef<number | null>(null);
-  const intervalRef = useRef<number | null>(null);
 
-  const cleanup = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+  const cleanup = () => {
+    try {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    } catch (e) {
       timeoutRef.current = null;
+
+      console.error("Failed to clear timeout:", e);
     }
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    if (decoderRef.current) {
-      decoderRef.current.reset();
+    try {
+      if (decoderRef.current) {
+        decoderRef.current.reset();
+        decoderRef.current = null;
+      }
+    } catch (e) {
       decoderRef.current = null;
+
+      console.error("Failed to reset decoder:", e);
     }
-    if (connectionRef.current) {
-      connectionRef.current.close();
+    try {
+      if (connectionRef.current) {
+        connectionRef.current.close();
+        connectionRef.current = null;
+      }
+    } catch (e) {
       connectionRef.current = null;
+
+      console.error("Failed to close connection:", e);
     }
-  }, []);
+  };
 
   const handleCanvasReady = useCallback((canvas: HTMLCanvasElement) => {
     canvasRef.current = canvas;
-    // Initialize decoder if we're already connected
     if (!decoderRef.current) {
       decoderRef.current = new H264Decoder(canvas);
     }
@@ -60,132 +72,118 @@ export default function InGame() {
 
   function handleExit() {
     cleanup();
-    navigate("/");
+    websocketAPI.close();
+    window.location.href = "/";
   }
 
-  useEffect(() => {
-    if (hasStartedConnection.current) {
-      return;
-    }
-    hasStartedConnection.current = true;
+  if (!initialized.current) {
+    initialized.current = true;
     console.log("Starting InGame connection");
 
     if (!appId) {
       alert("No game specified. Please select a game from the home page.");
-      handleExit();
-      return;
-    }
-
-    const handleSignalError = (
-      code: ErrorCode | undefined,
-      message: string
-    ) => {
-      setStatus(CONNECTION_STATUS.ERROR);
-      setStatusMessage(`Error: ${message}`);
-
-      if (code === ERROR_CODE.NO_WORKERS_AVAILABLE) {
-        alert("No game servers available. Please try again later.");
-        navigate("/");
-      } else if (code === ERROR_CODE.WEBRTC_FAILED) {
-        alert("WebRTC connection failed. Please try another wifi network.");
-        navigate("/");
-      } else {
-        alert(`An error occurred: ${message}. Returning to home page.`);
-        navigate("/");
-      }
-      websocketAPI.close();
-    };
-
-    function handleWebRTCError(code: ErrorCode | undefined, message: string) {
-      console.error("Error from WEBRTC:", code, message);
-      setStatus(CONNECTION_STATUS.ERROR);
-      setStatusMessage(`Error: ${message}`);
-
-      if (code === ERROR_CODE.WEBRTC_FAILED) {
-        alert(
-          "Client (you) WebRTC connection failed. This is most likely a server issue. please contact support."
-        );
-        return;
-      } else {
-        alert(`An error occurred: ${message}. Returning to home page.`);
-        navigate("/");
-      }
-    }
-
-    const handleDisconnected = () => {
-      console.log("Disconnected from Worker");
-      setStatus(CONNECTION_STATUS.DISCONNECTED);
-      setStatusMessage("Connection to worker lost");
-      navigate("/");
-    };
-
-    const handleVideoData = (data: ArrayBuffer) => {
-      setStatus(CONNECTION_STATUS.CONNECTED);
-      setStatusMessage("Connected"); // todo optimize this by only setting once
-      if (decoderRef.current) {
-        decoderRef.current.appendData(data);
-      }
-    };
-
-    const startConnection = async () => {
-      try {
-        if (!websocketAPI.isConnected()) {
-          window.alert("You need to wait in the queue!");
-          navigate("/");
-          return;
-        }
-        setLoadingMessage("Setting up worker...");
-        websocketAPI.onShutdown(handleExit); // TODO MAKE SURE WE UNSUB FROM THESE ON CLEANUP
-        const conn = await connect(
-          handleVideoData,
-          handleWebRTCError,
-          handleDisconnected
-        );
-        connectionRef.current = conn;
-        if (!connectionRef.current) {
-          throw new Error("Failed to set callbacks for WebRTC connection");
-        }
-
-        // Initialize decoder if canvas is ready
-        if (canvasRef.current && !decoderRef.current) {
-          decoderRef.current = new H264Decoder(canvasRef.current);
-        }
-
-        setStatus(CONNECTION_STATUS.CONNECTING);
-        websocketAPI.onError(handleSignalError);
-        websocketAPI.sendStart(); // Game already set during queue process
-        setLoadingMessage("Waiting on worker...");
-
-        // Timeout after 30 seconds
-        timeoutRef.current = setTimeout(() => {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          if (connectionRef.current) {
-            setStatus((currentStatus) => {
-              if (currentStatus === CONNECTION_STATUS.CONNECTING) {
-                handleSignalError(
-                  ERROR_CODE.CONNECTION_TIMEOUT,
-                  "Connection timed out"
-                );
-              }
-              return currentStatus;
-            });
-          }
-        }, 30000);
-      } catch (err) {
-        console.error("Failed to connect:", err);
+      setTimeout(() => navigate("/"), 0);
+    } else {
+      const handleSignalError = (
+        code: ErrorCode | undefined,
+        message: string
+      ) => {
         setStatus(CONNECTION_STATUS.ERROR);
-        setStatusMessage("Connection failed");
-        alert("Failed to connect to server. Returning to home page.");
-        navigate("/");
+        setStatusMessage(`Error: ${message}`);
+
+        if (code === ERROR_CODE.NO_WORKERS_AVAILABLE) {
+          alert("No game servers available. Please try again later.");
+        } else if (code === ERROR_CODE.WEBRTC_FAILED) {
+          alert("WebRTC connection failed. Please try another wifi network.");
+        } else {
+          alert(`An error occurred: ${message}. Returning to home page.`);
+        }
+        handleExit();
+      };
+
+      function handleWebRTCError(code: ErrorCode | undefined, message: string) {
+        console.error("Error from WEBRTC:", code, message);
+        setStatus(CONNECTION_STATUS.ERROR);
+        setStatusMessage(`Error: ${message}`);
+
+        if (code === ERROR_CODE.WEBRTC_FAILED) {
+          alert(
+            "Client (you) WebRTC connection failed. This is most likely a server issue. please contact support."
+          );
+        } else {
+          alert(`An error occurred: ${message}. Returning to home page.`);
+        }
+        handleExit();
       }
-    };
 
-    startConnection();
+      const handleDisconnected = () => {
+        console.log("Disconnected from Worker");
+        setStatus(CONNECTION_STATUS.DISCONNECTED);
+        setStatusMessage("Connection to worker lost");
+        handleExit();
+      };
 
-    return () => {
-      cleanup();
-    };
-  }, [appId, navigate, cleanup, handleExit]);
+      const handleVideoData = (data: ArrayBuffer) => {
+        setStatus(CONNECTION_STATUS.CONNECTED);
+        setStatusMessage("Connected");
+        if (decoderRef.current) {
+          decoderRef.current.appendData(data);
+        }
+      };
+
+      websocketAPI.onShutdown(handleExit);
+      websocketAPI.onError(handleSignalError);
+
+      (async () => {
+        try {
+          if (!websocketAPI.isConnected()) {
+            window.alert("You need to wait in the queue!");
+            window.location.href = "/";
+            return;
+          }
+          setLoadingMessage("Setting up worker...");
+          const conn = await connect(
+            handleVideoData,
+            handleWebRTCError,
+            handleDisconnected
+          );
+
+          connectionRef.current = conn;
+          if (!connectionRef.current) {
+            throw new Error("Failed to set callbacks for WebRTC connection");
+          }
+
+          if (canvasRef.current && !decoderRef.current) {
+            decoderRef.current = new H264Decoder(canvasRef.current);
+          }
+
+          setStatus(CONNECTION_STATUS.CONNECTING);
+          websocketAPI.sendStart();
+          setLoadingMessage("Waiting on worker...");
+
+          timeoutRef.current = setTimeout(() => {
+            if (connectionRef.current) {
+              setStatus((currentStatus) => {
+                if (currentStatus === CONNECTION_STATUS.CONNECTING) {
+                  handleSignalError(
+                    ERROR_CODE.CONNECTION_TIMEOUT,
+                    "Connection timed out"
+                  );
+                }
+                return currentStatus;
+              });
+            }
+          }, 30000);
+        } catch (err) {
+          console.error("Failed to connect:", err);
+          setStatus(CONNECTION_STATUS.ERROR);
+          setStatusMessage("Connection failed");
+          alert("Failed to connect to server. Returning to home page.");
+          handleExit();
+        }
+      })();
+    }
+  }
 
   const sendInput = useCallback(
     (msg: Parameters<WebRTCConnection["sendInput"]>[0]) => {

@@ -1,11 +1,10 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { websocketAPI, type QueueInfo } from "../utils/websocket_api";
 import { getGameName } from "../in_game/helpers";
 import { ERROR_CODE, type ErrorCode } from "../../../shared/types";
 import "./Queue.css";
 
-// Estimated seconds per player ahead in queue
 const ESTIMATED_SECONDS_PER_PLAYER = 60;
 
 export default function Queue() {
@@ -17,122 +16,91 @@ export default function Queue() {
   const [error, setError] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(true);
 
+  const initialized = useRef(false);
   const queueStartTime = useRef<number | null>(null);
+  const timerInterval = useRef<number | null>(null);
 
-  const handleExit = useCallback(() => {
+  function handleExit() {
+    if (timerInterval.current) clearInterval(timerInterval.current);
     websocketAPI.close();
-    navigate("/");
-  }, [navigate]);
+    window.location.href = "/";
+  }
 
-  // Close websocket on page unload (refresh, close tab)
-  // Note: Don't close on unmount - we need the connection when navigating to InGame
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      websocketAPI.close();
-    };
+  if (!initialized.current) {
+    initialized.current = true;
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, []);
-
-  // Timer to update timeInQueue every second
-  useEffect(() => {
-    if (isConnecting || error || position === null) return;
-
-    const interval = setInterval(() => {
-      if (queueStartTime.current) {
-        const elapsed = Math.floor(
-          (Date.now() - queueStartTime.current) / 1000
-        );
-        setTimeInQueue(elapsed);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isConnecting, error, position]);
-
-  useEffect(() => {
     if (!appId) {
       setError("No game specified");
-      return;
-    }
+    } else {
+      const handleError = (code: ErrorCode | undefined, message: string) => {
+        console.error("Queue error:", message);
+        if (code === ERROR_CODE.NO_SUBSCRIPTION) {
+          window.alert(`Subscription error: ${message}`);
+          handleExit();
+          return;
+        } else if (code === ERROR_CODE.AUTH_FAILED) {
+          window.alert(`Failed to authenticate: ${message}`);
+          handleExit();
+          return;
+        }
+        setError(message);
+      };
 
-    const handleError = (code: ErrorCode | undefined, message: string) => {
-      console.error("Queue error:", message);
-      if (code === ERROR_CODE.NO_SUBSCRIPTION) {
-        window.alert(`Subscription error: ${message}`);
-        navigate("/");
-      } else if (code === ERROR_CODE.AUTH_FAILED) {
-        window.alert(`Failed to authenticate: ${message}`);
-        navigate("/");
-      }
-      setError(message);
-    };
+      const handleShutdown = () => {
+        console.log("Disconnected from server");
+        setError("Connection lost");
+      };
 
-    const handleShutdown = () => {
-      console.log("Disconnected from server");
-      setError("Connection lost");
-    };
-
-    const handleQueueInfo = (info: QueueInfo) => {
-      console.log("Received queue info:", info);
-
-      // Set start time on first queue info received
-      if (queueStartTime.current === null) {
-        queueStartTime.current = Date.now();
-      }
-
-      setPosition(info.position);
-      setIsConnecting(false);
-    };
-
-    const handleQueueReady = () => {
-      console.log("Queue ready - navigating to game");
-      navigate(`/app/${appId}`);
-    };
-
-    // Register callbacks synchronously BEFORE any async work
-    const unsubError = websocketAPI.onError(handleError);
-    const unsubShutdown = websocketAPI.onShutdown(handleShutdown);
-    const unsubQueueInfo = websocketAPI.onQueueInfo(handleQueueInfo);
-    const unsubQueueReady = websocketAPI.onQueueReady(handleQueueReady);
-
-    const startQueue = async () => {
-      try {
-        console.log("Connecting to signal server...");
-        await websocketAPI.connect();
-        console.log("Connected, sending QUEUE for appId:", appId);
-        websocketAPI.sendQueue(appId);
-      } catch (err) {
-        console.error("Failed to connect:", err);
-        setError("Failed to connect to server");
+      const handleQueueInfo = (info: QueueInfo) => {
+        console.log("Received queue info:", info);
+        if (queueStartTime.current === null) {
+          queueStartTime.current = Date.now();
+          timerInterval.current = setInterval(() => {
+            if (queueStartTime.current) {
+              const elapsed = Math.floor(
+                (Date.now() - queueStartTime.current) / 1000
+              );
+              setTimeInQueue(elapsed);
+            }
+          }, 1000);
+        }
+        setPosition(info.position);
         setIsConnecting(false);
-      }
-    };
+      };
 
-    startQueue();
+      const handleQueueReady = () => {
+        console.log("Queue ready - navigating to game");
+        if (timerInterval.current) clearInterval(timerInterval.current);
+        navigate(`/app/${appId}`);
+      };
 
-    return () => {
-      // Cleanup subscriptions
-      unsubError();
-      unsubShutdown();
-      unsubQueueInfo();
-      unsubQueueReady();
-    };
-  }, [appId, navigate]);
+      websocketAPI.onError(handleError);
+      websocketAPI.onShutdown(handleShutdown);
+      websocketAPI.onQueueInfo(handleQueueInfo);
+      websocketAPI.onQueueReady(handleQueueReady);
+
+      (async () => {
+        try {
+          console.log("Connecting to signal server...");
+          await websocketAPI.connect();
+          console.log("Connected, sending QUEUE for appId:", appId);
+          websocketAPI.sendQueue(appId);
+        } catch (err) {
+          console.error("Failed to connect:", err);
+          setError("Failed to connect to server");
+          setIsConnecting(false);
+        }
+      })();
+    }
+  }
 
   const formatTime = (seconds: number): string => {
-    if (seconds < 60) {
-      return `${seconds}s`;
-    }
+    if (seconds < 60) return `${seconds}s`;
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}m ${secs}s`;
   };
 
-  // Calculate estimated wait based on position
   const estimatedWaitSeconds =
     position !== null
       ? Math.max(0, position * ESTIMATED_SECONDS_PER_PLAYER)
@@ -168,7 +136,6 @@ export default function Queue() {
               <span className="queue-stat-label">Position</span>
               <span className="queue-stat-value">{position}</span>
             </div>
-
             <div className="queue-stat">
               <span className="queue-stat-label">Estimated Wait</span>
               <span className="queue-stat-value">
@@ -177,14 +144,12 @@ export default function Queue() {
                   : `~${formatTime(estimatedWaitSeconds)}`}
               </span>
             </div>
-
             <div className="queue-stat">
               <span className="queue-stat-label">Time in Queue</span>
               <span className="queue-stat-value">
                 {formatTime(timeInQueue)}
               </span>
             </div>
-
             <div className="queue-progress">
               <div className="spinner"></div>
               <p>Waiting for available server...</p>

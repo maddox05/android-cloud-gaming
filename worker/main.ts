@@ -37,14 +37,7 @@ let videoChannel: DataChannel | null = null;
 let inputChannel: DataChannel | null = null;
 
 async function createPeerConnection(): Promise<PC> {
-  const iceServers: RTCIceServer[] = [
-    { urls: "stun:stun.l.google.com:19302" },
-    {
-      urls: "turn:openrelay.metered.ca:80",
-      username: "openrelayproject",
-      credential: "openrelayproject",
-    },
-  ];
+  const iceServers: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
 
   const pc = new RTCPeerConnection({ iceServers });
 
@@ -104,6 +97,7 @@ async function createPeerConnection(): Promise<PC> {
         type: "ice-candidate",
         candidate: event.candidate.toJSON(),
       };
+
       signalSocket.send(JSON.stringify(iceMsg));
     }
   };
@@ -333,6 +327,7 @@ async function connectToSignalServer() {
         // Client sent ICE candidate
         if (peerConnection && msg.candidate) {
           await peerConnection.addIceCandidate(msg.candidate);
+          console.log("Added remote ICE candidate!");
         }
         break;
 
