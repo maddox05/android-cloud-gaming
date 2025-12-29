@@ -133,13 +133,13 @@ export default class Client {
     }
 
     // If already has worker, clean up first
-    if (this.worker) {
+    if (this.worker) { // this should never happen
       this.worker.handleClientRequeued();
       this.worker = null;
     }
 
     // If already queued, just update game
-    if (this.connectionState === "queued") {
+    if (this.connectionState === "queued") { // this should never happen
       this.game = appId;
       this.sendQueueInfo();
       return;
@@ -222,7 +222,7 @@ export default class Client {
     this.send({ type: MSG.ICE_CANDIDATE, candidate });
   }
 
-  sendWorkerDisconnected(): void {
+  sendWorkerDisconnected(): void { // Message to client to disconnect same result as shutdown.
     this.send({ type: MSG.WORKER_DISCONNECTED });
   }
 
