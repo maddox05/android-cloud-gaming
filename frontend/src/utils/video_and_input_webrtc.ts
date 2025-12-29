@@ -70,7 +70,6 @@ export async function connect(
 
       channel.onopen = () => {
         console.log("Video channel open");
-        websocketAPI.sendConnected();
       };
 
       channel.onmessage = (e) => {
