@@ -154,7 +154,7 @@ export default function InGame() {
         setStatus(CONNECTION_STATUS.CONNECTING);
         websocketAPI.onError(handleSignalError);
         websocketAPI.sendStart(); // Game already set during queue process
-        setStatusMessage("Starting...");
+        setLoadingMessage("Waiting on worker...");
 
         // Timeout after 30 seconds
         timeoutRef.current = setTimeout(() => {

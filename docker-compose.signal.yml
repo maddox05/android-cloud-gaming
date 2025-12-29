@@ -9,9 +9,3 @@ services:
       SIGNAL_PORT: ${SIGNAL_PORT}
       SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
       SUPABASE_URL: ${SUPABASE_URL}
-    networks:
-      - cloud-gaming
-
-networks:
-  cloud-gaming:
-    name: cloud-gaming

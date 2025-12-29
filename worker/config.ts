@@ -1,5 +1,34 @@
+import { execSync } from "child_process";
+
+function getRedroidHost(): string {
+  // If explicitly set, use that
+  if (process.env.REDROID_HOST) {
+    return process.env.REDROID_HOST;
+  }
+
+  // With network_mode: host, we need to find the container's IP via Docker
+  const podName = process.env.POD_NAME;
+  if (podName) {
+    try {
+      const containerName = `${podName}-redroid-1`;
+      const ip = execSync(
+        `docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${containerName}`,
+        { encoding: "utf-8" }
+      ).trim();
+      if (ip) {
+        console.log(`Resolved redroid container IP: ${ip}`);
+        return ip;
+      }
+    } catch (e) {
+      console.warn("Failed to get redroid container IP, falling back to localhost");
+    }
+  }
+
+  return "localhost";
+}
+
 export const redroid_config = {
-  host: process.env.REDROID_HOST || "localhost",
+  host: getRedroidHost(),
   port: 5555,
   width: parseInt(process.env.REDROID_WIDTH || "360"),
   height: parseInt(process.env.REDROID_HEIGHT || "640"),
