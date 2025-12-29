@@ -11,6 +11,7 @@ import {
   MSG,
   type SignalMessage,
   type RegisterMessage,
+  type ErrorMessage,
 } from "../shared/types.js";
 
 export type WorkerStatus = "available" | "busy";
@@ -91,8 +92,8 @@ export default class Worker {
         this.forwardIceCandidateToClient(msg.candidate);
         break;
 
-      case MSG.WORKER_CRASHED:
-        this.handleCrashed(msg.reason);
+      case MSG.ERROR:
+        this.forwardErrorToClient(msg as ErrorMessage);
         break;
 
       default:
@@ -122,19 +123,14 @@ export default class Worker {
     }
   }
 
-  private handleCrashed(reason: string): void {
-    console.log(`Worker ${this.id} crashed: ${reason}`);
-
+  private forwardErrorToClient(msg: ErrorMessage): void {
     if (this.client) {
-      const client = this.client;
-      this.client = null;
-      client.worker = null;
-      client.sendWorkerDisconnected();
-      client.disconnect("worker_crashed");
+      this.client.sendError(msg.code!, msg.message);
+      console.log(`Forwarded error to client ${this.client.id}: ${msg.code} - ${msg.message}`);
     }
-
-    this.disconnect("crashed");
   }
+
+
 
   // ============================================
   // Sending Messages
@@ -198,7 +194,6 @@ export default class Worker {
       const client = this.client;
       this.client = null; // Clear reference first
       client.worker = null; // Clear bidirectional
-      client.sendWorkerDisconnected();
       client.disconnect("worker_disconnected");
     }
 

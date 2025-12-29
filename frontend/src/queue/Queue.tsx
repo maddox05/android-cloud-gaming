@@ -43,7 +43,9 @@ export default function Queue() {
 
     const interval = setInterval(() => {
       if (queueStartTime.current) {
-        const elapsed = Math.floor((Date.now() - queueStartTime.current) / 1000);
+        const elapsed = Math.floor(
+          (Date.now() - queueStartTime.current) / 1000
+        );
         setTimeInQueue(elapsed);
       }
     }, 1000);
@@ -62,7 +64,7 @@ export default function Queue() {
       setError(message);
     };
 
-    const handleDisconnected = () => {
+    const handleShutdown = () => {
       console.log("Disconnected from server");
       setError("Connection lost");
     };
@@ -86,7 +88,7 @@ export default function Queue() {
 
     // Register callbacks synchronously BEFORE any async work
     const unsubError = websocketAPI.onError(handleError);
-    const unsubDisconnect = websocketAPI.onDisconnect(handleDisconnected);
+    const unsubShutdown = websocketAPI.onShutdown(handleShutdown);
     const unsubQueueInfo = websocketAPI.onQueueInfo(handleQueueInfo);
     const unsubQueueReady = websocketAPI.onQueueReady(handleQueueReady);
 
@@ -108,7 +110,7 @@ export default function Queue() {
     return () => {
       // Cleanup subscriptions
       unsubError();
-      unsubDisconnect();
+      unsubShutdown();
       unsubQueueInfo();
       unsubQueueReady();
     };
@@ -124,9 +126,10 @@ export default function Queue() {
   };
 
   // Calculate estimated wait based on position
-  const estimatedWaitSeconds = position !== null
-    ? Math.max(0, position  * ESTIMATED_SECONDS_PER_PLAYER)
-    : 0;
+  const estimatedWaitSeconds =
+    position !== null
+      ? Math.max(0, position * ESTIMATED_SECONDS_PER_PLAYER)
+      : 0;
 
   const gameName = appId ? getGameName(appId) : "Loading...";
 

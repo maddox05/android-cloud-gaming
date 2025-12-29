@@ -22,7 +22,6 @@ export const MSG = {
   PONG: "pong",
   SHUTDOWN: "shutdown",
   WORKER_DISCONNECTED: "worker-disconnected",
-  WORKER_CRASHED: "worker-crashed",
   CONNECTED: "connected",
   AUTHENTICATED: "authenticated",
   // Queue messages
@@ -70,7 +69,6 @@ export const ERROR_CODE = {
   NO_WORKERS_AVAILABLE: "NO_WORKERS_AVAILABLE",
   AUTH_FAILED: "AUTH_FAILED",
   CONNECTION_TIMEOUT: "CONNECTION_TIMEOUT",
-  WORKER_CRASHED: "WORKER_CRASHED",
   WEBRTC_FAILED: "WEBRTC_FAILED",
   INVALID_REQUEST: "INVALID_REQUEST",
   QUEUE_TIMEOUT: "QUEUE_TIMEOUT",
@@ -114,16 +112,14 @@ export interface ShutdownMessage {
   reason: string;
 }
 
-/** Signal server notifies client that worker disconnected */
+/** Worker notifies signal server it disconnected */
 export interface WorkerDisconnectedMessage {
   type: typeof MSG.WORKER_DISCONNECTED;
 }
 
-/** Worker notifies signal server that it crashed */
-export interface WorkerCrashedMessage {
-  type: typeof MSG.WORKER_CRASHED;
-  reason: string;
-}
+
+
+
 
 /** Client notifies signal server that WebRTC is connected */
 export interface ConnectedMessage {
@@ -175,7 +171,6 @@ export type SignalMessage =
   | PongMessage
   | ShutdownMessage
   | WorkerDisconnectedMessage
-  | WorkerCrashedMessage
   | ConnectedMessage
   | AuthenticatedMessage
   | QueueMessage
@@ -239,8 +234,6 @@ export function isSignalMessage(msg: unknown): msg is SignalMessage {
     type === MSG.PING ||
     type === MSG.PONG ||
     type === MSG.SHUTDOWN ||
-    type === MSG.WORKER_DISCONNECTED ||
-    type === MSG.WORKER_CRASHED ||
     type === MSG.CONNECTED ||
     type === MSG.AUTHENTICATED ||
     type === MSG.QUEUE ||

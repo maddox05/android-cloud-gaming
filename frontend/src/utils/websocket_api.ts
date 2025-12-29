@@ -20,16 +20,24 @@ class WebSocketAPI {
   private ws: WebSocket | null = null;
 
   private onOfferCallbacks: ((sdp: string) => void)[] = [];
-  private onIceCandidateCallbacks: ((candidate: RTCIceCandidateInit) => void)[] = [];
-  private onErrorCallbacks: ((code: ErrorCode | undefined, message: string) => void)[] = [];
-  private onDisconnectCallbacks: (() => void)[] = [];
-  private onWorkerDisconnectedCallbacks: (() => void)[] = [];
+  private onIceCandidateCallbacks: ((
+    candidate: RTCIceCandidateInit
+  ) => void)[] = [];
+  private onErrorCallbacks: ((
+    code: ErrorCode | undefined,
+    message: string
+  ) => void)[] = [];
   private onQueueInfoCallbacks: ((info: QueueInfo) => void)[] = [];
   private onQueueReadyCallbacks: (() => void)[] = [];
+  private onShutdownCallbacks: ((reason: string) => void)[] = [];
 
   async connect(): Promise<void> {
     // Already connected or connecting
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+    if (
+      this.ws &&
+      (this.ws.readyState === WebSocket.OPEN ||
+        this.ws.readyState === WebSocket.CONNECTING)
+    ) {
       console.log("Already connected/connecting, skipping");
       return;
     }
@@ -40,7 +48,9 @@ class WebSocketAPI {
         throw new Error("Not authenticated");
       }
 
-      const url = `${config.SIGNAL_URL}?role=client&token=${encodeURIComponent(token)}`;
+      const url = `${config.SIGNAL_URL}?role=client&token=${encodeURIComponent(
+        token
+      )}`;
       console.log("Connecting to signal server");
 
       this.ws = new WebSocket(url);
@@ -57,14 +67,16 @@ class WebSocketAPI {
             reject(new Error(msg.message));
           }
         };
-        this.ws!.onclose = () => reject(new Error("Connection closed during authentication"));
+        this.ws!.onclose = () =>
+          reject(new Error("Connection closed during authentication"));
       });
 
       // Now set up the real handlers
       this.ws.onmessage = (event) => this.handleMessage(event);
       this.ws.onclose = () => {
         console.log("Disconnected from signal server");
-        this.notifyDisconnect();
+        window.alert("Disconnected from signal server");
+        this.notifyShutdown("signal_server_connection_closed");
       };
 
       console.log("Connected and authenticated to signal server");
@@ -121,14 +133,9 @@ class WebSocketAPI {
         break;
       }
 
-      case MSG.WORKER_DISCONNECTED:
-        console.log("Worker disconnected");
-        this.onWorkerDisconnectedCallbacks.forEach((cb) => cb());
-        break;
-
       case MSG.SHUTDOWN:
-        console.log("Server shutdown:", msg.reason);
-        this.notifyError(undefined, "Server shutdown: " + msg.reason);
+        console.log("Client received shutdown:", msg.reason);
+        this.notifyShutdown(msg.reason);
         break;
 
       case MSG.QUEUE_INFO: {
@@ -137,7 +144,11 @@ class WebSocketAPI {
         const info: QueueInfo = {
           position: queueMsg.position,
         };
-        console.log("Calling", this.onQueueInfoCallbacks.length, "queue info callbacks");
+        console.log(
+          "Calling",
+          this.onQueueInfoCallbacks.length,
+          "queue info callbacks"
+        );
         this.onQueueInfoCallbacks.forEach((cb) => cb(info));
         break;
       }
@@ -146,6 +157,9 @@ class WebSocketAPI {
         console.log("Queue ready - worker assigned");
         this.onQueueReadyCallbacks.forEach((cb) => cb());
         break;
+
+      default:
+        console.warn("Unknown signal message type:", msg.type);
     }
   }
 
@@ -159,57 +173,66 @@ class WebSocketAPI {
     this.onErrorCallbacks.forEach((cb) => cb(code, message));
   }
 
-  private notifyDisconnect(): void {
-    this.onDisconnectCallbacks.forEach((cb) => cb());
+  private notifyShutdown(reason: string): void {
+    this.onShutdownCallbacks.forEach((cb) => cb(reason));
   }
 
   // Public API: Register callbacks
   onOffer(callback: (sdp: string) => void): Unsubscribe {
     this.onOfferCallbacks.push(callback);
     return () => {
-      this.onOfferCallbacks = this.onOfferCallbacks.filter((cb) => cb !== callback);
+      this.onOfferCallbacks = this.onOfferCallbacks.filter(
+        (cb) => cb !== callback
+      );
     };
   }
 
-  onIceCandidate(callback: (candidate: RTCIceCandidateInit) => void): Unsubscribe {
+  onIceCandidate(
+    callback: (candidate: RTCIceCandidateInit) => void
+  ): Unsubscribe {
     this.onIceCandidateCallbacks.push(callback);
     return () => {
-      this.onIceCandidateCallbacks = this.onIceCandidateCallbacks.filter((cb) => cb !== callback);
+      this.onIceCandidateCallbacks = this.onIceCandidateCallbacks.filter(
+        (cb) => cb !== callback
+      );
     };
   }
 
-  onError(callback: (code: ErrorCode | undefined, message: string) => void): Unsubscribe {
+  onError(
+    callback: (code: ErrorCode | undefined, message: string) => void
+  ): Unsubscribe {
     this.onErrorCallbacks.push(callback);
     return () => {
-      this.onErrorCallbacks = this.onErrorCallbacks.filter((cb) => cb !== callback);
-    };
-  }
-
-  onDisconnect(callback: () => void): Unsubscribe {
-    this.onDisconnectCallbacks.push(callback);
-    return () => {
-      this.onDisconnectCallbacks = this.onDisconnectCallbacks.filter((cb) => cb !== callback);
-    };
-  }
-
-  onWorkerDisconnected(callback: () => void): Unsubscribe {
-    this.onWorkerDisconnectedCallbacks.push(callback);
-    return () => {
-      this.onWorkerDisconnectedCallbacks = this.onWorkerDisconnectedCallbacks.filter((cb) => cb !== callback);
+      this.onErrorCallbacks = this.onErrorCallbacks.filter(
+        (cb) => cb !== callback
+      );
     };
   }
 
   onQueueInfo(callback: (info: QueueInfo) => void): Unsubscribe {
     this.onQueueInfoCallbacks.push(callback);
     return () => {
-      this.onQueueInfoCallbacks = this.onQueueInfoCallbacks.filter((cb) => cb !== callback);
+      this.onQueueInfoCallbacks = this.onQueueInfoCallbacks.filter(
+        (cb) => cb !== callback
+      );
     };
   }
 
   onQueueReady(callback: () => void): Unsubscribe {
     this.onQueueReadyCallbacks.push(callback);
     return () => {
-      this.onQueueReadyCallbacks = this.onQueueReadyCallbacks.filter((cb) => cb !== callback);
+      this.onQueueReadyCallbacks = this.onQueueReadyCallbacks.filter(
+        (cb) => cb !== callback
+      );
+    };
+  }
+
+  onShutdown(callback: (reason: string) => void): Unsubscribe {
+    this.onShutdownCallbacks.push(callback);
+    return () => {
+      this.onShutdownCallbacks = this.onShutdownCallbacks.filter(
+        (cb) => cb !== callback
+      );
     };
   }
 
@@ -235,7 +258,7 @@ class WebSocketAPI {
   }
 
   sendInputEvent(): void {
-    this.send({type: MSG.CLIENT_INPUTED})
+    this.send({ type: MSG.CLIENT_INPUTED });
   }
 
   // Public API: Connection management
@@ -251,10 +274,9 @@ class WebSocketAPI {
     this.onOfferCallbacks = [];
     this.onIceCandidateCallbacks = [];
     this.onErrorCallbacks = [];
-    this.onDisconnectCallbacks = [];
-    this.onWorkerDisconnectedCallbacks = [];
     this.onQueueInfoCallbacks = [];
     this.onQueueReadyCallbacks = [];
+    this.onShutdownCallbacks = [];
   }
 }
 

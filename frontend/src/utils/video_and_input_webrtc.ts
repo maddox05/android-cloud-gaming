@@ -1,5 +1,9 @@
 import { websocketAPI } from "./websocket_api";
-import { ERROR_CODE, type InputMessage, type ErrorCode } from "../../../shared/types";
+import {
+  ERROR_CODE,
+  type InputMessage,
+  type ErrorCode,
+} from "../../../shared/types";
 
 export interface WebRTCConnection {
   sendInput: (msg: InputMessage) => void;
@@ -11,9 +15,6 @@ export async function connect(
   onError: (code: ErrorCode | undefined, message: string) => void,
   onDisconnected: () => void
 ): Promise<WebRTCConnection> {
-  // Connect to signal server
-  await websocketAPI.connect(); // webrtc is the one who establishes the websocket connection to signaling server
-
   // Create peer connection
   const pc = new RTCPeerConnection({
     iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -33,7 +34,10 @@ export async function connect(
       websocketAPI.sendAnswer(answer.sdp!);
     } catch (err) {
       console.error("Failed to handle offer:", err);
-      onError(ERROR_CODE.WEBRTC_FAILED, "Failed to establish connection");
+      onError(
+        ERROR_CODE.WEBRTC_FAILED,
+        "Failed to establish connection to worker"
+      ); // singal server and this use same code, but one is from client one is not
     }
   });
   unsubscribers.push(unsubOffer);
@@ -83,33 +87,47 @@ export async function connect(
 
   // Monitor connection state
   pc.onconnectionstatechange = () => {
-    console.log("Connection state:", pc.connectionState);
+    console.log("[WebRTC] Connection state:", pc.connectionState);
 
-    if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+    if (
+      pc.connectionState === "failed" ||
+      pc.connectionState === "disconnected"
+    ) {
       onDisconnected();
+      // todo could send server that I failed the webrtc connection
     }
   };
 
+  pc.oniceconnectionstatechange = () => {
+    console.log("[WebRTC] ICE connection state:", pc.iceConnectionState);
+  };
+
+  pc.onicegatheringstatechange = () => {
+    console.log("[WebRTC] ICE gathering state:", pc.iceGatheringState);
+  };
+
+  pc.onsignalingstatechange = () => {
+    console.log("[WebRTC] Signaling state:", pc.signalingState);
+  };
+
   // Handle errors from signal server
-  const unsubError = websocketAPI.onError((code, message) => {
-    onError(code, message);
+  const unsubError = websocketAPI.onError(() => {
+    closeConnection();
   });
   unsubscribers.push(unsubError);
 
-  // Handle worker disconnection
-  const unsubWorkerDisconnected = websocketAPI.onWorkerDisconnected(() => {
-    onError(ERROR_CODE.WORKER_CRASHED, "Worker disconnected");
-    onDisconnected();
+  // Handle Shutdowns
+  const unsubShutdown = websocketAPI.onShutdown(() => {
+    closeConnection();
   });
-  unsubscribers.push(unsubWorkerDisconnected);
+  unsubscribers.push(unsubShutdown);
 
-  // Handle signal server disconnection
-  const unsubDisconnect = websocketAPI.onDisconnect(() => {
-    onDisconnected();
-  });
-  unsubscribers.push(unsubDisconnect);
-
-
+  function closeConnection() {
+    unsubscribers.forEach((unsub) => unsub());
+    if (videoChannel) videoChannel.close();
+    if (inputChannel) inputChannel.close();
+    pc.close();
+  }
 
   // Return connection control
   return {
@@ -119,12 +137,6 @@ export async function connect(
         inputChannel.send(JSON.stringify(msg));
       }
     },
-    close: () => {
-      unsubscribers.forEach((unsub) => unsub());
-      if (videoChannel) videoChannel.close();
-      if (inputChannel) inputChannel.close();
-      pc.close();
-      websocketAPI.close();
-    },
+    close: closeConnection,
   };
 }

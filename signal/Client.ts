@@ -222,9 +222,6 @@ export default class Client {
     this.send({ type: MSG.ICE_CANDIDATE, candidate });
   }
 
-  sendWorkerDisconnected(): void { // Message to client to disconnect same result as shutdown.
-    this.send({ type: MSG.WORKER_DISCONNECTED });
-  }
 
   sendShutdown(reason: string): void {
     this.send({ type: MSG.SHUTDOWN, reason });
@@ -319,7 +316,6 @@ export default class Client {
     if (this.isDisconnected) return;
 
     this.worker = null;
-    this.sendWorkerDisconnected();
     this.disconnect("worker_disconnected");
   }
 }

@@ -1,6 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { connect, type WebRTCConnection } from "../utils/video_and_input_webrtc";
+import {
+  connect,
+  type WebRTCConnection,
+} from "../utils/video_and_input_webrtc";
 import { H264Decoder } from "../utils/decoder";
 import { websocketAPI } from "../utils/websocket_api";
 import Canvas from "./canvas/Canvas";
@@ -13,9 +16,13 @@ export default function InGame() {
   const navigate = useNavigate();
   const { appId } = useParams<{ appId: string }>();
 
-  const [status, setStatus] = useState<ConnectionStatus>(CONNECTION_STATUS.CONNECTING);
+  const [status, setStatus] = useState<ConnectionStatus>(
+    CONNECTION_STATUS.CONNECTING
+  );
   const [statusMessage, setStatusMessage] = useState("Connecting...");
-  const [loadingMessage, setLoadingMessage] = useState("Connecting to server...");
+  const [loadingMessage, setLoadingMessage] = useState(
+    "Connecting to server..."
+  );
 
   const connectionRef = useRef<WebRTCConnection | null>(null);
   const decoderRef = useRef<H264Decoder | null>(null);
@@ -69,35 +76,52 @@ export default function InGame() {
       return;
     }
 
-
-
-    const handleError = (code: ErrorCode | undefined, message: string) => {
-      console.error("Error:", code, message);
+    const handleSignalError = (
+      code: ErrorCode | undefined,
+      message: string
+    ) => {
       setStatus(CONNECTION_STATUS.ERROR);
       setStatusMessage(`Error: ${message}`);
 
       if (code === ERROR_CODE.NO_SUBSCRIPTION) {
-        alert("You need an active subscription to play. Redirecting to pricing...");
+        alert(
+          "You need an active subscription to play. Redirecting to pricing..."
+        );
         navigate("/pricing");
         return;
-      }
-
-      else if (code === ERROR_CODE.NO_WORKERS_AVAILABLE) {
+      } else if (code === ERROR_CODE.NO_WORKERS_AVAILABLE) {
         alert("No game servers available. Please try again later.");
         navigate("/");
-      }
-
-      else{
+      } else if (code === ERROR_CODE.WEBRTC_FAILED) {
+        alert("WebRTC connection failed. Please try another wifi network.");
+        navigate("/");
+      } else {
         alert(`An error occurred: ${message}. Returning to home page.`);
         navigate("/");
       }
-
+      websocketAPI.close();
     };
 
+    function handleWebRTCError(code: ErrorCode | undefined, message: string) {
+      console.error("Error from WEBRTC:", code, message);
+      setStatus(CONNECTION_STATUS.ERROR);
+      setStatusMessage(`Error: ${message}`);
+
+      if (code === ERROR_CODE.WEBRTC_FAILED) {
+        alert(
+          "Client (you) WebRTC connection failed. This is most likely a server issue. please contact support."
+        );
+        return;
+      } else {
+        alert(`An error occurred: ${message}. Returning to home page.`);
+        navigate("/");
+      }
+    }
+
     const handleDisconnected = () => {
-      console.log("Disconnected");
+      console.log("Disconnected from Worker");
       setStatus(CONNECTION_STATUS.DISCONNECTED);
-      setStatusMessage("Connection lost");
+      setStatusMessage("Connection to worker lost");
     };
 
     const handleVideoData = (data: ArrayBuffer) => {
@@ -109,8 +133,12 @@ export default function InGame() {
     const startConnection = async () => {
       try {
         setLoadingMessage("Connecting to server...");
-
-        const conn = await connect(handleVideoData, handleError, handleDisconnected);
+        await websocketAPI.connect();
+        const conn = await connect(
+          handleVideoData,
+          handleWebRTCError,
+          handleDisconnected
+        );
         connectionRef.current = conn;
         setLoadingMessage("Loading...");
 
@@ -127,6 +155,7 @@ export default function InGame() {
           }
           if (websocketAPI.isConnected()) {
             setStatus(CONNECTION_STATUS.CONNECTED);
+            websocketAPI.onError(handleSignalError);
             websocketAPI.sendStart(); // Game already set during queue process
             setStatusMessage("Sent start to server...");
             if (intervalRef.current) clearInterval(intervalRef.current);
@@ -139,7 +168,10 @@ export default function InGame() {
           if (connectionRef.current) {
             setStatus((currentStatus) => {
               if (currentStatus === CONNECTION_STATUS.CONNECTING) {
-                handleError(ERROR_CODE.CONNECTION_TIMEOUT, "Connection timed out");
+                handleSignalError(
+                  ERROR_CODE.CONNECTION_TIMEOUT,
+                  "Connection timed out"
+                );
               }
               return currentStatus;
             });
@@ -161,9 +193,12 @@ export default function InGame() {
     };
   }, [appId, navigate, cleanup, handleExit]);
 
-  const sendInput = useCallback((msg: Parameters<WebRTCConnection["sendInput"]>[0]) => {
-    connectionRef.current?.sendInput(msg);
-  }, []);
+  const sendInput = useCallback(
+    (msg: Parameters<WebRTCConnection["sendInput"]>[0]) => {
+      connectionRef.current?.sendInput(msg);
+    },
+    []
+  );
 
   const gameName = appId ? getGameName(appId) : "Loading...";
   const isLoading = status === CONNECTION_STATUS.CONNECTING;

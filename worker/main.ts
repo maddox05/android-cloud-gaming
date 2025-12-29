@@ -10,10 +10,10 @@ import type {
   IceCandidateMessage,
   RegisterMessage,
   PongMessage,
-  WorkerCrashedMessage,
+  ErrorMessage,
 } from "../shared/types.js";
 
-import { GAMES_LIST, MSG } from "../shared/types.js";
+import { GAMES_LIST, MSG, ERROR_CODE } from "../shared/types.js";
 
 const { RTCPeerConnection, RTCSessionDescription } = wrtc;
 
@@ -106,14 +106,62 @@ async function createPeerConnection(): Promise<PC> {
     }
   };
 
-  pc.onconnectionstatechange = () => {
-    console.log("Connection state:", pc.connectionState);
+  pc.onconnectionstatechange = async () => {
+    console.log("[WebRTC] Connection state:", pc.connectionState);
     if (
       pc.connectionState === "disconnected" ||
       pc.connectionState === "failed"
     ) {
+      // Log detailed diagnostics before restarting
+      console.log("[WebRTC] Connection failed/disconnected - diagnostics:");
+      console.log("  ICE connection state:", pc.iceConnectionState);
+      console.log("  ICE gathering state:", pc.iceGatheringState);
+      console.log("  Signaling state:", pc.signalingState);
+      console.log("  Local description type:", pc.localDescription?.type ?? "none");
+      console.log("  Remote description type:", pc.remoteDescription?.type ?? "none");
+
+      // Get connection stats for more insight
+      try {
+        const stats = await pc.getStats();
+        stats.forEach((report) => {
+          if (report.type === "candidate-pair" && report.state) {
+            console.log(`  Candidate pair: ${report.state}, local: ${report.localCandidateId}, remote: ${report.remoteCandidateId}`);
+          }
+          if (report.type === "local-candidate") {
+            console.log(`  Local candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`);
+          }
+          if (report.type === "remote-candidate") {
+            console.log(`  Remote candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`);
+          }
+        });
+      } catch (e) {
+        console.log("  Could not get stats:", e);
+      }
+
+      // Send error to signal server so client can be notified
+      if (signalSocket && signalSocket.readyState === WebSocket.OPEN) {
+        const errorMsg: ErrorMessage = {
+          type: MSG.ERROR,
+          code: ERROR_CODE.WEBRTC_FAILED,
+          message: `WebRTC connection ${pc.connectionState}: ICE ${pc.iceConnectionState}`,
+        };
+        signalSocket.send(JSON.stringify(errorMsg));
+      }
+
       restart();
     }
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    console.log("[WebRTC] ICE connection state:", pc.iceConnectionState);
+  };
+
+  pc.onicegatheringstatechange = () => {
+    console.log("[WebRTC] ICE gathering state:", pc.iceGatheringState);
+  };
+
+  pc.onsignalingstatechange = () => {
+    console.log("[WebRTC] Signaling state:", pc.signalingState);
   };
 
   return pc;
@@ -139,11 +187,13 @@ function notifyCrashAndExit(reason: string): void {
 
   // Notify signal server of crash so it can disconnect the client
   if (signalSocket && signalSocket.readyState === WebSocket.OPEN) {
-    const crashMsg: WorkerCrashedMessage = {
-      type: "worker-crashed",
-      reason: reason,
-    };
-    signalSocket.send(JSON.stringify(crashMsg));
+    // const crashMsg: WorkerCrashedMessage = {
+    //   type: "worker-crashed",
+    //   reason: reason,
+    // };
+    // signalSocket.send(JSON.stringify(crashMsg));
+
+    // we could send for debug logging but ehh
   }
 
   restart(1);
