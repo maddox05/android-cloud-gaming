@@ -149,7 +149,7 @@ class RedroidRunner {
         "-s",
         this.adbTarget,
         "shell",
-        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${height} max_fps=${max_fps} video_bit_rate=${video_bit_rate} video_codec_options=profile=1,level=256,i-frame-interval=1`,
+        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${height} max_fps=${max_fps} video_bit_rate=${video_bit_rate} video_codec_options=profile=1,level=256,i-frame-interval=2`,
       ],
       { stdio: "pipe" }
     );
