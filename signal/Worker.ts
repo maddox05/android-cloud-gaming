@@ -12,6 +12,7 @@ import {
   type SignalMessage,
   type RegisterMessage,
   type ErrorMessage,
+  ERROR_CODE,
 } from "../shared/types.js";
 
 export type WorkerStatus = "available" | "busy";
@@ -77,6 +78,12 @@ export default class Worker {
   private handleMessage(msg: SignalMessage): void {
     switch (msg.type) {
       case MSG.REGISTER:
+        const msgTyped = msg as RegisterMessage;
+        if(!msgTyped.games || !Array.isArray(msgTyped.games)) {
+          console.error(`Worker ${this.id} sent invalid games array`);
+          this.sendShutdown("invalid_games");
+          return;
+        }
         this.handleRegister(msg as RegisterMessage);
         break;
 

@@ -355,6 +355,7 @@ async function connectToSignalServer() {
         console.log(`Shutdown requested: ${msg.reason}`);
         restart();
         break;
+      
     }
   });
 
