@@ -133,7 +133,7 @@ export default function InGame() {
     const startConnection = async () => {
       try {
         setLoadingMessage("Setting up worker...");
-        websocketAPI.onShutdown(handleExit);
+        websocketAPI.onShutdown(handleExit); // TODO MAKE SURE WE UNSUB FROM THESE ON CLEANUP
         const conn = await connect(
           handleVideoData,
           handleWebRTCError,
