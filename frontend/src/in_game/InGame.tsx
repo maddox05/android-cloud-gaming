@@ -132,9 +132,8 @@ export default function InGame() {
 
     const startConnection = async () => {
       try {
-        setLoadingMessage("Connecting to server...");
-        await websocketAPI.connect();
-        websocketAPI.onShutdown(handleExit)
+        setLoadingMessage("Setting up worker...");
+        websocketAPI.onShutdown(handleExit);
         const conn = await connect(
           handleVideoData,
           handleWebRTCError,
