@@ -5,9 +5,7 @@
 // Message Type Constants
 // ============================================
 
-export const GAMES_LIST = [
-  "com.supercell.clashroyale",
-]
+export const GAMES_LIST = ["com.supercell.clashroyale"];
 
 export const MSG = {
   // Signal messages
@@ -16,13 +14,10 @@ export const MSG = {
   ANSWER: "answer",
   ICE_CANDIDATE: "ice-candidate",
   ERROR: "error",
-  CLIENT_DISCONNECTED: "client-disconnected",
-  REGISTER: "register",
+  REGISTER: "register", // worker registers to singal server
   PING: "ping",
   PONG: "pong",
   SHUTDOWN: "shutdown",
-  WORKER_DISCONNECTED: "worker-disconnected",
-  CONNECTED: "connected",
   AUTHENTICATED: "authenticated",
   // Queue messages
   QUEUE: "queue", // client -> server: join queue for a game
@@ -31,8 +26,7 @@ export const MSG = {
   // Input messages
   DRAG: "drag",
   CLICK: "click",
-  CLIENT_INPUTED: "client-inputed",
-  // Internal messages (signal -> worker)
+  CLIENT_INPUTED: "client-inputed", // Client sends to signal for heartbeat
   CLIENT_GAME_SELECTED: "client-game-selected", // signal -> worker: which game to launch
 } as const;
 
@@ -85,11 +79,6 @@ export interface ErrorMessage {
   message: string;
 }
 
-/** Signal server notifies pod that client disconnected */
-export interface ClientDisconnectedMessage {
-  type: typeof MSG.CLIENT_DISCONNECTED;
-}
-
 /** Worker registers with signal server */
 export interface RegisterMessage {
   type: typeof MSG.REGISTER;
@@ -110,20 +99,6 @@ export interface PongMessage {
 export interface ShutdownMessage {
   type: typeof MSG.SHUTDOWN;
   reason: string;
-}
-
-/** Worker notifies signal server it disconnected */
-export interface WorkerDisconnectedMessage {
-  type: typeof MSG.WORKER_DISCONNECTED;
-}
-
-
-
-
-
-/** Client notifies signal server that WebRTC is connected */
-export interface ConnectedMessage {
-  type: typeof MSG.CONNECTED;
 }
 
 /** Signal server confirms client authentication */
@@ -149,7 +124,8 @@ export interface QueueReadyMessage {
 }
 
 /** Client notifies signal server that it has clicked smth on the screen */
-export interface ClientInputed { // client will send data but server doesnt care.
+export interface ClientInputed {
+  // client will send data but server doesnt care.
   type: typeof MSG.CLIENT_INPUTED;
 }
 
@@ -165,13 +141,10 @@ export type SignalMessage =
   | AnswerMessage
   | IceCandidateMessage
   | ErrorMessage
-  | ClientDisconnectedMessage
   | RegisterMessage
   | PingMessage
   | PongMessage
   | ShutdownMessage
-  | WorkerDisconnectedMessage
-  | ConnectedMessage
   | AuthenticatedMessage
   | QueueMessage
   | QueueInfoMessage
@@ -229,12 +202,10 @@ export function isSignalMessage(msg: unknown): msg is SignalMessage {
     type === MSG.ANSWER ||
     type === MSG.ICE_CANDIDATE ||
     type === MSG.ERROR ||
-    type === MSG.CLIENT_DISCONNECTED ||
     type === MSG.REGISTER ||
     type === MSG.PING ||
     type === MSG.PONG ||
     type === MSG.SHUTDOWN ||
-    type === MSG.CONNECTED ||
     type === MSG.AUTHENTICATED ||
     type === MSG.QUEUE ||
     type === MSG.QUEUE_INFO ||

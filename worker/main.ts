@@ -21,9 +21,13 @@ if (!process.env.SIGNAL_URL) {
   console.error("SIGNAL_URL environment variable is required");
   process.exit(1); // this will just keep looping a restart, so dont let this happen ahha
 }
-const SIGNAL_SERVER_URL = `${process.env.SIGNAL_URL.includes("localhost") || process.env.SIGNAL_URL.includes("signal") ? "ws" : "wss"}://${process.env.SIGNAL_URL}?role=worker`;
+const SIGNAL_SERVER_URL = `${
+  process.env.SIGNAL_URL.includes("localhost") ||
+  process.env.SIGNAL_URL.includes("signal")
+    ? "ws"
+    : "wss"
+}://${process.env.SIGNAL_URL}?role=worker`;
 console.log(`Signal server URL: ${SIGNAL_SERVER_URL}`);
-
 
 type PC = InstanceType<typeof RTCPeerConnection>;
 type DataChannel = ReturnType<PC["createDataChannel"]>;
@@ -33,9 +37,7 @@ let videoChannel: DataChannel | null = null;
 let inputChannel: DataChannel | null = null;
 
 async function createPeerConnection(): Promise<PC> {
-  const iceServers: RTCIceServer[] = [
-    { urls: "stun:stun.l.google.com:19302" },
-  ];
+  const iceServers: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
 
   // Add TURN server if configured (recommended for reliable connectivity)
   // if (process.env.TURN_URL) {
@@ -64,7 +66,9 @@ async function createPeerConnection(): Promise<PC> {
         // console.log(
         //   `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`
         // );
-        {/* @ts-ignore */} // this used to be new Uint8Array(data) but thats a copy, it still works without a copy, so why copt it.
+        // this used to be new Uint8Array(data) but thats a copy, it still works without a copy, so why copt it.
+
+        /* @ts-ignore */
         videoChannel.send(data);
       }
     });
@@ -117,21 +121,33 @@ async function createPeerConnection(): Promise<PC> {
       console.log("  ICE connection state:", pc.iceConnectionState);
       console.log("  ICE gathering state:", pc.iceGatheringState);
       console.log("  Signaling state:", pc.signalingState);
-      console.log("  Local description type:", pc.localDescription?.type ?? "none");
-      console.log("  Remote description type:", pc.remoteDescription?.type ?? "none");
+      console.log(
+        "  Local description type:",
+        pc.localDescription?.type ?? "none"
+      );
+      console.log(
+        "  Remote description type:",
+        pc.remoteDescription?.type ?? "none"
+      );
 
       // Get connection stats for more insight
       try {
         const stats = await pc.getStats();
         stats.forEach((report) => {
           if (report.type === "candidate-pair" && report.state) {
-            console.log(`  Candidate pair: ${report.state}, local: ${report.localCandidateId}, remote: ${report.remoteCandidateId}`);
+            console.log(
+              `  Candidate pair: ${report.state}, local: ${report.localCandidateId}, remote: ${report.remoteCandidateId}`
+            );
           }
           if (report.type === "local-candidate") {
-            console.log(`  Local candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`);
+            console.log(
+              `  Local candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`
+            );
           }
           if (report.type === "remote-candidate") {
-            console.log(`  Remote candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`);
+            console.log(
+              `  Remote candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`
+            );
           }
         });
       } catch (e) {
@@ -192,7 +208,6 @@ function notifyCrashAndExit(reason: string): void {
     //   reason: reason,
     // };
     // signalSocket.send(JSON.stringify(crashMsg));
-
     // we could send for debug logging but ehh
   }
 
@@ -201,7 +216,7 @@ function notifyCrashAndExit(reason: string): void {
 
 let isRestarting = false;
 
-async function restart(exitCode:number = 0) {
+async function restart(exitCode: number = 0) {
   console.log("Restarting...");
   if (isRestarting) {
     console.log(">>> Already restarting, skipping");
@@ -209,7 +224,9 @@ async function restart(exitCode:number = 0) {
   }
   isRestarting = true;
 
-  console.log(">>> Restarting worker - exiting for Docker to restart container...");
+  console.log(
+    ">>> Restarting worker - exiting for Docker to restart container..."
+  );
 
   // Cleanup WebRTC
   webrtc_cleanup();
@@ -237,7 +254,7 @@ let sessionStarted = false;
  * Initialize the session - start redroid, connect video/input, create peer connection
  * Called when a client wants to connect (receives "start" message)
  */
-async function initializeSession(gameId:string): Promise<void> {
+async function initializeSession(gameId: string): Promise<void> {
   if (sessionStarted) {
     console.log("Session already started");
     return;
@@ -321,13 +338,6 @@ async function connectToSignalServer() {
         }
         break;
 
-      case MSG.CLIENT_DISCONNECTED:
-        console.log("Client disconnected, restarting worker...");
-        restart();
-        break;
-
-
-
       case MSG.CLIENT_GAME_SELECTED:
         // Client's WebRTC is connected - NOW initialize the session
         console.log("Client choose game, initializing session...");
@@ -343,7 +353,7 @@ async function connectToSignalServer() {
 
       case MSG.SHUTDOWN:
         console.log(`Shutdown requested: ${msg.reason}`);
-        restart()
+        restart();
         break;
     }
   });
@@ -353,7 +363,7 @@ async function connectToSignalServer() {
     // sleep 5 secs
     await new Promise((resolve) => setTimeout(resolve, 5000));
     process.exit(0);
-  })
+  });
 
   signalSocket.on("error", (err) => {
     console.error("Signal socket error:", err);

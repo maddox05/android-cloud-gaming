@@ -253,10 +253,6 @@ class WebSocketAPI {
     this.send({ type: MSG.ICE_CANDIDATE, candidate });
   }
 
-  sendConnected(): void {
-    this.send({ type: MSG.CONNECTED });
-  }
-
   sendInputEvent(): void {
     this.send({ type: MSG.CLIENT_INPUTED });
   }

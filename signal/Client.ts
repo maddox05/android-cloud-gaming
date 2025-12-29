@@ -7,11 +7,7 @@ import {
   removeClientWs,
   generateClientId,
 } from "./registry.js";
-import {
-  addToQueue,
-  removeFromQueue,
-  getQueuePosition,
-} from "./queue.js";
+import { addToQueue, removeFromQueue, getQueuePosition } from "./queue.js";
 import {
   ERROR_CODE,
   MSG,
@@ -25,7 +21,11 @@ import {
   CONNECTING_TIMEOUT_THRESHOLD,
 } from "./consts.js";
 
-export type ClientConnectionState = "waiting" | "queued" | "connecting" | "connected";
+export type ClientConnectionState =
+  | "waiting"
+  | "queued"
+  | "connecting"
+  | "connected";
 
 export default class Client {
   // Identity
@@ -128,18 +128,23 @@ export default class Client {
     const { appId } = msg;
 
     if (!appId) {
-      this.sendError(ERROR_CODE.INVALID_REQUEST, "No game specified in queue request");
+      this.sendError(
+        ERROR_CODE.INVALID_REQUEST,
+        "No game specified in queue request"
+      );
       return;
     }
 
     // If already has worker, clean up first
-    if (this.worker) { // this should never happen
+    if (this.worker) {
+      // this should never happen
       this.worker.handleClientRequeued();
       this.worker = null;
     }
 
     // If already queued, just update game
-    if (this.connectionState === "queued") { // this should never happen
+    if (this.connectionState === "queued") {
+      // this should never happen
       this.game = appId;
       this.sendQueueInfo();
       return;
@@ -159,18 +164,26 @@ export default class Client {
   private handleStart(): void {
     // Prevent double START
     if (this.connectionState === "connected") {
-      console.log(`Client ${this.id} already started, ignoring duplicate START`);
+      console.log(
+        `Client ${this.id} already started, ignoring duplicate START`
+      );
       return;
     }
 
     if (!this.worker) {
-      this.sendError(ERROR_CODE.NO_WORKERS_AVAILABLE, "No worker assigned. Please rejoin the queue.");
+      this.sendError(
+        ERROR_CODE.NO_WORKERS_AVAILABLE,
+        "No worker assigned. Please rejoin the queue."
+      );
       this.disconnect("no_worker");
       return;
     }
 
     if (!this.game) {
-      this.sendError(ERROR_CODE.INVALID_REQUEST, "No game selected. Please rejoin the queue.");
+      this.sendError(
+        ERROR_CODE.INVALID_REQUEST,
+        "No game selected. Please rejoin the queue."
+      );
       this.disconnect("no_game");
       return;
     }
@@ -180,7 +193,9 @@ export default class Client {
     this.worker.sendStart();
     this.worker.sendClientGame(this.game);
 
-    console.log(`Client ${this.id} started connection with worker ${this.worker.id}`);
+    console.log(
+      `Client ${this.id} started connection with worker ${this.worker.id}`
+    );
   }
 
   private forwardAnswerToWorker(sdp: string): void {
@@ -189,7 +204,9 @@ export default class Client {
     }
   }
 
-  private forwardIceCandidateToWorker(candidate: RTCIceCandidateInit | null): void {
+  private forwardIceCandidateToWorker(
+    candidate: RTCIceCandidateInit | null
+  ): void {
     if (this.worker) {
       this.worker.sendIceCandidate(candidate);
     }
@@ -222,7 +239,6 @@ export default class Client {
     this.send({ type: MSG.ICE_CANDIDATE, candidate });
   }
 
-
   sendShutdown(reason: string): void {
     this.send({ type: MSG.SHUTDOWN, reason });
   }
@@ -230,7 +246,9 @@ export default class Client {
   sendQueueInfo(): void {
     const position = getQueuePosition(this.id);
     this.send({ type: MSG.QUEUE_INFO, position });
-    console.log(`Sending QUEUE_INFO to client ${this.id}: position ${position}`);
+    console.log(
+      `Sending QUEUE_INFO to client ${this.id}: position ${position}`
+    );
   }
 
   sendQueueReady(): void {
@@ -309,13 +327,5 @@ export default class Client {
     this.ws.close();
 
     console.log(`Client ${this.id} removed`);
-  }
-
-  // Called when worker notifies us of disconnect (avoid circular disconnect)
-  handleWorkerDisconnected(): void {
-    if (this.isDisconnected) return;
-
-    this.worker = null;
-    this.disconnect("worker_disconnected");
   }
 }

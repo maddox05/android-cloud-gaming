@@ -117,7 +117,9 @@ export default class Worker {
     }
   }
 
-  private forwardIceCandidateToClient(candidate: RTCIceCandidateInit | null): void {
+  private forwardIceCandidateToClient(
+    candidate: RTCIceCandidateInit | null
+  ): void {
     if (this.client) {
       this.client.sendIceCandidate(candidate);
     }
@@ -126,11 +128,11 @@ export default class Worker {
   private forwardErrorToClient(msg: ErrorMessage): void {
     if (this.client) {
       this.client.sendError(msg.code!, msg.message);
-      console.log(`Forwarded error to client ${this.client.id}: ${msg.code} - ${msg.message}`);
+      console.log(
+        `Forwarded error to client ${this.client.id}: ${msg.code} - ${msg.message}`
+      );
     }
   }
-
-
 
   // ============================================
   // Sending Messages
@@ -159,7 +161,7 @@ export default class Worker {
   }
 
   sendClientDisconnected(): void {
-    this.send({ type: MSG.CLIENT_DISCONNECTED });
+    this.send({ type: MSG.SHUTDOWN, reason: "client_disconnected" });
   }
 
   sendClientGame(gameId: string): void {
