@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { websocketAPI, type QueueInfo } from "../utils/websocket_api";
 import { getGameName } from "../in_game/helpers";
-import { type ErrorCode } from "../../../shared/types";
+import { ERROR_CODE, type ErrorCode } from "../../../shared/types";
 import "./Queue.css";
 
 // Estimated seconds per player ahead in queue
@@ -59,8 +59,15 @@ export default function Queue() {
       return;
     }
 
-    const handleError = (_code: ErrorCode | undefined, message: string) => {
+    const handleError = (code: ErrorCode | undefined, message: string) => {
       console.error("Queue error:", message);
+      if (code === ERROR_CODE.NO_SUBSCRIPTION) {
+        window.alert(`Subscription error: ${message}`);
+        navigate("/");
+      } else if (code === ERROR_CODE.AUTH_FAILED) {
+        window.alert(`Failed to authenticate: ${message}`);
+        navigate("/");
+      }
       setError(message);
     };
 

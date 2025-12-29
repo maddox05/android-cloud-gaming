@@ -64,9 +64,8 @@ class WebSocketAPI {
           if (msg.type === MSG.AUTHENTICATED) {
             resolve();
           } else if (msg.type === MSG.ERROR) {
-            reject(new Error(msg.message));
-            window.alert(`Authentication error: ${msg.message}`);
-            window.location.href = "/";
+            this.handleMessage(event); // Let the normal handler process the error
+            reject(new Error("Authentication failed"));
           }
         };
         this.ws!.onclose = () =>
