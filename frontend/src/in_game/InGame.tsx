@@ -120,6 +120,8 @@ export default function InGame() {
     };
 
     const handleVideoData = (data: ArrayBuffer) => {
+      setStatus(CONNECTION_STATUS.CONNECTED);
+      setStatusMessage("Connected"); // todo optimize this by only setting once
       if (decoderRef.current) {
         decoderRef.current.appendData(data);
       }
@@ -140,26 +142,19 @@ export default function InGame() {
           handleDisconnected
         );
         connectionRef.current = conn;
+        if (!connectionRef.current) {
+          throw new Error("Failed to set callbacks for WebRTC connection");
+        }
 
         // Initialize decoder if canvas is ready
         if (canvasRef.current && !decoderRef.current) {
           decoderRef.current = new H264Decoder(canvasRef.current);
         }
 
-        // Wait for connection to be fully established
-        intervalRef.current = setInterval(() => {
-          if (!connectionRef.current) {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            return;
-          }
-          if (websocketAPI.isConnected()) {
-            setStatus(CONNECTION_STATUS.CONNECTED);
-            websocketAPI.onError(handleSignalError);
-            websocketAPI.sendStart(); // Game already set during queue process
-            setStatusMessage("Starting...");
-            if (intervalRef.current) clearInterval(intervalRef.current);
-          }
-        }, 100);
+        setStatus(CONNECTION_STATUS.CONNECTING);
+        websocketAPI.onError(handleSignalError);
+        websocketAPI.sendStart(); // Game already set during queue process
+        setStatusMessage("Starting...");
 
         // Timeout after 30 seconds
         timeoutRef.current = setTimeout(() => {
