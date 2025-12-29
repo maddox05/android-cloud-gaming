@@ -68,7 +68,7 @@ class RedroidRunner {
       return;
     }
 
-    const { height,video_bit_rate } = redroid_config;
+    const { height, video_bit_rate, max_fps } = redroid_config;
 
     // Connect adb (retry a few times in case redroid isn't ready yet)
     console.log(`Connecting ADB to ${this.adbTarget}...`);
@@ -149,7 +149,7 @@ class RedroidRunner {
         "-s",
         this.adbTarget,
         "shell",
-        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${height} video_bit_rate=${video_bit_rate} video_codec_options=i-frame-interval:int=2`,
+        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${height} max_fps=${max_fps} video_bit_rate=${video_bit_rate} video_codec_options=profile=1,level=256,i-frame-interval=1`,
       ],
       { stdio: "pipe" }
     );
@@ -217,17 +217,6 @@ class RedroidRunner {
     console.log("Kiosk mode setup complete!");
   }
 
-  getScrcpyPort(): number {
-    return scrcpy_config.port;
-  }
-
-  getScreenWidth(): number {
-    return redroid_config.width;
-  }
-
-  getScreenHeight(): number {
-    return redroid_config.height;
-  }
 
   /**
    * Restart the redroid container via Docker.

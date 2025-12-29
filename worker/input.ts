@@ -20,6 +20,7 @@ class InputHandler {
   private connected = false;
   private screenWidth = redroid_config.width;
   private screenHeight = redroid_config.height;
+  private touchBuffer = Buffer.alloc(32);  // Pre-allocated, reused for every touch
   private constructor() {}
 
 
@@ -37,6 +38,7 @@ class InputHandler {
     return new Promise((resolve, reject) => {
       this.socket = net.createConnection(scrcpy_config.port, "127.0.0.1", () => {
         console.log("Input/Control socket connected");
+        this.socket!.setNoDelay(true);  // Disable Nagle's algorithm for lower latency
         this.connected = true;
         resolve();
       });
@@ -77,51 +79,31 @@ class InputHandler {
     xPercent: number,
     yPercent: number
   ): Buffer {
-    const buf = Buffer.alloc(32);
-    let offset = 0;
+    const buf = this.touchBuffer;  // Reuse pre-allocated buffer
 
     const x = xPercent * this.screenWidth;
     const y = yPercent * this.screenHeight;
 
     // Message type (1 byte)
-    buf.writeUInt8(SC_CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT, offset);
-    offset += 1;
-
+    buf.writeUInt8(SC_CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT, 0);
     // Action (1 byte)
-    buf.writeUInt8(action, offset);
-    offset += 1;
-
+    buf.writeUInt8(action, 1);
     // Pointer ID (8 bytes) - use 0 for single finger
-    buf.writeBigInt64BE(POINTER_ID_FINGER, offset);
-    offset += 8;
-
+    buf.writeBigInt64BE(POINTER_ID_FINGER, 2);
     // Position X (4 bytes)
-    buf.writeInt32BE(Math.floor(x), offset);
-    offset += 4;
-
+    buf.writeInt32BE(Math.floor(x), 10);
     // Position Y (4 bytes)
-    buf.writeInt32BE(Math.floor(y), offset);
-    offset += 4;
-
+    buf.writeInt32BE(Math.floor(y), 14);
     // Screen width (2 bytes)
-    buf.writeUInt16BE(this.screenWidth, offset);
-    offset += 2;
-
+    buf.writeUInt16BE(this.screenWidth, 18);
     // Screen height (2 bytes)
-    buf.writeUInt16BE(this.screenHeight, offset);
-    offset += 2;
-
+    buf.writeUInt16BE(this.screenHeight, 20);
     // Pressure (2 bytes) - 0xFFFF for full pressure, 0 for UP
-    const pressure = action === ACTION_UP ? 0 : 0xFFFF;
-    buf.writeUInt16BE(pressure, offset);
-    offset += 2;
-
-    // Action button (4 bytes) - 0 for touch (no button)
-    buf.writeUInt32BE(0, offset);
-    offset += 4;
-
-    // Buttons (4 bytes) - 0 for touch (no buttons)
-    buf.writeUInt32BE(0, offset);
+    buf.writeUInt16BE(action === ACTION_UP ? 0 : 0xFFFF, 22);
+    // Action button (4 bytes) - 0 for touch
+    buf.writeUInt32BE(0, 24);
+    // Buttons (4 bytes) - 0 for touch
+    buf.writeUInt32BE(0, 28);
 
     return buf;
   }
@@ -162,11 +144,7 @@ class InputHandler {
       return;
     }
 
-    const actionName = action === ACTION_DOWN ? "DOWN" : action === ACTION_UP ? "UP" : "MOVE";
     const buf = this.buildTouchMessage(action, xPercent, yPercent);
-    const x = Math.floor(xPercent * this.screenWidth);
-    const y = Math.floor(yPercent * this.screenHeight);
-    console.log(`Touch ${actionName}: (${x}, ${y}) [${(xPercent * 100).toFixed(1)}%, ${(yPercent * 100).toFixed(1)}%] screen=${this.screenWidth}x${this.screenHeight}`);
     this.socket.write(buf);
   }
 

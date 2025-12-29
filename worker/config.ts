@@ -3,7 +3,8 @@ export const redroid_config = {
   port: 5555,
   width: parseInt(process.env.REDROID_WIDTH || "360"),
   height: parseInt(process.env.REDROID_HEIGHT || "640"),
-  video_bit_rate: process.env.REDROID_VIDEO_BIT_RATE || "500K",
+  video_bit_rate: process.env.REDROID_VIDEO_BIT_RATE || "2M",
+  max_fps: parseInt(process.env.REDROID_FPS || "60"),
 };
 
 export const scrcpy_config = {

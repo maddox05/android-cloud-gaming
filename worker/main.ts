@@ -19,7 +19,7 @@ const { RTCPeerConnection, RTCSessionDescription } = wrtc;
 
 if (!process.env.SIGNAL_URL) {
   console.error("SIGNAL_URL environment variable is required");
-  process.exit(1);
+  process.exit(1); // this will just keep looping a restart, so dont let this happen ahha
 }
 const SIGNAL_SERVER_URL = `${process.env.SIGNAL_URL.includes("localhost") || process.env.SIGNAL_URL.includes("signal") ? "ws" : "wss"}://${process.env.SIGNAL_URL}?role=worker`;
 console.log(`Signal server URL: ${SIGNAL_SERVER_URL}`);
@@ -57,15 +57,15 @@ async function createPeerConnection(): Promise<PC> {
   videoChannel.onopen = () => {
     console.log("Video channel open");
     // Start piping video data
-    let videoChunkCount = 0;
+    // let videoChunkCount = 0;
     videoHandler.setCallback((data) => {
       if (videoChannel && videoChannel.readyState === "open") {
-        videoChunkCount++;
-        console.log(
-          `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`
-        );
-        // Convert Node Buffer to Uint8Array for WebRTC
-        videoChannel.send(new Uint8Array(data));
+        // videoChunkCount++;
+        // console.log(
+        //   `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`
+        // );
+        {/* @ts-ignore */} // this used to be new Uint8Array(data) but thats a copy, it still works without a copy, so why copt it.
+        videoChannel.send(data);
       }
     });
   };
@@ -84,7 +84,7 @@ async function createPeerConnection(): Promise<PC> {
 
   inputChannel.onmessage = (event) => {
     try {
-      const msg: InputMessage = JSON.parse(event.data);
+      const msg: InputMessage = JSON.parse(event.data); // TODO validate is actual input msg
 
       inputHandler.sendInput(msg as InputMessage);
     } catch (e) {
@@ -119,7 +119,7 @@ async function createPeerConnection(): Promise<PC> {
   return pc;
 }
 
-function cleanup() {
+function webrtc_cleanup() {
   if (videoChannel) {
     videoChannel.close();
     videoChannel = null;
@@ -146,19 +146,13 @@ function notifyCrashAndExit(reason: string): void {
     signalSocket.send(JSON.stringify(crashMsg));
   }
 
-  // Cleanup resources
-  cleanup();
-  videoHandler.disconnect();
-  inputHandler.disconnect();
-
-  // Exit with error code - Docker will restart the container
-  process.exit(1);
+  restart(1);
 }
 
 let isRestarting = false;
 
-async function restart() {
-  console.log(">>> restart() called, isRestarting:", isRestarting);
+async function restart(exitCode:number = 0) {
+  console.log("Restarting...");
   if (isRestarting) {
     console.log(">>> Already restarting, skipping");
     return;
@@ -168,7 +162,7 @@ async function restart() {
   console.log(">>> Restarting worker - exiting for Docker to restart container...");
 
   // Cleanup WebRTC
-  cleanup();
+  webrtc_cleanup();
 
   // Close signal socket
   if (signalSocket) {
@@ -183,7 +177,7 @@ async function restart() {
 
   // Exit - Docker restart policy will restart the container fresh
   console.log(">>> Calling process.exit(0) NOW");
-  process.exit(0);
+  process.exit(exitCode);
 }
 
 let signalSocket: WebSocket | null = null;
@@ -299,15 +293,17 @@ async function connectToSignalServer() {
 
       case MSG.SHUTDOWN:
         console.log(`Shutdown requested: ${msg.reason}`);
-        cleanup();
-        process.exit(0);
+        restart()
+        break;
     }
   });
 
-  signalSocket.on("close", () => {
+  signalSocket.on("close", async () => {
     console.log("Disconnected from signal server, restarting myself!");
-// TODO wait for 2 secs
-    process.exit(0);})
+    // sleep 5 secs
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+    process.exit(0);
+  })
 
   signalSocket.on("error", (err) => {
     console.error("Signal socket error:", err);
