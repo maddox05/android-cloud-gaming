@@ -83,13 +83,7 @@ export default function InGame() {
       setStatus(CONNECTION_STATUS.ERROR);
       setStatusMessage(`Error: ${message}`);
 
-      if (code === ERROR_CODE.NO_SUBSCRIPTION) {
-        alert(
-          "You need an active subscription to play. Redirecting to pricing..."
-        );
-        navigate("/pricing");
-        return;
-      } else if (code === ERROR_CODE.NO_WORKERS_AVAILABLE) {
+      if (code === ERROR_CODE.NO_WORKERS_AVAILABLE) {
         alert("No game servers available. Please try again later.");
         navigate("/");
       } else if (code === ERROR_CODE.WEBRTC_FAILED) {
@@ -133,6 +127,11 @@ export default function InGame() {
 
     const startConnection = async () => {
       try {
+        if (!websocketAPI.isConnected()) {
+          window.alert("You need to wait in the queue!");
+          navigate("/");
+          return;
+        }
         setLoadingMessage("Setting up worker...");
         websocketAPI.onShutdown(handleExit); // TODO MAKE SURE WE UNSUB FROM THESE ON CLEANUP
         const conn = await connect(
