@@ -122,6 +122,7 @@ export default function InGame() {
       console.log("Disconnected from Worker");
       setStatus(CONNECTION_STATUS.DISCONNECTED);
       setStatusMessage("Connection to worker lost");
+      navigate("/");
     };
 
     const handleVideoData = (data: ArrayBuffer) => {
