@@ -58,10 +58,10 @@ export default function InGame() {
     }
   }, []);
 
-  const handleExit = useCallback(() => {
+  function handleExit() {
     cleanup();
     navigate("/");
-  }, [cleanup, navigate]);
+  }
 
   useEffect(() => {
     if (hasStartedConnection.current) {
@@ -134,6 +134,7 @@ export default function InGame() {
       try {
         setLoadingMessage("Connecting to server...");
         await websocketAPI.connect();
+        websocketAPI.onShutdown(handleExit)
         const conn = await connect(
           handleVideoData,
           handleWebRTCError,
