@@ -76,6 +76,7 @@ class WebSocketAPI {
       this.ws.onmessage = (event) => this.handleMessage(event);
       this.ws.onclose = () => {
         this.notifyShutdown("signal_server_connection_closed");
+        this.close();
       };
 
       console.log("Connected and authenticated to signal server");

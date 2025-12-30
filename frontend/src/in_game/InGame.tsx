@@ -1,15 +1,12 @@
 import { useState, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  connect,
-  type WebRTCConnection,
-} from "../utils/video_and_input_webrtc";
+import { videoInputWebRTC } from "../utils/video_and_input_webrtc";
 import { H264Decoder } from "../utils/decoder";
 import { websocketAPI } from "../utils/websocket_api";
 import Canvas from "./canvas/Canvas";
 import { getGameName } from "./helpers";
 import { CONNECTION_STATUS, type ConnectionStatus } from "../types";
-import { ERROR_CODE, type ErrorCode } from "../../../shared/types";
+import { ERROR_CODE, type ErrorCode, type InputMessage } from "../../../shared/types";
 import "./InGame.css";
 
 export default function InGame() {
@@ -24,7 +21,6 @@ export default function InGame() {
     "Connecting to server..."
   );
 
-  const connectionRef = useRef<WebRTCConnection | null>(null);
   const decoderRef = useRef<H264Decoder | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const initialized = useRef(false);
@@ -52,13 +48,8 @@ export default function InGame() {
       console.error("Failed to reset decoder:", e);
     }
     try {
-      if (connectionRef.current) {
-        connectionRef.current.close();
-        connectionRef.current = null;
-      }
+      videoInputWebRTC.close();
     } catch (e) {
-      connectionRef.current = null;
-
       console.error("Failed to close connection:", e);
     }
   };
@@ -70,8 +61,8 @@ export default function InGame() {
     }
   }, []);
 
-  function handleExit(reason?: string ) {
-    if(reason){
+  function handleExit(reason?: string) {
+    if (reason) {
       window.alert(`Exiting game: ${reason}`);
     }
     cleanup();
@@ -145,16 +136,13 @@ export default function InGame() {
             return;
           }
           setLoadingMessage("Setting up worker...");
-          const conn = await connect(
-            handleVideoData,
-            handleWebRTCError,
-            handleDisconnected
-          );
 
-          connectionRef.current = conn;
-          if (!connectionRef.current) {
-            throw new Error("Failed to set callbacks for WebRTC connection");
-          }
+          // Subscribe to callbacks before connecting
+          videoInputWebRTC.onVideo(handleVideoData);
+          videoInputWebRTC.onError(handleWebRTCError);
+          videoInputWebRTC.onDisconnected(handleDisconnected);
+
+          await videoInputWebRTC.connect();
 
           if (canvasRef.current && !decoderRef.current) {
             decoderRef.current = new H264Decoder(canvasRef.current);
@@ -165,17 +153,15 @@ export default function InGame() {
           setLoadingMessage("Waiting on worker...");
 
           timeoutRef.current = setTimeout(() => {
-            if (connectionRef.current) {
-              setStatus((currentStatus) => {
-                if (currentStatus === CONNECTION_STATUS.CONNECTING) {
-                  handleSignalError(
-                    ERROR_CODE.CONNECTION_TIMEOUT,
-                    "Connection timed out"
-                  );
-                }
-                return currentStatus;
-              });
-            }
+            setStatus((currentStatus) => {
+              if (currentStatus === CONNECTION_STATUS.CONNECTING) {
+                handleSignalError(
+                  ERROR_CODE.CONNECTION_TIMEOUT,
+                  "Connection timed out"
+                );
+              }
+              return currentStatus;
+            });
           }, 30000);
         } catch (err) {
           console.error("Failed to connect:", err);
@@ -188,12 +174,9 @@ export default function InGame() {
     }
   }
 
-  const sendInput = useCallback(
-    (msg: Parameters<WebRTCConnection["sendInput"]>[0]) => {
-      connectionRef.current?.sendInput(msg);
-    },
-    []
-  );
+  const sendInput = useCallback((msg: InputMessage) => {
+    videoInputWebRTC.sendInput(msg);
+  }, []);
 
   const gameName = appId ? getGameName(appId) : "Loading...";
   const isLoading = status === CONNECTION_STATUS.CONNECTING;
@@ -202,7 +185,7 @@ export default function InGame() {
     <div className="app-container">
       <div className="app-header">
         <h1>{gameName}</h1>
-        <button className="back-btn" onClick={handleExit}>
+        <button className="back-btn" onClick={() => handleExit()}>
           Exit
         </button>
       </div>

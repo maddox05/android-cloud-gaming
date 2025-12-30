@@ -4,6 +4,9 @@ services:
     image: ${REDROID_IMAGE}:${REDROID_TAG}
     privileged: true
     stop_grace_period: 0s
+    cpus: 3
+    mem_limit: 4g
+    mem_reservation: 3g
     volumes:
       - redroid-base:/data-base # Shared base data partition
     tmpfs:
