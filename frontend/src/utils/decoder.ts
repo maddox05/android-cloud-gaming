@@ -124,7 +124,10 @@ export class H264Decoder {
     return `avc1.${hex(profileIdc)}${hex(constraints)}${hex(levelIdc)}`;
   }
 
-  private parseDimensionsFromSPS(sps: Uint8Array): { width: number; height: number } {
+  private parseDimensionsFromSPS(sps: Uint8Array): {
+    width: number;
+    height: number;
+  } {
     const startCodeLen = sps[2] === 1 ? 3 : 4;
     const rbsp = this.removeEmulationPrevention(sps.slice(startCodeLen + 1));
 
@@ -153,7 +156,11 @@ export class H264Decoder {
     readBits(8); // level
     readUE(); // seq_parameter_set_id
 
-    if ([100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134].includes(profileIdc)) {
+    if (
+      [100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134].includes(
+        profileIdc
+      )
+    ) {
       const chromaFormat = readUE();
       if (chromaFormat === 3) readBits(1);
       readUE();
@@ -206,7 +213,9 @@ export class H264Decoder {
     }
 
     const width = picWidthInMbs * 16 - (cropLeft + cropRight) * 2;
-    const height = (2 - frameMbsOnly) * picHeightInMapUnits * 16 - (cropTop + cropBottom) * 2;
+    const height =
+      (2 - frameMbsOnly) * picHeightInMapUnits * 16 -
+      (cropTop + cropBottom) * 2;
 
     return { width, height };
   }
@@ -214,7 +223,12 @@ export class H264Decoder {
   private removeEmulationPrevention(data: Uint8Array): Uint8Array {
     const result: number[] = [];
     for (let i = 0; i < data.length; i++) {
-      if (i + 2 < data.length && data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 3) {
+      if (
+        i + 2 < data.length &&
+        data[i] === 0 &&
+        data[i + 1] === 0 &&
+        data[i + 2] === 3
+      ) {
         result.push(0, 0);
         i += 2;
       } else {
@@ -237,6 +251,10 @@ export class H264Decoder {
       },
       error: (e) => {
         console.error("Decoder error:", e);
+        window.alert(
+          "Decoder (Video) error. We are working hard to fix this issue, please queue again and report to support. Try not to switch tabs as well."
+        );
+        window.location.href = "/";
       },
     });
 
@@ -271,7 +289,9 @@ export class H264Decoder {
     // For keyframes, prepend SPS and PPS
     let frameData = nal;
     if (isKeyframe && this.sps && this.pps) {
-      const combined = new Uint8Array(this.sps.length + this.pps.length + nal.length);
+      const combined = new Uint8Array(
+        this.sps.length + this.pps.length + nal.length
+      );
       combined.set(this.sps, 0);
       combined.set(this.pps, this.sps.length);
       combined.set(nal, this.sps.length + this.pps.length);

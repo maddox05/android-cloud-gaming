@@ -13,10 +13,7 @@ services:
       - /data-diff:size=1G,mode=1777 # RAM-backed, auto-deleted on stop
     command:
       - androidboot.use_redroid_overlayfs=1
-      - androidboot.redroid_width=${REDROID_WIDTH}
-      - androidboot.redroid_height=${REDROID_HEIGHT}
-      - androidboot.redroid_dpi=${REDROID_DPI}
-      - androidboot.redroid_fps=${REDROID_FPS}
+
       - ro.secure=0 # maybe remove this??
     networks:
       - internal # Gives container an IP that host-networked worker can reach
@@ -32,11 +29,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       SIGNAL_URL: ${SIGNAL_URL}
-      # REDROID_HOST resolved dynamically via docker inspect using POD_NAME
-      REDROID_WIDTH: ${REDROID_WIDTH}
-      REDROID_HEIGHT: ${REDROID_HEIGHT}
       POD_NAME: ${COMPOSE_PROJECT_NAME}
-      REDROID_VIDEO_BIT_RATE: ${REDROID_VIDEO_BIT_RATE}
     depends_on:
       - redroid
 

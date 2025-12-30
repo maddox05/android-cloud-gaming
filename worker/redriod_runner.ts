@@ -151,9 +151,9 @@ class RedroidRunner {
     const videoCodecOpts = `profile=${s.videoCodecOptions.profile},level=${s.videoCodecOptions.level},i-frame-interval=${s.videoCodecOptions.iFrameInterval}`;
     const scrcpyCmd = [
       `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion}`,
-      `send_device_meta=${s.sendDeviceMeta}`,
-      `send_codec_meta=${s.sendCodecMeta}`,
-      `send_frame_meta=${s.sendFrameMeta}`,
+      // `send_device_meta=${s.sendDeviceMeta}`,
+      // `send_codec_meta=${s.sendCodecMeta}`,
+      // `send_frame_meta=${s.sendFrameMeta}`,
       `tunnel_forward=${s.tunnelForward}`,
       `audio=${s.audio}`,
       `control=${s.control}`,
@@ -163,7 +163,7 @@ class RedroidRunner {
       `max_fps=${s.maxFps}`,
       `video_bit_rate=${s.videoBitRate}`,
       `video_codec_options=${videoCodecOpts}`,
-      `video=${s.video}`,
+      // `video=${s.video}`,
     ].join(" ");
 
     this.scrcpyProc = spawn("adb", ["-s", this.adbTarget, "shell", scrcpyCmd], {

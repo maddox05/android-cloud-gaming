@@ -223,7 +223,7 @@ export function isInputMessage(msg: unknown): msg is InputMessage {
 
 export const REDROID_SCRCPY_SERVER_SETTINGS = {
   // Display settings
-  width: 640,
+  width: 360,
   height: 640,
   dpi: 120,
 
@@ -240,9 +240,9 @@ export const REDROID_SCRCPY_SERVER_SETTINGS = {
   },
 
   // Scrcpy server flags
-  sendDeviceMeta: false, // send_device_meta - don't send device name
-  sendCodecMeta: false, // send_codec_meta - don't send codec info
-  sendFrameMeta: false, // send_frame_meta - send PTS timestamps
+  // sendDeviceMeta: false, // send_device_meta - don't send device name
+  // sendCodecMeta: false, // send_codec_meta - don't send codec info
+  // sendFrameMeta: false, // send_frame_meta - send PTS timestamps
   tunnelForward: true, // tunnel_forward - use adb forward instead of reverse
   audio: false, // audio - no audio streaming
   control: true, // control - enable touch/input control

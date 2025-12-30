@@ -1,6 +1,9 @@
 import net from "net";
 import { scrcpy_config, redroid_config } from "./config.js";
-import { InputMessage } from "../shared/types.js";
+import {
+  InputMessage,
+  REDROID_SCRCPY_SERVER_SETTINGS,
+} from "../shared/types.js";
 
 // scrcpy control message types
 const SC_CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT = 2;
@@ -18,11 +21,10 @@ class InputHandler {
   private static instance: InputHandler;
   private socket: net.Socket | null = null;
   private connected = false;
-  private screenWidth = redroid_config.width;
-  private screenHeight = redroid_config.height;
-  private touchBuffer = Buffer.alloc(32);  // Pre-allocated, reused for every touch
+  private screenWidth = REDROID_SCRCPY_SERVER_SETTINGS.width;
+  private screenHeight = REDROID_SCRCPY_SERVER_SETTINGS.height;
+  private touchBuffer = Buffer.alloc(32); // Pre-allocated, reused for every touch
   private constructor() {}
-
 
   static getInstance(): InputHandler {
     if (!InputHandler.instance) {
@@ -31,17 +33,20 @@ class InputHandler {
     return InputHandler.instance;
   }
 
-
   async connect(): Promise<void> {
     if (this.connected) return;
 
     return new Promise((resolve, reject) => {
-      this.socket = net.createConnection(scrcpy_config.port, "127.0.0.1", () => {
-        console.log("Input/Control socket connected");
-        this.socket!.setNoDelay(true);  // Disable Nagle's algorithm for lower latency
-        this.connected = true;
-        resolve();
-      });
+      this.socket = net.createConnection(
+        scrcpy_config.port,
+        "127.0.0.1",
+        () => {
+          console.log("Input/Control socket connected");
+          this.socket!.setNoDelay(true); // Disable Nagle's algorithm for lower latency
+          this.connected = true;
+          resolve();
+        }
+      );
 
       this.socket.on("error", (err) => {
         console.error("Input socket error:", err);
@@ -79,7 +84,7 @@ class InputHandler {
     xPercent: number,
     yPercent: number
   ): Buffer {
-    const buf = this.touchBuffer;  // Reuse pre-allocated buffer
+    const buf = this.touchBuffer; // Reuse pre-allocated buffer
 
     const x = xPercent * this.screenWidth;
     const y = yPercent * this.screenHeight;
@@ -99,7 +104,7 @@ class InputHandler {
     // Screen height (2 bytes)
     buf.writeUInt16BE(this.screenHeight, 20);
     // Pressure (2 bytes) - 0xFFFF for full pressure, 0 for UP
-    buf.writeUInt16BE(action === ACTION_UP ? 0 : 0xFFFF, 22);
+    buf.writeUInt16BE(action === ACTION_UP ? 0 : 0xffff, 22);
     // Action button (4 bytes) - 0 for touch
     buf.writeUInt32BE(0, 24);
     // Buttons (4 bytes) - 0 for touch
@@ -147,7 +152,6 @@ class InputHandler {
     const buf = this.buildTouchMessage(action, xPercent, yPercent);
     this.socket.write(buf);
   }
-
 
   disconnect(): void {
     if (this.socket) {
