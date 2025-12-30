@@ -70,7 +70,10 @@ export default function InGame() {
     }
   }, []);
 
-  function handleExit() {
+  function handleExit(reason?: string ) {
+    if(reason){
+      window.alert(`Exiting game: ${reason}`);
+    }
     cleanup();
     websocketAPI.close();
     window.location.href = "/";
