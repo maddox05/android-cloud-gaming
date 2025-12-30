@@ -1,11 +1,6 @@
 import { execSync } from "child_process";
 
 function getRedroidHost(): string {
-  // If explicitly set, use that
-  if (process.env.REDROID_HOST) {
-    return process.env.REDROID_HOST;
-  }
-
   // With network_mode: host, we need to find the container's IP via Docker
   const podName = process.env.POD_NAME;
   if (podName) {
@@ -20,7 +15,9 @@ function getRedroidHost(): string {
         return ip;
       }
     } catch (e) {
-      console.warn("Failed to get redroid container IP, falling back to localhost");
+      console.warn(
+        "Failed to get redroid container IP, falling back to localhost"
+      );
     }
   }
 
@@ -30,10 +27,6 @@ function getRedroidHost(): string {
 export const redroid_config = {
   host: getRedroidHost(),
   port: 5555,
-  width: parseInt(process.env.REDROID_WIDTH || "360"),
-  height: parseInt(process.env.REDROID_HEIGHT || "640"),
-  video_bit_rate: process.env.REDROID_VIDEO_BIT_RATE || "2M",
-  max_fps: parseInt(process.env.REDROID_FPS || "60"),
 };
 
 export const scrcpy_config = {
@@ -41,4 +34,3 @@ export const scrcpy_config = {
   // First connection = video, second connection = control
   port: 6767,
 };
-

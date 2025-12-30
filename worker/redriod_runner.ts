@@ -1,5 +1,6 @@
 import { spawn, exec, execSync } from "child_process";
 import { redroid_config, scrcpy_config } from "./config.js";
+import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/types.js";
 
 const POD_NAME = process.env.POD_NAME;
 if (!POD_NAME) {
@@ -42,7 +43,9 @@ class RedroidRunner {
    * Execute command but don't throw on non-zero exit - just return output
    * Useful for commands that print to stderr but still succeed
    */
-  private execAsyncSafe(cmd: string): Promise<{ stdout: string; stderr: string; code: number }> {
+  private execAsyncSafe(
+    cmd: string
+  ): Promise<{ stdout: string; stderr: string; code: number }> {
     return new Promise((resolve) => {
       exec(cmd, (error, stdout, stderr) => {
         resolve({
@@ -68,7 +71,7 @@ class RedroidRunner {
       return;
     }
 
-    const { height, video_bit_rate, max_fps } = redroid_config;
+    const s = REDROID_SCRCPY_SERVER_SETTINGS;
 
     // Connect adb (retry a few times in case redroid isn't ready yet)
     console.log(`Connecting ADB to ${this.adbTarget}...`);
@@ -132,7 +135,9 @@ class RedroidRunner {
     );
 
     // Get scrcpy version
-    const scrcpyVersion = (await this.execAsync("cat ./assets/scrcpy/version")).trim();
+    const scrcpyVersion = (
+      await this.execAsync("cat ./assets/scrcpy/version")
+    ).trim();
     console.log(`Using scrcpy version: ${scrcpyVersion}`);
 
     // Setup port forward for scrcpy abstract socket
@@ -143,16 +148,27 @@ class RedroidRunner {
 
     // Start scrcpy server
     console.log("Starting scrcpy server...");
-    this.scrcpyProc = spawn(
-      "adb",
-      [
-        "-s",
-        this.adbTarget,
-        "shell",
-        `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion} tunnel_forward=true audio=false control=true cleanup=false raw_stream=true max_size=${height} max_fps=${max_fps} video_bit_rate=${video_bit_rate} video_codec_options=profile=1,level=256,i-frame-interval=2`,
-      ],
-      { stdio: "pipe" }
-    );
+    const videoCodecOpts = `profile=${s.videoCodecOptions.profile},level=${s.videoCodecOptions.level},i-frame-interval=${s.videoCodecOptions.iFrameInterval}`;
+    const scrcpyCmd = [
+      `CLASSPATH=/data/local/tmp/scrcpy-server.jar app_process / com.genymobile.scrcpy.Server ${scrcpyVersion}`,
+      `send_device_meta=${s.sendDeviceMeta}`,
+      `send_codec_meta=${s.sendCodecMeta}`,
+      `send_frame_meta=${s.sendFrameMeta}`,
+      `tunnel_forward=${s.tunnelForward}`,
+      `audio=${s.audio}`,
+      `control=${s.control}`,
+      `cleanup=${s.cleanup}`,
+      `raw_stream=${s.rawStream}`,
+      `max_size=${s.maxSize}`,
+      `max_fps=${s.maxFps}`,
+      `video_bit_rate=${s.videoBitRate}`,
+      `video_codec_options=${videoCodecOpts}`,
+      `video=${s.video}`,
+    ].join(" ");
+
+    this.scrcpyProc = spawn("adb", ["-s", this.adbTarget, "shell", scrcpyCmd], {
+      stdio: "pipe",
+    });
 
     this.scrcpyProc.stdout?.on("data", (data) => {
       console.log("scrcpy:", data.toString().trim());
@@ -164,14 +180,18 @@ class RedroidRunner {
     });
 
     this.scrcpyProc.on("error", (err) => console.error("scrcpy error:", err));
-    this.scrcpyProc.on("exit", (code) => console.log("scrcpy exited with code:", code));
+    this.scrcpyProc.on("exit", (code) =>
+      console.log("scrcpy exited with code:", code)
+    );
 
     // Wait for scrcpy to be ready
     await this.sleep(2000);
 
     this.running = true;
     console.log("RedroidRunner started successfully!");
-    console.log(`scrcpy port: ${scrcpy_config.port} (connect twice: video first, then control)`);
+    console.log(
+      `scrcpy port: ${scrcpy_config.port} (connect twice: video first, then control)`
+    );
 
     // Setup kiosk mode AFTER scrcpy is running
     await this.setupKioskMode(packageName);
@@ -196,10 +216,10 @@ class RedroidRunner {
     console.log(`Activity resolve: ${activityResult.stdout}`);
 
     // Parse the activity (last line of output like "com.package/com.package.Activity")
-    const lines = activityResult.stdout.split('\n').filter(l => l.trim());
+    const lines = activityResult.stdout.split("\n").filter((l) => l.trim());
     const activity = lines[lines.length - 1]?.trim();
 
-    if (activity && activity.includes('/')) {
+    if (activity && activity.includes("/")) {
       console.log(`Launching with am start: ${activity}`);
       const result = await this.execAsyncSafe(
         `adb -s ${this.adbTarget} shell am start -n ${activity}`
@@ -216,7 +236,6 @@ class RedroidRunner {
 
     console.log("Kiosk mode setup complete!");
   }
-
 
   /**
    * Restart the redroid container via Docker.
