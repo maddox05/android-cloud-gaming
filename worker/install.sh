@@ -2,6 +2,8 @@
 # each time I get a new server, I have to run this script to set it up (each time server dies as well, as I wont ever use storage)
 # need to install scrcpy, docker, adb, redroid
 
+# MUST RUN THIS EWACH TIME SERVER IS KILLED OR STARTED NEW
+
 set -e  # Exit on error
 
 # Load environment variables from .env file if it exists
