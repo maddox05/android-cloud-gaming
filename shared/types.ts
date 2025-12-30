@@ -243,7 +243,7 @@ export const REDROID_SCRCPY_SERVER_SETTINGS = {
   sendDeviceMeta: false, // send_device_meta - don't send device name
   sendCodecMeta: false, // send_codec_meta - don't send codec info
   sendFrameMeta: false, // send_frame_meta - send PTS timestamps
-  tunnelForward: false, // tunnel_forward - use adb forward instead of reverse
+  tunnelForward: true, // tunnel_forward - use adb forward instead of reverse
   audio: false, // audio - no audio streaming
   control: true, // control - enable touch/input control
   cleanup: false, // cleanup - don't restore display settings on exit
