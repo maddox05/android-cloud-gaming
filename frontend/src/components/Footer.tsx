@@ -28,16 +28,28 @@ export default function Footer() {
             Cloud gaming, simplified. Play anywhere, anytime.
           </p>
           <div className="footer-social">
-            <a href="#" className="social-link" aria-label="Discord">
+            <a
+              href="https://discord.gg/U4QYdzXEnr"
+              className="social-link"
+              aria-label="Discord"
+            >
               <DiscordIcon size={20} />
             </a>
-            <a href="#" className="social-link" aria-label="YouTube">
+            <a
+              href="https://youtube.com/@maddoxschmidlkofers"
+              className="social-link"
+              aria-label="YouTube"
+            >
               <YouTubeIcon size={20} />
             </a>
             <a href="#" className="social-link" aria-label="TikTok">
               <TikTokIcon size={20} />
             </a>
-            <a href="#" className="social-link" aria-label="Instagram">
+            <a
+              href="https://instagram.com/maddoxcloud"
+              className="social-link"
+              aria-label="Instagram"
+            >
               <InstagramIcon size={20} />
             </a>
           </div>
