@@ -3,6 +3,8 @@
 
 /* CSS Variables - Warm Charcoal Theme */
 :root {
+  /* Tilt Warp with good fallbacks */
+  --font-display: 'Tilt Warp', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --bg-primary: #1C1917;
   --bg-surface: #292524;
   --bg-elevated: #3a3633;

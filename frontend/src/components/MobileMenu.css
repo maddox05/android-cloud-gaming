@@ -1,0 +1,43 @@
+/* Mobile Dropdown Menu */
+.mobile-menu {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  background: rgba(28, 25, 23, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  z-index: 99;
+}
+
+.mobile-menu.open {
+  max-height: 200px;
+  padding: 16px;
+}
+
+.mobile-menu-link {
+  display: block;
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  transition: background 0.2s;
+}
+
+.mobile-menu-link:hover {
+  background: var(--bg-surface);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .mobile-menu {
+    top: 56px;
+  }
+}

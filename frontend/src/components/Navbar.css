@@ -1,12 +1,14 @@
-/* Header */
+/* Header - Glassmorphism */
 .header {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  height: 64px;
+  background: rgba(28, 25, 23, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(68, 64, 60, 0.6);
+  padding: 0 max(24px, calc((100vw - 1200px) / 2 + 24px));
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -17,11 +19,36 @@
   align-items: center;
 }
 
+/* Discord Badge */
+.discord-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #5865F2;
+  border: none;
+  border-radius: 10px;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.discord-badge:hover {
+  background: #4752C4;
+  transform: translateY(-1px);
+}
+
+.discord-count {
+  color: #ffffff;
+}
+
 .logo {
   display: flex;
   align-items: center;
   gap: 0px;
-  font-family: 'Tilt Warp', cursive;
+  font-family: var(--font-display);
   font-size: 1.5rem;
   color: var(--text-primary);
   text-decoration: none;
@@ -34,9 +61,13 @@
 }
 
 .logo-icon {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
+}
+
+.logo-text {
+  display: inline;
 }
 
 .header-right {
@@ -45,117 +76,81 @@
   gap: 16px;
 }
 
-/* Navigation */
+/* Desktop/Mobile Navigation Toggle */
+.desktop-nav {
+  display: flex;
+}
+
+.mobile-nav {
+  display: none;
+}
+
+/* Navigation Link */
 .nav-link {
   color: var(--text-secondary);
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
-  padding: 8px 12px;
+  padding: 8px 16px;
   border-radius: var(--radius);
   transition: color 0.2s, background 0.2s;
 }
 
 .nav-link:hover {
   color: var(--text-primary);
-  background: var(--bg-surface);
+  background: rgba(255, 255, 255, 0.05);
 }
 
-/* Auth UI */
-.login-btn {
-  background: var(--accent);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: var(--radius);
-  font-family: inherit;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-}
-
-.login-btn:hover {
-  background: var(--accent-hover);
-}
-
-.login-btn:active {
-  transform: scale(0.98);
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-name {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.settings-btn {
+/* Profile Button - wraps Avatar component */
+.profile-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: var(--bg-surface);
-  border-radius: 50%;
-  color: var(--text-secondary);
-  text-decoration: none;
-  transition: background 0.2s, color 0.2s;
-}
-
-.settings-btn:hover {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-}
-
-.logout-btn {
+  padding: 0;
   background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  padding: 8px 14px;
-  border-radius: var(--radius);
-  font-family: inherit;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  border: 2px solid var(--border);
+  border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 0.2s;
 }
 
-.logout-btn:hover {
-  background: var(--bg-surface);
-  color: var(--text-primary);
+.profile-btn:hover {
   border-color: var(--text-muted);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .header {
-    padding: 0 16px;
-    height: 56px;
-  }
-
-  .logo {
-    font-size: 1.25rem;
-  }
+/* Burger Button */
+.burger-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.2s;
 }
 
-@media (max-width: 480px) {
-  .header-right {
-    gap: 8px;
+.burger-btn:hover {
+  color: var(--text-primary);
+}
+
+/* Responsive - only essential changes */
+@media (max-width: 600px) {
+  .header {
+    padding: 0 16px;
   }
 
-  .nav-link {
-    padding: 6px 10px;
-    font-size: 0.8125rem;
+  .desktop-nav {
+    display: none;
   }
 
-  .login-btn {
-    padding: 8px 14px;
-    font-size: 0.8125rem;
+  .mobile-nav {
+    display: flex;
+  }
+
+  .logo-text {
+    display: none;
   }
 }

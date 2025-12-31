@@ -11,7 +11,7 @@
 }
 
 .pricing-header h1 {
-  font-family: 'Tilt Warp', cursive;
+  font-family: var(--font-display);
   font-size: 2.5rem;
   font-weight: 400;
   color: var(--text-primary);
@@ -194,7 +194,9 @@
   background: var(--accent-hover);
 }
 
-/* Responsive */
+/* ========================= */
+/* Responsive               */
+/* ========================= */
 @media (max-width: 640px) {
   .pricing-cards {
     grid-template-columns: 1fr;

@@ -1,0 +1,290 @@
+/* ========================= */
+/* Comparison Table Section  */
+/* ========================= */
+.comparison-section {
+  margin-top: 80px;
+  padding-top: 64px;
+  border-top: 1px solid var(--border);
+}
+
+.comparison-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.comparison-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--accent) 0%, #fb923c 100%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 6px 16px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+}
+
+.comparison-header h2 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.comparison-header p {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* Table Wrapper */
+.comparison-table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+/* Table Base */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+/* Header Cells */
+.comparison-table thead {
+  background: var(--bg-elevated);
+}
+
+.comparison-table th {
+  padding: 24px 16px;
+  text-align: center;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.feature-header {
+  text-align: left !important;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted) !important;
+  width: 200px;
+}
+
+.company-header {
+  width: calc((100% - 200px) / 3);
+}
+
+/* Company Cell */
+.company-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.company-cell.winner {
+  position: relative;
+}
+
+.company-cell.winner > svg:first-child {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 2px 4px rgba(249, 115, 22, 0.3));
+}
+
+.company-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: contain;
+  background: var(--bg-surface);
+  padding: 4px;
+}
+
+.company-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* MaddoxCloud Column Highlight */
+.maddox-header {
+  background: linear-gradient(180deg, rgba(249, 115, 22, 0.08) 0%, transparent 100%);
+  border-left: 1px solid rgba(249, 115, 22, 0.2);
+  border-right: 1px solid rgba(249, 115, 22, 0.2);
+}
+
+/* Body Cells */
+.comparison-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.comparison-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.comparison-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
+.comparison-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Feature Cell */
+.feature-cell {
+  text-align: left !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feature-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.feature-hint {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  cursor: help;
+  position: relative;
+}
+
+.feature-hint svg {
+  transition: color 0.15s ease;
+}
+
+.feature-hint:hover svg {
+  color: var(--text-secondary);
+}
+
+/* Tooltip */
+.hint-tooltip {
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.feature-hint:hover .hint-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Value Cells */
+.value-cell {
+  vertical-align: middle;
+}
+
+.value-cell.best {
+  background: linear-gradient(180deg, rgba(249, 115, 22, 0.06) 0%, rgba(249, 115, 22, 0.02) 100%);
+  border-left: 1px solid rgba(249, 115, 22, 0.15);
+  border-right: 1px solid rgba(249, 115, 22, 0.15);
+}
+
+.value-cell svg {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.value-highlight {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 1rem;
+}
+
+.value-cell.muted {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Comparison Footer */
+.comparison-footer {
+  text-align: center;
+  margin-top: 32px;
+}
+
+.comparison-footer p {
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ========================= */
+/* Responsive               */
+/* ========================= */
+@media (max-width: 768px) {
+  .comparison-section {
+    margin-top: 48px;
+    padding-top: 40px;
+  }
+
+  .comparison-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    padding: 12px 8px;
+  }
+
+  .company-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .company-name {
+    font-size: 0.75rem;
+  }
+
+  .feature-name {
+    font-size: 0.8125rem;
+  }
+
+  .feature-header {
+    width: 140px;
+  }
+
+  .hint-tooltip {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .comparison-table {
+    min-width: 500px;
+  }
+
+  .feature-hint {
+    display: none;
+  }
+}
