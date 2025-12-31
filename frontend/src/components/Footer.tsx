@@ -42,7 +42,11 @@ export default function Footer() {
             >
               <YouTubeIcon size={20} />
             </a>
-            <a href="#" className="social-link" aria-label="TikTok">
+            <a
+              href="https://tiktok.com/@maddoxcloud"
+              className="social-link"
+              aria-label="TikTok"
+            >
               <TikTokIcon size={20} />
             </a>
             <a
