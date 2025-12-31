@@ -94,8 +94,8 @@ export default function Canvas({ sendInput, onCanvasReady }: CanvasProps) {
       <canvas
         ref={canvasRef}
         className="stream-canvas"
-        width={720}
-        height={1280}
+        width={1920}
+        height={1080}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

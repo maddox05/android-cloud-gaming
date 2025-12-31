@@ -6,7 +6,11 @@ import { websocketAPI } from "../utils/websocket_api";
 import Canvas from "./canvas/Canvas";
 import { getGameName } from "./helpers";
 import { CONNECTION_STATUS, type ConnectionStatus } from "../types";
-import { ERROR_CODE, type ErrorCode, type InputMessage } from "../../../shared/types";
+import {
+  ERROR_CODE,
+  type ErrorCode,
+  type InputMessage,
+} from "../../../shared/types";
 import "./InGame.css";
 
 export default function InGame() {
@@ -89,6 +93,8 @@ export default function InGame() {
           alert("No game servers available. Please try again later.");
         } else if (code === ERROR_CODE.WEBRTC_FAILED) {
           alert("WebRTC connection failed. Please try another wifi network.");
+        } else if (code === ERROR_CODE.CONNECTION_TIMEOUT) {
+          alert("AFK? Not on my watch. Connection timed out.");
         } else {
           alert(`An error occurred: ${message}. Returning to home page.`);
         }
@@ -114,7 +120,7 @@ export default function InGame() {
         console.log("Disconnected from Worker");
         setStatus(CONNECTION_STATUS.DISCONNECTED);
         setStatusMessage("Connection to worker lost");
-        handleExit();
+        // no need to exit as if disconnected happens, signal server will follow up and exit us.
       };
 
       const handleVideoData = (data: ArrayBuffer) => {
