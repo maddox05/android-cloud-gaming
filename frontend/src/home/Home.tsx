@@ -181,10 +181,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="hero">
         <h1>Play Clash Royale In School</h1>
-        <p>
-          Use cloud gaming to play mobile games, all for free unblocked in
-          school.
-        </p>
+        <p>The best cloud gaming to play mobile games unblocked in school</p>
       </section>
 
       {/* Features Section */}
