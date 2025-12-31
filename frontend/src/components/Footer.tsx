@@ -105,7 +105,7 @@ export default function Footer() {
               <span>Join our Discord</span>
             </a>
             <a
-              href="mailto:support@maddoxcloud.com"
+              href="mailto:contact@maddoxcloud.com"
               className="footer-support-link"
             >
               <MailIcon size={16} />
