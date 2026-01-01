@@ -109,7 +109,7 @@ export default function Footer() {
               className="footer-support-link"
             >
               <MailIcon size={16} />
-              <span>support@maddoxcloud.com</span>
+              <span>contact@maddoxcloud.com</span>
             </a>
           </div>
         </div>
