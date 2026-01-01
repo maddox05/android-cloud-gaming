@@ -36,7 +36,7 @@ export default function Footer() {
               <DiscordIcon size={20} />
             </a>
             <a
-              href="https://youtube.com/@maddoxschmidlkofers"
+              href="https://youtube.com/@maddoxcloud"
               className="social-link"
               aria-label="YouTube"
             >
