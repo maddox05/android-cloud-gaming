@@ -1,9 +1,10 @@
+import { Game } from "./types.js";
 export const STUN_SERVERS = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun.cloudflare.com:3478" },
 ];
 
-export const MAX_SESSION_TIME_MS = 60 * 1000; // 1 hour todo for laer use this in client & signal server
+export const MAX_SESSION_TIME_MS = 60 * 60 * 1000; // 1 hour todo for laer use this in client & signal server
 
 export const REDROID_SCRCPY_SERVER_SETTINGS = {
   // Display settings
@@ -35,3 +36,27 @@ export const REDROID_SCRCPY_SERVER_SETTINGS = {
   video: true, // video - enable video streaming
   sendFrameMeta: true, // send_frame_meta - don't send PTS timestamps
 };
+
+export const GAMES_LIST: Game[] = [
+  {
+    id: "com.supercell.clashroyale",
+    name: "Clash Royale",
+    description: "Real-time PvP battles",
+    thumbnail:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQMt18VVv2_bw1FRALdGOsPqf027hhFfQVFzQ&s",
+  },
+  {
+    id: "com.supercell.clashofclans",
+    name: "Clash of Clans",
+    description: "Strategic base building game",
+    thumbnail:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR25TlNh8ve7ot5SIbP9nwgGNygwmb6g2dxFQ&s",
+  },
+  {
+    id: "youtube.lite.anikinc",
+    name: "YouTube Lite",
+    description: "Lightweight YouTube experience",
+    thumbnail:
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/YouTube_social_white_square_%282024%29.svg/1200px-YouTube_social_white_square_%282024%29.svg.png",
+  },
+];

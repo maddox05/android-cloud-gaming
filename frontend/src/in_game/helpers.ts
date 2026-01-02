@@ -1,7 +1,6 @@
-const GAME_NAMES: Record<string, string> = {
-  "com.supercell.clashroyale": "Clash Royale",
-};
+import { GAMES_LIST } from "../../../shared/const";
 
 export function getGameName(appId: string): string {
-  return GAME_NAMES[appId] || appId;
+  const game = GAMES_LIST.find((g) => g.id === appId);
+  return game ? game.name : appId;
 }

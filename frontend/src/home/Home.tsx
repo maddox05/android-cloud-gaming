@@ -3,23 +3,7 @@ import { useState } from "react";
 import { isLoggedIn, signInWithGoogle } from "../utils/supabase";
 import GameCard from "./GameCard";
 import "./Home.css";
-
-interface Game {
-  id: string;
-  name: string;
-  description: string;
-  thumbnail: string;
-}
-
-const GAMES: Game[] = [
-  {
-    id: "com.supercell.clashroyale",
-    name: "Clash Royale",
-    description: "Real-time PvP battles",
-    thumbnail:
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQMt18VVv2_bw1FRALdGOsPqf027hhFfQVFzQ&s",
-  },
-];
+import { GAMES_LIST } from "../../../shared/const";
 
 const FEATURES = [
   {
@@ -165,7 +149,7 @@ export default function Home() {
       {/* Games Grid - First */}
       <section className="games-section">
         <div className="game-grid">
-          {GAMES.map((game) => (
+          {GAMES_LIST.map((game) => (
             <GameCard
               key={game.id}
               id={game.id}

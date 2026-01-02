@@ -4,9 +4,12 @@
 // ============================================
 // Message Type Constants
 // ============================================
-
-export const GAMES_LIST = ["com.supercell.clashroyale"];
-
+export interface Game {
+  id: string;
+  name: string;
+  description: string;
+  thumbnail: string;
+}
 export const MSG = {
   // Signal messages
   CLIENT_STARTED: "client-started", // client -> signal: client is ready to connect after QUEUE_READY
@@ -190,7 +193,10 @@ export interface ResetVideoInputMessage {
 }
 
 /** Union of all input messages */
-export type InputMessage = DragInputMessage | ClickInputMessage | ResetVideoInputMessage;
+export type InputMessage =
+  | DragInputMessage
+  | ClickInputMessage
+  | ResetVideoInputMessage;
 
 /** Input message types for type guards */
 export type InputMessageType = InputMessage["type"];

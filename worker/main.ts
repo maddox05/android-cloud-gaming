@@ -15,7 +15,8 @@ import type {
 } from "../shared/types.js";
 import { STUN_SERVERS } from "../shared/const.js";
 
-import { GAMES_LIST, MSG, ERROR_CODE } from "../shared/types.js";
+import { MSG, ERROR_CODE } from "../shared/types.js";
+import { GAMES_LIST } from "../shared/const.js";
 
 const { RTCPeerConnection, RTCSessionDescription } = wrtc;
 
@@ -47,7 +48,11 @@ async function createPeerConnection(): Promise<PC> {
     ...STUN_SERVERS,
     ...(currentTurnServers ?? []),
   ];
-  console.log(`[WebRTC] Using ICE servers: ${iceServers.length} (STUN: ${STUN_SERVERS.length} + TURN: ${currentTurnServers?.length ?? 0})`);
+  console.log(
+    `[WebRTC] Using ICE servers: ${iceServers.length} (STUN: ${
+      STUN_SERVERS.length
+    } + TURN: ${currentTurnServers?.length ?? 0})`
+  );
 
   const pc = new RTCPeerConnection({ iceServers });
 
@@ -287,9 +292,14 @@ async function connectToSignalServer() {
     console.log("Connected to signal server");
 
     // Register with signal server
-    const register: RegisterMessage = { type: "register", games: GAMES_LIST };
+    const register: RegisterMessage = {
+      type: "register",
+      games: GAMES_LIST.map((g) => g.id),
+    };
     signalSocket!.send(JSON.stringify(register));
-    console.log(`Registered with games: ${GAMES_LIST.join(", ")}`);
+    console.log(
+      `Registered with games: ${GAMES_LIST.map((g) => g.id).join(", ")}`
+    );
     console.log("Waiting for client to connect...");
   });
 
@@ -310,8 +320,10 @@ async function connectToSignalServer() {
       case MSG.WORKER_START: {
         // Signal server tells us to start - create peer connection and initialize session
         const workerStartMsg = msg as WorkerStartMessage;
-        console.log("Creating peer connection, offer, and initializing session...",
-          workerStartMsg.turnInfo ? "(with TURN)" : "(no TURN)");
+        console.log(
+          "Creating peer connection, offer, and initializing session...",
+          workerStartMsg.turnInfo ? "(with TURN)" : "(no TURN)"
+        );
         try {
           // Store TURN servers before creating peer connection
           currentTurnServers = workerStartMsg.turnInfo ?? null;
