@@ -105,6 +105,7 @@ export class H264Decoder {
         break;
 
       case NAL_TYPE.IDR:
+        console.log("I GOT A IDR FRAME");
         this.decodeFrame(nal, true);
         break;
 
@@ -239,7 +240,8 @@ export class H264Decoder {
   }
 
   private tryConfigureDecoder(): void {
-    if (!this.sps || !this.pps || this.configured) return;
+    // if (!this.sps || !this.pps || this.configured) return; if it sends another I want it to reconfigure
+    if (!this.sps || !this.pps) return;
 
     const codec = this.parseCodecFromSPS(this.sps);
     console.log("Configuring decoder with codec:", codec);
@@ -270,7 +272,7 @@ export class H264Decoder {
       // Try fallback codec
       try {
         this.decoder.configure({
-          codec: "avc1.42E01E", // Baseline Profile Level 3.0
+          codec: "avc1.42E00A",
           optimizeForLatency: true,
         });
         this.configured = true;

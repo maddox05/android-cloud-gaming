@@ -255,4 +255,5 @@ export const REDROID_SCRCPY_SERVER_SETTINGS = {
   cleanup: false, // cleanup - don't restore display settings on exit
   rawStream: true, // raw_stream - use framed stream (not raw H.264)
   video: true, // video - enable video streaming
+  sendFrameMeta: true, // send_frame_meta - don't send PTS timestamps
 };

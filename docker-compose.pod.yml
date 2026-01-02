@@ -10,7 +10,7 @@ services:
     volumes:
       - redroid-base:/data-base # Shared base data partition
     tmpfs:
-      - /data-diff:size=1G,mode=1777 # RAM-backed, auto-deleted on stop
+      - /data-diff:size=500m,mode=1777 # RAM-backed, auto-deleted on stop
     command:
       - androidboot.use_redroid_overlayfs=1
 
