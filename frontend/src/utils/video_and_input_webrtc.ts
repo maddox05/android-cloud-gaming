@@ -1,6 +1,7 @@
 import { websocketAPI } from "./websocket_api";
 import {
   ERROR_CODE,
+  MSG,
   type InputMessage,
   type ErrorCode,
   type TurnInfo,
@@ -197,6 +198,13 @@ class VideoInputWebRTC {
     if (this.inputChannel && this.inputChannel.readyState === "open") {
       websocketAPI.sendInputEvent();
       this.inputChannel.send(JSON.stringify(msg));
+    }
+  }
+
+  resetVideo(): void {
+    if (this.inputChannel && this.inputChannel.readyState === "open") {
+      this.inputChannel.send(JSON.stringify({ type: MSG.RESET_VIDEO }));
+      console.log("[WebRTC] Sent reset-video request");
     }
   }
 

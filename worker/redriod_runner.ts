@@ -1,6 +1,6 @@
 import { spawn, exec, execSync } from "child_process";
 import { redroid_config, scrcpy_config } from "./config.js";
-import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/types.js";
+import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/const.js";
 
 const POD_NAME = process.env.POD_NAME;
 if (!POD_NAME) {

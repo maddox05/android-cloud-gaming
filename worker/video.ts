@@ -6,7 +6,7 @@ class VideoHandler {
   private socket: net.Socket | null = null;
   private connected = false;
   private onDataCallback: ((data: Buffer) => void) | null = null;
-  private pendingData: Buffer[] = [];  // Buffer data until callback is set
+  private pendingData: Buffer[] = []; // Buffer data until callback is set
 
   private constructor() {}
 
@@ -39,19 +39,23 @@ class VideoHandler {
     if (this.connected) return;
 
     return new Promise((resolve, reject) => {
-      this.socket = net.createConnection(scrcpy_config.port, "127.0.0.1", () => {
-        console.log("Video socket connected (first connection)");
-        this.socket!.setNoDelay(true);  // Disable Nagle's algorithm for lower latency
-        this.connected = true;
-        resolve();
-      });
+      this.socket = net.createConnection(
+        scrcpy_config.port,
+        "127.0.0.1",
+        () => {
+          console.log("Video socket connected (first connection)");
+          this.socket!.setNoDelay(true); // Disable Nagle's algorithm for lower latency
+          this.connected = true;
+          resolve();
+        }
+      );
 
       this.socket.on("data", (data) => {
         if (this.onDataCallback) {
           this.onDataCallback(data);
         } else {
           // Buffer data until callback is set (don't lose SPS/PPS!)
-          this.pendingData.push(data);  // data is already a Buffer, no copy needed
+          this.pendingData.push(data); // data is already a Buffer, no copy needed
         }
       });
 
@@ -67,8 +71,6 @@ class VideoHandler {
       });
     });
   }
-
-
 
   disconnect(): void {
     if (this.socket) {

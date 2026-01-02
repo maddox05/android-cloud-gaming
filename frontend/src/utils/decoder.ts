@@ -11,12 +11,25 @@ export class H264Decoder {
   private configured: boolean = false;
   private videoWidth: number = 0;
   private videoHeight: number = 0;
+  private resetVideo: (() => void) | null = null;
+  private lastResetTime: number = 0;
+  private readonly RESET_COOLDOWN_MS = 10000; // 10 seconds
 
   onDimensionsChanged: ((width: number, height: number) => void) | null = null;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, resetVideo?: () => void) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
+    this.resetVideo = resetVideo ?? null;
+  }
+
+  private requestVideoReset(): void {
+    const now = Date.now();
+    if (this.resetVideo && now - this.lastResetTime >= this.RESET_COOLDOWN_MS) {
+      this.lastResetTime = now;
+      console.log("Requesting video reset from server");
+      this.resetVideo();
+    }
   }
 
   appendData(data: ArrayBuffer): void {
@@ -91,6 +104,7 @@ export class H264Decoder {
           const dims = this.parseDimensionsFromSPS(nal);
           this.videoWidth = dims.width;
           this.videoHeight = dims.height;
+          console.log("Parsed SPS");
           console.log("Video dimensions:", dims.width, "x", dims.height);
           this.onDimensionsChanged?.(dims.width, dims.height);
         } catch (e) {
@@ -100,6 +114,7 @@ export class H264Decoder {
         break;
 
       case NAL_TYPE.PPS:
+        console.log("Got PPS");
         this.pps = nal;
         this.tryConfigureDecoder();
         break;
@@ -253,10 +268,11 @@ export class H264Decoder {
       },
       error: (e) => {
         console.error("Decoder error:", e);
-        window.alert(
-          "Decoder (Video) error. We are working hard to fix this issue, please queue again and report to support. Try not to switch tabs as well."
+        // Request video reset from server to get fresh SPS/PPS/IDR
+        alert(
+          "Video decoder error occurred, requesting video reset, you may have to reconnect. (sorry!)"
         );
-        window.location.href = "/";
+        this.requestVideoReset();
       },
     });
 
@@ -286,6 +302,8 @@ export class H264Decoder {
   private decodeFrame(nal: Uint8Array, isKeyframe: boolean): void {
     if (!this.decoder || this.decoder.state !== "configured") {
       console.log("Decoder not configured, skipping frame");
+      // Request video reset to get fresh SPS/PPS/IDR sequence
+      this.requestVideoReset();
       return;
     }
 
@@ -326,6 +344,7 @@ export class H264Decoder {
     this.configured = false;
     this.videoWidth = 0;
     this.videoHeight = 0;
+    this.lastResetTime = 0;
   }
 
   getVideoDimensions(): { width: number; height: number } {

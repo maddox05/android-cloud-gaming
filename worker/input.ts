@@ -1,9 +1,7 @@
 import net from "net";
 import { scrcpy_config, redroid_config } from "./config.js";
-import {
-  InputMessage,
-  REDROID_SCRCPY_SERVER_SETTINGS,
-} from "../shared/types.js";
+import { InputMessage, MSG } from "../shared/types.js";
+import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/const.js";
 
 // scrcpy control message types
 const SC_CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT = 2;
@@ -116,6 +114,12 @@ class InputHandler {
   sendInput(msg: InputMessage): void {
     if (!this.socket || !this.connected) {
       console.warn("Input socket not connected");
+      return;
+    }
+
+    // Handle reset video request
+    if (msg.type === MSG.RESET_VIDEO) {
+      this.resetVideo();
       return;
     }
 
