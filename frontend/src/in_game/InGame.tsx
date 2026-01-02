@@ -61,7 +61,9 @@ export default function InGame() {
   const handleCanvasReady = useCallback((canvas: HTMLCanvasElement) => {
     canvasRef.current = canvas;
     if (!decoderRef.current) {
-      decoderRef.current = new H264Decoder(canvas, () => videoInputWebRTC.resetVideo());
+      decoderRef.current = new H264Decoder(canvas, () =>
+        videoInputWebRTC.resetVideo()
+      );
     }
   }, []);
 
@@ -151,7 +153,9 @@ export default function InGame() {
           await videoInputWebRTC.connect();
 
           if (canvasRef.current && !decoderRef.current) {
-            decoderRef.current = new H264Decoder(canvasRef.current, () => videoInputWebRTC.resetVideo());
+            decoderRef.current = new H264Decoder(canvasRef.current, () =>
+              videoInputWebRTC.resetVideo()
+            );
           }
 
           setStatus(CONNECTION_STATUS.CONNECTING);

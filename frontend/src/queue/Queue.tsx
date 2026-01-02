@@ -74,7 +74,10 @@ export default function Queue() {
       };
 
       const handleQueueReady = (turnInfo?: TurnInfo) => {
-        console.log("Queue ready - navigating to game", turnInfo ? "(with TURN)" : "(no TURN)");
+        console.log(
+          "Queue ready - navigating to game",
+          turnInfo ? "(with TURN)" : "(no TURN)"
+        );
         if (timerInterval.current) clearInterval(timerInterval.current);
         // Set TURN servers before navigation so they're available when WebRTC connects
         videoInputWebRTC.setTurnServers(turnInfo);
@@ -94,7 +97,7 @@ export default function Queue() {
           websocketAPI.sendQueue(appId);
         } catch (err) {
           console.error("Failed to connect:", err);
-          setError("Failed to connect to server");
+          setError("Failed to connect to server, servers are down.");
           setIsConnecting(false);
         }
       })();
@@ -128,7 +131,7 @@ export default function Queue() {
           </div>
         )}
 
-        {error && (
+        {error && ( // maybe a check server status button here instead in the future
           <div className="queue-error">
             <p>{error}</p>
             <button className="queue-btn" onClick={handleExit}>

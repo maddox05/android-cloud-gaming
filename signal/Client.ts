@@ -21,6 +21,8 @@ import {
   INPUT_TIMEOUT_THRESHOLD,
   CONNECTING_TIMEOUT_THRESHOLD,
 } from "./consts.js";
+import { MAX_SESSION_TIME_MS } from "../shared/const.js";
+import { assert } from "console";
 
 export type ClientConnectionState =
   | "waiting"
@@ -296,6 +298,13 @@ export default class Client {
   checkConnectingTimeout(now: number): boolean {
     if (this.connectionState !== "connecting" || !this.assignedAt) return false;
     return now - this.assignedAt > CONNECTING_TIMEOUT_THRESHOLD;
+  }
+
+  // uses assignedAt, as thats when a worker was taken for this client
+  checkIsAtMaxSessionDuration(now: number): boolean {
+    if (this.connectionState !== "connected" || !this.assignedAt) return false; // its not possible to not be connected while being at max session duration, as checkConnectingTimeout would have caught it earlier
+    return now - this.assignedAt > MAX_SESSION_TIME_MS;
+    //    3:30 - 3:00 = 0:30 > 1hr? no (all in ms tho)
   }
 
   // ============================================
