@@ -1,4 +1,4 @@
-import { Game } from "./types.js";
+import type { Game } from "./types.js";
 export const STUN_SERVERS = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun.cloudflare.com:3478" },
