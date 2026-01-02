@@ -255,8 +255,7 @@ export class H264Decoder {
   }
 
   private tryConfigureDecoder(): void {
-    // if (!this.sps || !this.pps || this.configured) return; if it sends another I want it to reconfigure
-    if (!this.sps || !this.pps) return;
+    if (!this.sps || !this.pps || this.configured) return;
 
     const codec = this.parseCodecFromSPS(this.sps);
     console.log("Configuring decoder with codec:", codec);
@@ -269,6 +268,8 @@ export class H264Decoder {
       error: (e) => {
         console.error("Decoder error:", e);
         // Request video reset from server to get fresh SPS/PPS/IDR
+        this.reset();
+
         alert(
           "Video decoder error occurred, requesting video reset, you may have to reconnect. (sorry!)"
         );
