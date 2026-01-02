@@ -15,6 +15,7 @@ docker volume create redroid-base
 ```bash
 docker run -d --name redroid-setup \
   --privileged \
+  -p 5555:5555 \
   -v redroid-base:/data \
   redroid/redroid:12.0.0_64only-latest \
   androidboot.redroid_width=720 \
@@ -34,6 +35,8 @@ adb connect localhost:5555
 adb install your-app.apk
 ```
 
+-- note anything you download with apkpure even after uninstall will leave residue files.
+
 ### 4. Stop the container
 
 ```bash
@@ -50,12 +53,31 @@ docker run --rm -v redroid-base:/data -v $(pwd):/backup alpine \
   tar -czvf /backup/redroid-base.tar.gz -C /data .
 ```
 
-### 6. Import from tar.gz (on another machine)
+### 6. Upload to Cloudflare R2 via S3 CLI
+
+First, configure AWS CLI with your Cloudflare R2 credentials:
 
 ```bash
-docker volume create redroid-base
-docker run --rm -v redroid-base:/data -v $(pwd):/backup alpine \
-  tar -xzvf /backup/redroid-base.tar.gz -C /data
+aws configure set aws_access_key_id <YOUR_R2_ACCESS_KEY_ID>
+aws configure set aws_secret_access_key <YOUR_R2_SECRET_ACCESS_KEY>
+aws configure set default.region auto
+```
+
+Upload the tar.gz to your R2 bucket:
+
+```bash
+aws s3 cp redroid-base.tar.gz s3://android-cloud-gaming/redroid-bases/redroid-base.tar.gz \
+  --endpoint-url https://7b692eb05e5322beaef098debe10e8ae.r2.cloudflarestorage.com
+```
+
+To make the file publicly accessible, ensure your bucket has public access enabled in the Cloudflare dashboard, or use a custom domain linked to your R2 bucket.
+
+### 7. Download and Import via install.sh
+
+On the target machine, delete the old tar.gz and volume, and run the worker install script.
+
+```bash
+./worker/install.sh
 ```
 
 ## Notes
