@@ -3,7 +3,9 @@ import {
   ERROR_CODE,
   type InputMessage,
   type ErrorCode,
+  type TurnInfo,
 } from "../../../shared/types";
+import { STUN_SERVERS } from "../../../shared/const";
 
 type Unsubscribe = () => void;
 
@@ -14,6 +16,7 @@ class VideoInputWebRTC {
   private inputChannel: RTCDataChannel | null = null;
   private videoChannel: RTCDataChannel | null = null;
   private unsubscribers: (() => void)[] = [];
+  private turnServers: TurnInfo | null = null;
 
   // Callback arrays
   private onVideoCallbacks: ((data: ArrayBuffer) => void)[] = [];
@@ -24,6 +27,11 @@ class VideoInputWebRTC {
   private onDisconnectedCallbacks: (() => void)[] = [];
 
   private constructor() {}
+
+  setTurnServers(turnInfo: TurnInfo | undefined): void {
+    this.turnServers = turnInfo ?? null;
+    console.log("[WebRTC] TURN servers set:", turnInfo ? turnInfo.length : 0);
+  }
 
   static getInstance(): VideoInputWebRTC {
     if (!VideoInputWebRTC.instance) {
@@ -74,10 +82,15 @@ class VideoInputWebRTC {
   }
 
   async connect(): Promise<void> {
+    // Merge STUN servers with any TURN servers we received
+    const iceServers: RTCIceServer[] = [
+      ...STUN_SERVERS,
+      ...(this.turnServers ?? []),
+    ];
+    console.log("[WebRTC] Using ICE servers:", iceServers.length, "(STUN:", STUN_SERVERS.length, "+ TURN:", this.turnServers?.length ?? 0, ")");
+
     // Create peer connection
-    this.pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
+    this.pc = new RTCPeerConnection({ iceServers });
 
     // Handle incoming offer
     const unsubOffer = websocketAPI.onOffer(async (sdp) => {
@@ -202,7 +215,8 @@ class VideoInputWebRTC {
       this.pc.close();
       this.pc = null;
     }
-    // Clear all subscribers
+    // Clear all state
+    this.turnServers = null;
     this.onVideoCallbacks = [];
     this.onErrorCallbacks = [];
     this.onDisconnectedCallbacks = [];

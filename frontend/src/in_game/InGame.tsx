@@ -155,7 +155,7 @@ export default function InGame() {
           }
 
           setStatus(CONNECTION_STATUS.CONNECTING);
-          websocketAPI.sendStart();
+          websocketAPI.sendClientStarted();
           setLoadingMessage("Waiting on worker...");
 
           timeoutRef.current = setTimeout(() => {

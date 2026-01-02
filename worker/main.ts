@@ -11,7 +11,9 @@ import type {
   RegisterMessage,
   PongMessage,
   ErrorMessage,
+  WorkerStartMessage,
 } from "../shared/types.js";
+import { STUN_SERVERS } from "../shared/const.js";
 
 import { GAMES_LIST, MSG, ERROR_CODE } from "../shared/types.js";
 
@@ -36,8 +38,16 @@ let peerConnection: PC | null = null;
 let videoChannel: DataChannel | null = null;
 let inputChannel: DataChannel | null = null;
 
+// TURN servers received from signal server
+let currentTurnServers: RTCIceServer[] | null = null;
+
 async function createPeerConnection(): Promise<PC> {
-  const iceServers: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
+  // Merge STUN servers with any TURN servers we received
+  const iceServers: RTCIceServer[] = [
+    ...STUN_SERVERS,
+    ...(currentTurnServers ?? []),
+  ];
+  console.log(`[WebRTC] Using ICE servers: ${iceServers.length} (STUN: ${STUN_SERVERS.length} + TURN: ${currentTurnServers?.length ?? 0})`);
 
   const pc = new RTCPeerConnection({ iceServers });
 
@@ -188,6 +198,7 @@ function webrtc_cleanup() {
     peerConnection.close();
     peerConnection = null;
   }
+  currentTurnServers = null;
 }
 
 function notifyCrashAndExit(reason: string): void {
@@ -296,20 +307,32 @@ async function connectToSignalServer() {
         break;
       }
 
-      case MSG.START: {
-        // Client wants to connect - create peer connection and offer
-        // (session initialization happens when WebRTC actually connects)
-        console.log("Creating peer connection and offer...");
-        peerConnection = await createPeerConnection();
+      case MSG.WORKER_START: {
+        // Signal server tells us to start - create peer connection and initialize session
+        const workerStartMsg = msg as WorkerStartMessage;
+        console.log("Creating peer connection, offer, and initializing session...",
+          workerStartMsg.turnInfo ? "(with TURN)" : "(no TURN)");
+        try {
+          // Store TURN servers before creating peer connection
+          currentTurnServers = workerStartMsg.turnInfo ?? null;
 
-        const offer = await peerConnection!.createOffer();
-        await peerConnection!.setLocalDescription(offer);
+          peerConnection = await createPeerConnection();
 
-        const offerMsg: OfferMessage = {
-          type: MSG.OFFER,
-          sdp: offer.sdp!,
-        };
-        signalSocket!.send(JSON.stringify(offerMsg));
+          const offer = await peerConnection!.createOffer();
+          await peerConnection!.setLocalDescription(offer);
+
+          const offerMsg: OfferMessage = {
+            type: MSG.OFFER,
+            sdp: offer.sdp!,
+          };
+          signalSocket!.send(JSON.stringify(offerMsg));
+
+          // Initialize the session with the game
+          await initializeSession(workerStartMsg.gameId);
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          notifyCrashAndExit(`Failed to start worker: ${errorMessage}`);
+        }
         break;
       }
 
@@ -328,19 +351,6 @@ async function connectToSignalServer() {
         if (peerConnection && msg.candidate) {
           await peerConnection.addIceCandidate(msg.candidate);
           console.log("Added remote ICE candidate!");
-        }
-        break;
-
-      case MSG.CLIENT_GAME_SELECTED:
-        // Client's WebRTC is connected - NOW initialize the session
-        console.log("Client choose game, initializing session...");
-        try {
-          await initializeSession(msg.gameId);
-
-          // inputHandler.resetVideo();
-        } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : String(err);
-          notifyCrashAndExit(`Failed to initialize session: ${errorMessage}`);
         }
         break;
 

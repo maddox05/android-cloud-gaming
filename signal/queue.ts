@@ -2,6 +2,7 @@ import { getClient, findAvailableWorkerWithGame } from "./registry.js";
 import type Client from "./Client.js";
 import { ERROR_CODE } from "../shared/types.js";
 import { QUEUE_TIMEOUT_THRESHOLD } from "./consts.js";
+import { generateTurnCredentials } from "./helpers.js";
 
 // Global queue - ordered array of client IDs
 const queue: string[] = [];
@@ -13,7 +14,9 @@ const queue: string[] = [];
 export function addToQueue(clientId: string): void {
   if (!queue.includes(clientId)) {
     queue.push(clientId);
-    console.log(`Client ${clientId} added to queue at position ${queue.length}`);
+    console.log(
+      `Client ${clientId} added to queue at position ${queue.length}`
+    );
   }
 }
 
@@ -53,7 +56,7 @@ export function getAllQueuedClientIds(): string[] {
 // Queue Processing (FUNCA)
 // ============================================
 
-export function processQueue(): void {
+export async function processQueue(): Promise<void> {
   // Iterate copy of queue to allow modifications during iteration
   for (const clientId of [...queue]) {
     const client = getClient(clientId);
@@ -66,13 +69,20 @@ export function processQueue(): void {
       // Remove from queue first
       removeFromQueue(clientId);
 
+      // Generate TURN credentials for this session
+      const turnInfo = await generateTurnCredentials();
+      client.turnInfo = turnInfo;
+      worker.turnInfo = turnInfo;
+
       // Assign worker to client (sets up bidirectional link)
       client.assignWorker(worker);
 
-      // Tell client they're ready
+      // Tell client they're ready (includes turnInfo)
       client.sendQueueReady();
 
-      console.log(`Matched client ${client.id} with worker ${worker.id} for game ${client.game}`);
+      console.log(
+        `Matched client ${client.id} with worker ${worker.id} for game ${client.game}`
+      );
     }
   }
 
@@ -103,7 +113,10 @@ export function checkQueueTimeouts(): void {
 
     if (client.queuedAt && now - client.queuedAt > QUEUE_TIMEOUT_THRESHOLD) {
       console.log(`Client ${client.id} timed out in queue`);
-      client.sendError(ERROR_CODE.QUEUE_TIMEOUT, "Queue timeout - you've been waiting too long. Please try again.");
+      client.sendError(
+        ERROR_CODE.QUEUE_TIMEOUT,
+        "Queue timeout - you've been waiting too long. Please try again."
+      );
       removeFromQueue(clientId);
       client.disconnect("queue_timeout");
     }

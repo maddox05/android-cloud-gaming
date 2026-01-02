@@ -155,7 +155,7 @@ setInterval(() => {
 // ============================================
 
 setInterval(() => {
-  processQueue();
+  processQueue().catch((err) => console.error("Queue processing error:", err));
   checkQueueTimeouts();
 }, QUEUE_PROCESS_INTERVAL);
 

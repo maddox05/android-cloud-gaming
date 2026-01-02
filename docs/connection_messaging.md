@@ -24,9 +24,8 @@ This document describes the complete message flow between Client, Signal Server,
         │                           │                           │
         │  (navigates to /app)      │                           │
         │                           │                           │
-        │  ──────── START ───────►  │                           │
-        │                           │  ─────── START ────────►  │
-        │                           │  ── CLIENT_GAME_SELECTED ►│
+        │  ─── CLIENT_STARTED ───►  │                           │
+        │                           │  ─── WORKER_START ─────►  │
         │                           │       {gameId}            │
         │                           │                           │
         │                           │  ◄──────── OFFER ───────  │
@@ -90,16 +89,15 @@ Client                          Signal
 
 ### 3. Start Connection
 
-Client navigates to game page and sends START. Signal tells worker to begin.
+Client navigates to game page and sends CLIENT_STARTED. Signal tells worker to begin with WORKER_START (includes gameId).
 
 ```
 Client                          Signal                         Worker
   │                               │                               │
   │ (navigates to /app/{appId})   │                               │
   │                               │                               │
-  │──────── START ──────────────► │                               │
-  │                               │─────── START ───────────────► │
-  │                               │── CLIENT_GAME_SELECTED ─────► │
+  │───── CLIENT_STARTED ────────► │                               │
+  │                               │───── WORKER_START ──────────► │
   │                               │      {gameId}                 │
 ```
 
@@ -190,6 +188,6 @@ Signal server maintains connection health via ping/pong and monitors for timeout
 | Ping timeout | 10s | No PONG response |
 | Input timeout | 180s | No CLIENT_INPUTED (AFK) |
 | Queue timeout | 20min | Waiting too long in queue |
-| Connecting timeout | 30s | Got QUEUE_READY but no START |
+| Connecting timeout | 30s | Got QUEUE_READY but no CLIENT_STARTED |
 
 

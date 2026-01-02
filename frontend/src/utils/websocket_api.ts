@@ -8,6 +8,8 @@ import {
   type IceCandidateMessage,
   type ErrorMessage,
   type QueueInfoMessage,
+  type QueueReadyMessage,
+  type TurnInfo,
 } from "../../../shared/types";
 
 export interface QueueInfo {
@@ -28,7 +30,7 @@ class WebSocketAPI {
     message: string
   ) => void)[] = [];
   private onQueueInfoCallbacks: ((info: QueueInfo) => void)[] = [];
-  private onQueueReadyCallbacks: (() => void)[] = [];
+  private onQueueReadyCallbacks: ((turnInfo?: TurnInfo) => void)[] = [];
   private onShutdownCallbacks: ((reason: string) => void)[] = [];
 
   async connect(): Promise<void> {
@@ -153,10 +155,12 @@ class WebSocketAPI {
         break;
       }
 
-      case MSG.QUEUE_READY:
-        console.log("Queue ready - worker assigned");
-        this.onQueueReadyCallbacks.forEach((cb) => cb());
+      case MSG.QUEUE_READY: {
+        const queueReadyMsg = msg as QueueReadyMessage;
+        console.log("Queue ready - worker assigned", queueReadyMsg.turnInfo ? "(with TURN)" : "(no TURN)");
+        this.onQueueReadyCallbacks.forEach((cb) => cb(queueReadyMsg.turnInfo));
         break;
+      }
 
       default:
         console.warn("Unknown signal message type:", msg.type);
@@ -218,7 +222,7 @@ class WebSocketAPI {
     };
   }
 
-  onQueueReady(callback: () => void): Unsubscribe {
+  onQueueReady(callback: (turnInfo?: TurnInfo) => void): Unsubscribe {
     this.onQueueReadyCallbacks.push(callback);
     return () => {
       this.onQueueReadyCallbacks = this.onQueueReadyCallbacks.filter(
@@ -241,8 +245,8 @@ class WebSocketAPI {
     this.send({ type: MSG.QUEUE, appId });
   }
 
-  sendStart(): void {
-    this.send({ type: MSG.START });
+  sendClientStarted(): void {
+    this.send({ type: MSG.CLIENT_STARTED });
   }
 
   sendAnswer(sdp: string): void {

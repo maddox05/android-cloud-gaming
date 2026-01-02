@@ -1,8 +1,13 @@
 import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { websocketAPI, type QueueInfo } from "../utils/websocket_api";
+import { videoInputWebRTC } from "../utils/video_and_input_webrtc";
 import { getGameName } from "../in_game/helpers";
-import { ERROR_CODE, type ErrorCode } from "../../../shared/types";
+import {
+  ERROR_CODE,
+  type ErrorCode,
+  type TurnInfo,
+} from "../../../shared/types";
 import "./Queue.css";
 
 const ESTIMATED_SECONDS_PER_PLAYER = 60;
@@ -68,9 +73,11 @@ export default function Queue() {
         setIsConnecting(false);
       };
 
-      const handleQueueReady = () => {
-        console.log("Queue ready - navigating to game");
+      const handleQueueReady = (turnInfo?: TurnInfo) => {
+        console.log("Queue ready - navigating to game", turnInfo ? "(with TURN)" : "(no TURN)");
         if (timerInterval.current) clearInterval(timerInterval.current);
+        // Set TURN servers before navigation so they're available when WebRTC connects
+        videoInputWebRTC.setTurnServers(turnInfo);
         navigate(`/app/${appId}`);
       };
 

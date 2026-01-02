@@ -15,6 +15,7 @@ import {
   type QueueMessage,
   type ErrorMessage,
   type ErrorCode,
+  type TurnInfo,
 } from "../shared/types.js";
 import {
   INPUT_TIMEOUT_THRESHOLD,
@@ -39,6 +40,7 @@ export default class Client {
   // State
   connectionState: ClientConnectionState = "waiting";
   game: string | null = null;
+  turnInfo: TurnInfo | null = null;
 
   // Timestamps
   lastPing: number;
@@ -102,8 +104,8 @@ export default class Client {
         this.handleQueue(msg as QueueMessage);
         break;
 
-      case MSG.START:
-        this.handleStart();
+      case MSG.CLIENT_STARTED:
+        this.handleClientStarted();
         break;
 
       case MSG.PONG:
@@ -161,11 +163,11 @@ export default class Client {
     console.log(`Client ${this.id} queued for game: ${appId}`);
   }
 
-  private handleStart(): void {
-    // Prevent double START
+  private handleClientStarted(): void {
+    // Prevent double CLIENT_STARTED
     if (this.connectionState === "connected") {
       console.log(
-        `Client ${this.id} already started, ignoring duplicate START`
+        `Client ${this.id} already started, ignoring duplicate CLIENT_STARTED`
       );
       return;
     }
@@ -188,10 +190,10 @@ export default class Client {
       return;
     }
 
-    // Mark as connected and tell worker to start
+    // Mark as connected and tell worker to start with game info
+    // (worker already has turnInfo from queue assignment)
     this.connectionState = "connected";
-    this.worker.sendStart();
-    this.worker.sendClientGame(this.game);
+    this.worker.sendWorkerStart(this.game);
 
     console.log(
       `Client ${this.id} started connection with worker ${this.worker.id}`
@@ -252,7 +254,10 @@ export default class Client {
   }
 
   sendQueueReady(): void {
-    this.send({ type: MSG.QUEUE_READY });
+    this.send({
+      type: MSG.QUEUE_READY,
+      turnInfo: this.turnInfo ?? undefined,
+    });
   }
 
   sendAuthenticated(): void {

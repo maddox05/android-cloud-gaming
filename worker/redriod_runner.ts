@@ -158,7 +158,7 @@ class RedroidRunner {
       `audio=${s.audio}`,
       `control=${s.control}`,
       `cleanup=${s.cleanup}`,
-      `raw_stream=${s.rawStream}`,
+      `raw_stream=${s.rawStream}`, //todo switch from raw_stream to non
       `max_size=${s.maxSize}`,
       `max_fps=${s.maxFps}`,
       `video_bit_rate=${s.videoBitRate}`,

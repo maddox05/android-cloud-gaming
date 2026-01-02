@@ -283,6 +283,7 @@ export class H264Decoder {
 
   private decodeFrame(nal: Uint8Array, isKeyframe: boolean): void {
     if (!this.decoder || this.decoder.state !== "configured") {
+      console.log("Decoder not configured, skipping frame");
       return;
     }
 

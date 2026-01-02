@@ -9,7 +9,8 @@ export const GAMES_LIST = ["com.supercell.clashroyale"];
 
 export const MSG = {
   // Signal messages
-  START: "start", // starts client and worker connection process (they start talking webrtc shit) info has been exchanged through singaling, and we now tell signal server hey we want to talk to each other now
+  CLIENT_STARTED: "client-started", // client -> signal: client is ready to connect after QUEUE_READY
+  WORKER_START: "worker-start", // signal -> worker: start WebRTC + session with gameId
   OFFER: "offer",
   ANSWER: "answer",
   ICE_CANDIDATE: "ice-candidate",
@@ -27,16 +28,25 @@ export const MSG = {
   DRAG: "drag",
   CLICK: "click",
   CLIENT_INPUTED: "client-inputed", // Client sends to signal for heartbeat
-  CLIENT_GAME_SELECTED: "client-game-selected", // signal -> worker: which game to launch
 } as const;
+
+/** TURN server credentials for WebRTC connection */
+export type TurnInfo = RTCIceServer[];
 
 // ============================================
 // WebSocket Signal Messages
 // ============================================
 
-/** Client requests to start a streaming session */
-export interface StartMessage {
-  type: typeof MSG.START;
+/** Client notifies signal server it's ready to connect after QUEUE_READY */
+export interface ClientStartedMessage {
+  type: typeof MSG.CLIENT_STARTED;
+}
+
+/** Signal server tells worker to start WebRTC and session with specific game */
+export interface WorkerStartMessage {
+  type: typeof MSG.WORKER_START;
+  gameId: string;
+  turnInfo?: TurnInfo;
 }
 
 /** Pod sends SDP offer to client */
@@ -121,6 +131,7 @@ export interface QueueInfoMessage {
 /** Server notifies client that worker is assigned and ready */
 export interface QueueReadyMessage {
   type: typeof MSG.QUEUE_READY;
+  turnInfo?: TurnInfo;
 }
 
 /** Client notifies signal server that it has clicked smth on the screen */
@@ -129,14 +140,10 @@ export interface ClientInputed {
   type: typeof MSG.CLIENT_INPUTED;
 }
 
-/** Signal server tells worker which game to launch (internal) */
-export interface ClientGameSelectedMessage {
-  type: typeof MSG.CLIENT_GAME_SELECTED;
-  gameId: string;
-}
 /** Union of all signal messages */
 export type SignalMessage =
-  | StartMessage
+  | ClientStartedMessage
+  | WorkerStartMessage
   | OfferMessage
   | AnswerMessage
   | IceCandidateMessage
@@ -149,8 +156,7 @@ export type SignalMessage =
   | QueueMessage
   | QueueInfoMessage
   | QueueReadyMessage
-  | ClientInputed
-  | ClientGameSelectedMessage;
+  | ClientInputed;
 
 /** Signal message types for type guards */
 export type SignalMessageType = SignalMessage["type"];
@@ -197,7 +203,8 @@ export function isSignalMessage(msg: unknown): msg is SignalMessage {
   if (typeof msg !== "object" || msg === null) return false;
   const type = (msg as { type?: unknown }).type;
   return (
-    type === MSG.START ||
+    type === MSG.CLIENT_STARTED ||
+    type === MSG.WORKER_START ||
     type === MSG.OFFER ||
     type === MSG.ANSWER ||
     type === MSG.ICE_CANDIDATE ||
@@ -210,8 +217,7 @@ export function isSignalMessage(msg: unknown): msg is SignalMessage {
     type === MSG.QUEUE ||
     type === MSG.QUEUE_INFO ||
     type === MSG.QUEUE_READY ||
-    type === MSG.CLIENT_INPUTED ||
-    type === MSG.CLIENT_GAME_SELECTED
+    type === MSG.CLIENT_INPUTED
   );
 }
 

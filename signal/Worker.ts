@@ -13,6 +13,7 @@ import {
   type RegisterMessage,
   type ErrorMessage,
   ERROR_CODE,
+  type TurnInfo,
 } from "../shared/types.js";
 
 export type WorkerStatus = "available" | "busy";
@@ -21,6 +22,8 @@ export default class Worker {
   // Identity
   readonly id: string;
   readonly ws: WebSocket;
+
+  turnInfo: TurnInfo | null = null;
 
   // Pairing - direct reference
   client: Client | null = null;
@@ -79,7 +82,7 @@ export default class Worker {
     switch (msg.type) {
       case MSG.REGISTER:
         const msgTyped = msg as RegisterMessage;
-        if(!msgTyped.games || !Array.isArray(msgTyped.games)) {
+        if (!msgTyped.games || !Array.isArray(msgTyped.games)) {
           console.error(`Worker ${this.id} sent invalid games array`);
           this.sendShutdown("invalid_games");
           return;
@@ -155,8 +158,12 @@ export default class Worker {
     this.send({ type: MSG.PING });
   }
 
-  sendStart(): void {
-    this.send({ type: MSG.START });
+  sendWorkerStart(gameId: string): void {
+    this.send({
+      type: MSG.WORKER_START,
+      gameId,
+      turnInfo: this.turnInfo ?? undefined,
+    });
   }
 
   sendAnswer(sdp: string): void {
@@ -169,10 +176,6 @@ export default class Worker {
 
   sendClientDisconnected(): void {
     this.send({ type: MSG.SHUTDOWN, reason: "client_disconnected" });
-  }
-
-  sendClientGame(gameId: string): void {
-    this.send({ type: MSG.CLIENT_GAME_SELECTED, gameId });
   }
 
   sendShutdown(reason: string): void {
