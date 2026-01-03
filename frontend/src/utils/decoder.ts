@@ -28,6 +28,7 @@ export class H264Decoder {
     if (this.resetVideo && now - this.lastResetTime >= this.RESET_COOLDOWN_MS) {
       this.lastResetTime = now;
       console.log("Requesting video reset from server");
+      this.reset();
       this.resetVideo();
     }
   }
@@ -267,13 +268,10 @@ export class H264Decoder {
       },
       error: (e) => {
         console.error("Decoder error:", e);
-        // Request video reset from server to get fresh SPS/PPS/IDR
-        this.reset();
-
         alert(
           "Video decoder error occurred, requesting video reset, you may have to reconnect. (sorry!)"
         );
-        this.requestVideoReset();
+        this.requestVideoReset(); // fix issue Cannot call 'close' on a closed codec when decoder fails, to my left is an error this got, its now fixed, but I think if the decoder errors again, resetting may not fix it. not sure if anyone gets this pls write a issue
       },
     });
 
@@ -335,7 +333,9 @@ export class H264Decoder {
 
   reset(): void {
     if (this.decoder) {
-      this.decoder.close();
+      try {
+        this.decoder.close();
+      } catch {}
       this.decoder = null;
     }
     this.buffer = new Uint8Array(0);
