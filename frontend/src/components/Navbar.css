@@ -21,6 +21,7 @@
 
 /* Discord Badge */
 .discord-badge {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -40,7 +41,21 @@
   transform: translateY(-1px);
 }
 
-.discord-count {
+.discord-text {
+  color: #ffffff;
+}
+
+.discord-gift {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #ff9500;
+  border-radius: 6px;
   color: #ffffff;
 }
 

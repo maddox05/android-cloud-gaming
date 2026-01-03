@@ -8,10 +8,35 @@ import {
   onAuthStateChange,
 } from "../utils/supabase";
 import { Avatar } from "./Avatar";
-import { BurgerIcon, CloseIcon, DiscordIcon } from "./Icons";
+import { BurgerIcon, CloseIcon, DiscordIcon, GiftIcon } from "./Icons";
 import { MobileMenu } from "./MobileMenu";
 import { ProfilePanel } from "./ProfilePanel";
 import "./Navbar.css";
+
+interface DiscordBadgeProps {
+  text: string;
+  showGift?: boolean;
+  href?: string;
+}
+
+function DiscordBadge({ text, showGift = false, href = "https://discord.gg/U4QYdzXEnr" }: DiscordBadgeProps) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="discord-badge"
+    >
+      <DiscordIcon size={24} />
+      <span className="discord-text">{text}</span>
+      {showGift && (
+        <span className="discord-gift">
+          <GiftIcon size={16} />
+        </span>
+      )}
+    </a>
+  );
+}
 
 const NAV_LINKS = [{ to: "/pricing", label: "Pricing" }];
 
@@ -93,15 +118,7 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
-          <a
-            href="https://discord.gg/U4QYdzXEnr"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="discord-badge"
-          >
-            <DiscordIcon size={24} />
-            <span className="discord-count">6</span>
-          </a>
+          <DiscordBadge text="Get 50% off" showGift />
           <button
             className="profile-btn"
             onClick={handleProfileClick}
@@ -113,15 +130,7 @@ export default function Navbar() {
 
         {/* Mobile Navigation */}
         <div className="header-right mobile-nav">
-          <a
-            href="https://discord.gg/U4QYdzXEnr"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="discord-badge"
-          >
-            <DiscordIcon size={24} />
-            <span className="discord-count">6</span>
-          </a>
+          <DiscordBadge text="Get 50% off" showGift />
           <button
             className="profile-btn"
             onClick={handleProfileClick}
