@@ -1,7 +1,7 @@
 import net from "net";
-import { scrcpy_config, redroid_config } from "./config.js";
+import { scrcpy_config } from "./config.js";
 import { InputMessage, MSG } from "../shared/types.js";
-import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/const.js";
+import { redroidRunner } from "./redriod_runner.js";
 
 // scrcpy control message types
 const SC_CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT = 2;
@@ -19,8 +19,6 @@ class InputHandler {
   private static instance: InputHandler;
   private socket: net.Socket | null = null;
   private connected = false;
-  private screenWidth = REDROID_SCRCPY_SERVER_SETTINGS.width;
-  private screenHeight = REDROID_SCRCPY_SERVER_SETTINGS.height;
   private touchBuffer = Buffer.alloc(32); // Pre-allocated, reused for every touch
   private constructor() {}
 
@@ -84,8 +82,8 @@ class InputHandler {
   ): Buffer {
     const buf = this.touchBuffer; // Reuse pre-allocated buffer
 
-    const x = xPercent * this.screenWidth;
-    const y = yPercent * this.screenHeight;
+    const x = xPercent * redroidRunner.videoWidth;
+    const y = yPercent * redroidRunner.videoHeight;
 
     // Message type (1 byte)
     buf.writeUInt8(SC_CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT, 0);
@@ -98,9 +96,9 @@ class InputHandler {
     // Position Y (4 bytes)
     buf.writeInt32BE(Math.floor(y), 14);
     // Screen width (2 bytes)
-    buf.writeUInt16BE(this.screenWidth, 18);
+    buf.writeUInt16BE(redroidRunner.videoWidth, 18);
     // Screen height (2 bytes)
-    buf.writeUInt16BE(this.screenHeight, 20);
+    buf.writeUInt16BE(redroidRunner.videoHeight, 20);
     // Pressure (2 bytes) - 0xFFFF for full pressure, 0 for UP
     buf.writeUInt16BE(action === ACTION_UP ? 0 : 0xffff, 22);
     // Action button (4 bytes) - 0 for touch

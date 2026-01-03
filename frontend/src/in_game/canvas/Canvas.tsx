@@ -28,8 +28,9 @@ export default function Canvas({ sendInput, onCanvasReady }: CanvasProps) {
 
       const rect = getCanvasRect();
       if (!rect) return;
-
-      sendInput(createDragMessage("start", e.nativeEvent, rect));
+      const x = createDragMessage("start", e.nativeEvent, rect);
+      console.log(x.xPercent, x.yPercent);
+      sendInput(x);
     },
     [sendInput, getCanvasRect]
   );
@@ -94,8 +95,6 @@ export default function Canvas({ sendInput, onCanvasReady }: CanvasProps) {
       <canvas
         ref={canvasRef}
         className="stream-canvas"
-        width={1920}
-        height={1080}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

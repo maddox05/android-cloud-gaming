@@ -7,11 +7,6 @@ export const STUN_SERVERS = [
 export const MAX_SESSION_TIME_MS = 60 * 60 * 1000; // 1 hour todo for laer use this in client & signal server
 
 export const REDROID_SCRCPY_SERVER_SETTINGS = {
-  // Display settings
-  width: 360,
-  height: 640,
-  dpi: 120,
-
   // Video settings
   maxSize: 640, // max_size - scales video to fit this dimension
   maxFps: 20, // max_fps
@@ -34,7 +29,6 @@ export const REDROID_SCRCPY_SERVER_SETTINGS = {
   cleanup: false, // cleanup - don't restore display settings on exit
   rawStream: true, // raw_stream - use framed stream (not raw H.264)
   video: true, // video - enable video streaming
-  sendFrameMeta: true, // send_frame_meta - don't send PTS timestamps
 };
 
 export const GAMES_LIST: Game[] = [

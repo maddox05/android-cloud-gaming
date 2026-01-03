@@ -13,6 +13,10 @@ class RedroidRunner {
   private running = false;
   private scrcpyProc: ReturnType<typeof spawn> | null = null;
   private adbTarget: string;
+  private videoSizeInterval: ReturnType<typeof setInterval> | null = null;
+
+  public videoWidth: number = 0;
+  public videoHeight: number = 0;
 
   private constructor() {
     const { host, port } = redroid_config;
@@ -195,6 +199,33 @@ class RedroidRunner {
 
     // Setup kiosk mode AFTER scrcpy is running
     await this.setupKioskMode(packageName);
+
+    // Start polling video size every 5 seconds
+    this.startVideoSizePolling();
+  }
+
+  /**
+   * Start polling video size every 5 seconds
+   */
+  private startVideoSizePolling(): void {
+    // Get initial size immediately
+    this.updateVideoSize();
+
+    // Then poll every 5 seconds
+    this.videoSizeInterval = setInterval(() => {
+      this.updateVideoSize();
+    }, 5000);
+  }
+
+  /**
+   * Update the video width/height from the device
+   */
+  private async updateVideoSize(): Promise<void> {
+    const size = await this.getVideoSize();
+    if (size) {
+      this.videoWidth = size.width;
+      this.videoHeight = size.height;
+    }
   }
 
   /**
@@ -238,15 +269,64 @@ class RedroidRunner {
   }
 
   /**
+   * Get the current video dimensions that the adb device is at
+   * Queries the device display size, checks rotation, and applies max_size scaling to match scrcpy's output size.
+   */
+  async getVideoSize(): Promise<{ width: number; height: number } | null> {
+    try {
+      const result = await this.execAsync(
+        `adb -s ${this.adbTarget} shell wm size`
+      );
+      const match = result.match(/(\d+)x(\d+)/);
+      if (match) {
+        let width = parseInt(match[1]);
+        let height = parseInt(match[2]);
+
+        // Check display rotation and swap if landscape (rotation 1 or 3)
+        const rotationResult = await this.execAsyncSafe(
+          `adb -s ${this.adbTarget} shell dumpsys window | grep -E 'mCurrentRotation|rotation='`
+        );
+        const rotationMatch = rotationResult.stdout.match(
+          /(?:mCurrentRotation|rotation)=(\d)/
+        );
+        const rotation = rotationMatch ? parseInt(rotationMatch[1]) : 0;
+        if (rotation === 1 || rotation === 3) {
+          [width, height] = [height, width];
+        }
+
+        // Apply max_size scaling (scrcpy scales the larger dimension)
+        const maxSize = REDROID_SCRCPY_SERVER_SETTINGS.maxSize;
+        const maxDim = Math.max(width, height);
+        if (maxDim > maxSize) {
+          const scale = maxSize / maxDim;
+          width = Math.floor(width * scale);
+          height = Math.floor(height * scale);
+        }
+        return { width, height };
+      }
+    } catch {}
+    return null;
+  }
+
+  /**
    * Restart the redroid container via Docker.
    * Used to get a fresh state when worker restarts.
    */
   restartContainer(): void {
     const containerName = `${POD_NAME}-redroid-1`;
     console.log(`Restarting redroid container: ${containerName}`);
+
+    // Stop video size polling
+    if (this.videoSizeInterval) {
+      clearInterval(this.videoSizeInterval);
+      this.videoSizeInterval = null;
+    }
+
     try {
       execSync(`docker restart ${containerName}`, { stdio: "inherit" });
       this.running = false; // Reset state since container is fresh
+      this.videoWidth = 0;
+      this.videoHeight = 0;
     } catch (e) {
       console.error("Failed to restart redroid container:", e);
     }

@@ -108,6 +108,12 @@ export class H264Decoder {
           console.log("Parsed SPS");
           console.log("Video dimensions:", dims.width, "x", dims.height);
           this.onDimensionsChanged?.(dims.width, dims.height);
+          // Set canvas dimensions and aspect ratio
+          if (this.videoWidth > 0 && this.videoHeight > 0) {
+            this.canvas.width = this.videoWidth;
+            this.canvas.height = this.videoHeight;
+            this.canvas.style.aspectRatio = `${this.videoWidth} / ${this.videoHeight}`;
+          } // todo put this somewhere else
         } catch (e) {
           console.error("Failed to parse SPS dimensions:", e);
         }

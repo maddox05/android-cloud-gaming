@@ -20,7 +20,6 @@ docker run -d --name redroid-setup \
   redroid/redroid:12.0.0_64only-latest \
   androidboot.redroid_width=720 \
   androidboot.redroid_height=1280 \
-  androidboot.redroid_dpi=320
 ```
 
 ### 3. Connect and configure

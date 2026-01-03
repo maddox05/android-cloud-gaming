@@ -1,8 +1,14 @@
+how to start?
+
 start a pod:
 docker compose -p pod0 -f docker-compose.pod.yml up --build
 
 start signal server:
 docker compose -f docker-compose.signal.yml up --build
+
+start frontend:
+cd frontend
+npm run dev
 
 clean docker state:
 docker rm -f $(docker ps -aq)
