@@ -164,8 +164,8 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="hero">
-        <h1>Play Clash Royale In School</h1>
-        <p>The best cloud gaming to play mobile games unblocked in school</p>
+        <h1>Play Clash Royale Anywhere</h1>
+        <p>The best cloud gaming to play mobile games on a laptop or desktop</p>
       </section>
 
       {/* Features Section */}
