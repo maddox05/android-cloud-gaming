@@ -87,6 +87,74 @@
   margin: 1rem 0;
 }
 
+/* Centered content variant (for success/error pages) */
+.page-content-centered {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 40px;
+}
+
+.page-content-centered .page-section {
+  max-width: 500px;
+}
+
+.page-subtitle {
+  color: var(--text-secondary);
+  font-size: 1.125rem;
+  margin-top: 0.5rem;
+}
+
+/* Status icons */
+.page-status-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+.page-status-success {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
+}
+
+.page-status-error {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+}
+
+/* CTA Button */
+.page-cta-button {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  color: white;
+  text-decoration: none;
+  font-size: 1.125rem;
+  font-weight: 600;
+  padding: 16px 48px;
+  border-radius: var(--radius-lg);
+  margin-top: 1.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
+}
+
+.page-cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(249, 115, 22, 0.4);
+}
+
+.page-cta-button:active {
+  transform: translateY(0);
+}
+
 @media (max-width: 768px) {
   .page-container {
     padding: 100px 16px 40px;
@@ -98,5 +166,16 @@
 
   .page-section h2 {
     font-size: 1.25rem;
+  }
+
+  .page-status-icon {
+    width: 64px;
+    height: 64px;
+    font-size: 2rem;
+  }
+
+  .page-cta-button {
+    padding: 14px 32px;
+    font-size: 1rem;
   }
 }

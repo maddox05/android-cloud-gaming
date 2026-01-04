@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   getCurrentUser,
   signInWithGoogle,
@@ -12,7 +12,6 @@ import "./Pricing.css";
 export default function Pricing() {
   const [user, setUser] = useState<User | null>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
-  const tableRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const scriptId = "stripe-pricing-table-script";
@@ -54,15 +53,6 @@ export default function Pricing() {
     trackViewContent("Pricing Page");
   }, []);
 
-  useEffect(() => {
-    if (tableRef.current && user) {
-      tableRef.current.setAttribute("client-reference-id", user.id);
-      if (user.email) {
-        tableRef.current.setAttribute("customer-email", user.email);
-      }
-    }
-  }, [user]);
-
   const handleOverlayClick = async () => {
     await signInWithGoogle();
   };
@@ -93,9 +83,11 @@ export default function Pricing() {
         {scriptLoaded && (
           // @ts-expect-error stripe-pricing-table is a custom element
           <stripe-pricing-table
-            ref={tableRef}
+            key={user?.id ?? "anonymous"}
             pricing-table-id="prctbl_1Sibp9Io5niLkgKCQoirRLr0"
             publishable-key="pk_live_51ShAGcIo5niLkgKCCwvIhzBqI2xLDdOZ3CxzDEwegRTHpfWzCwJkyTBc7cGNhlF9Tej0O5nmc7jQ2uJr2TJiOgSw00aACeMl1e"
+            client-reference-id={user?.id}
+            customer-email={user?.email}
           />
         )}
       </div>

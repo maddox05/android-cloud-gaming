@@ -1,11 +1,10 @@
 import { useEffect, useState, useRef } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { trackPurchase } from "../utils/metaPixel";
 import "./Pages.css";
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const hasTracked = useRef(false);
 
@@ -49,9 +48,9 @@ export default function PaymentSuccess() {
   if (status === "loading") {
     return (
       <div className="page-container">
-        <div className="page-content" style={{ textAlign: "center" }}>
+        <div className="page-content page-content-centered">
           <h1>Processing...</h1>
-          <p>Please wait while we confirm your purchase.</p>
+          <p className="page-subtitle">Please wait while we confirm your purchase.</p>
         </div>
       </div>
     );
@@ -60,24 +59,19 @@ export default function PaymentSuccess() {
   if (status === "error") {
     return (
       <div className="page-container">
-        <div className="page-content" style={{ textAlign: "center" }}>
+        <div className="page-content page-content-centered">
+          <div className="page-status-icon page-status-error">!</div>
           <h1>Something went wrong</h1>
-          <p>We couldn't verify your purchase. If you completed payment, your subscription should be active.</p>
-          <button
-            onClick={() => navigate("/")}
-            style={{
-              marginTop: "1.5rem",
-              padding: "0.75rem 2rem",
-              fontSize: "1rem",
-              backgroundColor: "#6366f1",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-            }}
-          >
+          <section className="page-section">
+            <p>
+              We couldn't verify your purchase. If you completed payment, your
+              subscription should be active. Try playing a game or check your email
+              for confirmation.
+            </p>
+          </section>
+          <Link to="/" className="page-cta-button">
             Go to Home
-          </button>
+          </Link>
         </div>
       </div>
     );
@@ -85,26 +79,18 @@ export default function PaymentSuccess() {
 
   return (
     <div className="page-container">
-      <div className="page-content" style={{ textAlign: "center" }}>
-        <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>✓</div>
+      <div className="page-content page-content-centered">
+        <div className="page-status-icon page-status-success">✓</div>
         <h1>Payment Successful!</h1>
-        <p style={{ fontSize: "1.125rem", color: "#a1a1aa", marginBottom: "2rem" }}>
-          Thank you for subscribing to MaddoxCloud. You now have full access to all games.
-        </p>
-        <button
-          onClick={() => navigate("/")}
-          style={{
-            padding: "0.75rem 2rem",
-            fontSize: "1rem",
-            backgroundColor: "#6366f1",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-          }}
-        >
+        <section className="page-section">
+          <p>
+            Thank you for subscribing to MaddoxCloud. You now have full access
+            to all games. Start playing your favorites right now!
+          </p>
+        </section>
+        <Link to="/" className="page-cta-button">
           Start Playing
-        </button>
+        </Link>
       </div>
     </div>
   );
