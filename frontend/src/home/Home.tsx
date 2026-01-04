@@ -6,11 +6,11 @@ import "./Home.css";
 import { GAMES_LIST } from "../../../shared/const";
 
 const FEATURES = [
-  {
-    icon: "link",
-    title: "New Proxy Links Daily",
-    description: "Fresh links that work in school - updated every day",
-  },
+  // {
+  //   icon: "link",
+  //   title: "New Proxy Links Daily",
+  //   description: "Fresh links that work in school - updated every day",
+  // },
   {
     icon: "clock",
     title: "No Queue Times",
