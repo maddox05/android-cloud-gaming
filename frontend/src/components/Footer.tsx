@@ -76,18 +76,18 @@ export default function Footer() {
         <div className="footer-section">
           <h4 className="footer-heading">Legal</h4>
           <nav className="footer-nav">
-            <a href="#" className="footer-link">
+            <Link to="/about" className="footer-link">
               About
-            </a>
-            <a href="#" className="footer-link">
+            </Link>
+            <Link to="/privacy-policy" className="footer-link">
               Privacy Policy
-            </a>
-            <a href="#" className="footer-link">
-              DMCA
-            </a>
-            <a href="#" className="footer-link">
+            </Link>
+            <Link to="/copyright-policy" className="footer-link">
+              Copyright Policy
+            </Link>
+            <Link to="/terms-of-service" className="footer-link">
               Terms of Service
-            </a>
+            </Link>
           </nav>
         </div>
 
