@@ -1,4 +1,14 @@
-import { MSG, type DragInputMessage, type ClickInputMessage, type InputMessage } from "../../../../shared/types";
+import {
+  MSG,
+  type DragInputMessage,
+  type ClickInputMessage,
+  type InputMessage,
+} from "../../../../shared/types";
+
+// Using Percents works as on a screen depending on form factor,
+// a item will be in different pixel positions but same relative position.
+// so for example im playing COC and I squeeze the screen to a phone size, the center popup is still in the center
+// and is the same amount of percent away from the left top etc.
 
 export function createDragMessage(
   action: "start" | "move" | "end" | "cancel",
