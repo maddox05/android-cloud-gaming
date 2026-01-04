@@ -6,6 +6,7 @@ import {
 } from "../utils/supabase";
 import type { User } from "@supabase/supabase-js";
 import ComparisonTable from "./ComparisonTable";
+import { trackViewContent } from "../utils/metaPixel";
 import "./Pricing.css";
 
 export default function Pricing() {
@@ -46,6 +47,11 @@ export default function Pricing() {
     });
 
     return unsubscribe;
+  }, []);
+
+  // Track pricing page view for Meta Pixel
+  useEffect(() => {
+    trackViewContent("Pricing Page");
   }, []);
 
   useEffect(() => {
