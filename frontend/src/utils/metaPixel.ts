@@ -79,21 +79,28 @@ export function trackPurchase(
 
 /**
  * Track subscription start (paid subscription)
+ * @param sessionId - Stripe checkout session ID (used for deduplication)
  * @param value - Subscription price
  * @param currency - Currency code
  * @param predictedLtv - Predicted lifetime value (optional)
  */
 export function trackSubscribe(
-  value: number,
+  sessionId: string,
+  value?: number,
   currency: string = "USD",
   predictedLtv?: number
 ): void {
   if (isFbqAvailable()) {
-    window.fbq("track", "Subscribe", {
-      value: value.toString(),
-      currency,
-      predicted_ltv: predictedLtv?.toString(),
-    });
+    window.fbq(
+      "track",
+      "Subscribe",
+      {
+        value: value ?? 0,
+        currency,
+        predicted_ltv: predictedLtv,
+      },
+      { eventID: sessionId }
+    );
   }
 }
 

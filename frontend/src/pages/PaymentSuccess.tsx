@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { trackPurchase } from "../utils/metaPixel";
+import { trackPurchase, trackSubscribe } from "../utils/metaPixel";
 import "./Pages.css";
 
 export default function PaymentSuccess() {
@@ -38,8 +38,9 @@ export default function PaymentSuccess() {
     // The session_id is cryptographically random and hard to guess
     hasTracked.current = true;
 
-    // Fire Meta Pixel Purchase event with session_id for deduplication
+    // Fire Meta Pixel events with session_id for deduplication
     // TODO: Pass actual purchase value from Supabase verification
+    trackSubscribe(sessionId);
     trackPurchase(sessionId);
 
     setStatus("success");
