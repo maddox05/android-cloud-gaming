@@ -136,7 +136,7 @@ export async function checkSubscription(
       }
     }
 
-    // Fallback: check by email if checkout sessions didn't find an active subscription (this is so awful)
+    // Fallback: check by email if checkout sessions didn't find an active subscription (this is so awful) TODO change to payment links
     if (_email) {
       console.log(`Fallback: checking subscription by email for ${userId}`);
 
