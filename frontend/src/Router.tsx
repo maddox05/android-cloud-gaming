@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { AuthModal } from "./components/AuthModal";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { trackPageView } from "./utils/metaPixel";
@@ -40,14 +42,17 @@ function AppLayout() {
         </Routes>
       </Suspense>
       {!hideNavFooter && <Footer />}
+      <AuthModal />
     </>
   );
 }
 
 export default function Router() {
   return (
-    <BrowserRouter>
-      <AppLayout />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppLayout />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

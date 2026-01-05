@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import {
   getCurrentUser,
-  signInWithGoogle,
   onAuthStateChange,
 } from "../utils/supabase";
+import { useAuth } from "../context/AuthContext";
 import type { User } from "@supabase/supabase-js";
 import ComparisonTable from "./ComparisonTable";
 import { trackViewContent } from "../utils/metaPixel";
@@ -12,6 +12,7 @@ import "./Pricing.css";
 export default function Pricing() {
   const [user, setUser] = useState<User | null>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const { startLogin } = useAuth();
 
   useEffect(() => {
     const scriptId = "stripe-pricing-table-script";
@@ -53,10 +54,6 @@ export default function Pricing() {
     trackViewContent("Pricing Page");
   }, []);
 
-  const handleOverlayClick = async () => {
-    await signInWithGoogle();
-  };
-
   return (
     <div className="pricing-page">
       <div className="pricing-header">
@@ -68,7 +65,7 @@ export default function Pricing() {
         {!user && (
           <div
             className="login-overlay"
-            onClick={handleOverlayClick}
+            onClick={startLogin}
             style={{
               position: "absolute",
               top: 0,

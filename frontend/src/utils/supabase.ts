@@ -41,6 +41,43 @@ export async function signOut(): Promise<void> {
   }
 }
 
+export async function signUpWithEmail(
+  email: string,
+  password: string
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: window.location.origin,
+    },
+  });
+
+  if (error) {
+    console.error("Sign up error:", error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+export async function signInWithEmail(
+  email: string,
+  password: string
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    console.error("Sign in error:", error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
 export async function isLoggedIn(): Promise<boolean> {
   const user = await getCurrentUser();
   return user !== null;

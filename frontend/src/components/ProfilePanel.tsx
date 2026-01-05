@@ -1,7 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { config } from "../config";
 import { Avatar } from "./Avatar";
-import { CloseIcon, CreditCardIcon, GoogleIcon } from "./Icons";
+import { CloseIcon, CreditCardIcon } from "./Icons";
 import "./ProfilePanel.css";
 
 interface ProfilePanelProps {
@@ -60,8 +60,7 @@ export function ProfilePanel({
               Sign in to access your account and manage subscriptions.
             </p>
             <button className="panel-signin" onClick={onSignIn}>
-              <GoogleIcon />
-              Continue with Google
+              Sign In
             </button>
           </div>
         )}

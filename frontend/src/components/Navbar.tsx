@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import type { User } from "@supabase/supabase-js";
 import {
   getCurrentUser,
-  signInWithGoogle,
   signOut,
   onAuthStateChange,
 } from "../utils/supabase";
+import { useAuth } from "../context/AuthContext";
 import { Avatar } from "./Avatar";
 import { BurgerIcon, CloseIcon, DiscordIcon, GiftIcon } from "./Icons";
 import { MobileMenu } from "./MobileMenu";
@@ -44,6 +44,7 @@ export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [showPanel, setShowPanel] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const { startLogin } = useAuth();
 
   const userAvatarUrl =
     user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
@@ -74,15 +75,6 @@ export default function Navbar() {
     return () => document.removeEventListener("click", handleClickOutside);
   }, [showPanel]);
 
-  const handleSignIn = async () => {
-    try {
-      await signInWithGoogle();
-      setShowPanel(false);
-    } catch (err) {
-      console.error("Sign in failed:", err);
-    }
-  };
-
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -97,7 +89,7 @@ export default function Navbar() {
     if (user) {
       setShowPanel(!showPanel);
     } else {
-      handleSignIn();
+      startLogin();
     }
   };
 
@@ -158,7 +150,7 @@ export default function Navbar() {
         avatarUrl={userAvatarUrl}
         isOpen={showPanel}
         onClose={() => setShowPanel(false)}
-        onSignIn={handleSignIn}
+        onSignIn={startLogin}
         onSignOut={handleSignOut}
       />
     </>
