@@ -15,6 +15,7 @@ export function createDragMessage(
   e: PointerEvent,
   canvasRect: DOMRect
 ): DragInputMessage {
+  console.log(canvasRect.width);
   return {
     type: MSG.DRAG,
     action,

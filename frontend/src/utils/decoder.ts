@@ -112,7 +112,7 @@ export class H264Decoder {
           if (this.videoWidth > 0 && this.videoHeight > 0) {
             this.canvas.width = this.videoWidth;
             this.canvas.height = this.videoHeight;
-            this.canvas.style.aspectRatio = `${this.videoWidth} / ${this.videoHeight}`;
+            // this.canvas.style.aspectRatio = `${this.videoWidth} / ${this.videoHeight}`;
             // then canvas can scale itself via css. i kinda dont get why this is needed TODO
           } // todo put this somewhere else
         } catch (e) {
@@ -270,7 +270,8 @@ export class H264Decoder {
 
     this.decoder = new VideoDecoder({
       output: (frame) => {
-        this.ctx.drawImage(frame, 0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.drawImage(frame, 0, 0, this.canvas.width, this.canvas.height); // writes frame to canvas size, then the canvas can scale itself via css.
+        // keep in mind the width and height of the canvas are set not as styling but as actual pixel value, and the css we use scales it.
         frame.close();
       },
       error: (e) => {

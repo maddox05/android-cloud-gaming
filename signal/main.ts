@@ -96,7 +96,8 @@ app.ws("/", (ws, req) => {
           JSON.stringify({
             type: MSG.ERROR,
             code: ERROR_CODE.NO_SUBSCRIPTION,
-            message: "Active subscription required. Please subscribe to play.",
+            message:
+              "Active subscription required. Please subscribe to play. If you believe this is an error, contact support, we will help ASAP!",
           })
         );
         ws.close();
