@@ -14,6 +14,7 @@ export function AuthModal() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -32,6 +33,7 @@ export function AuthModal() {
   useEffect(() => {
     setEmail("");
     setPassword("");
+    setConfirmPassword("");
     setError("");
     setSuccessMessage("");
   }, [isAuthModalOpen, authMode]);
@@ -64,6 +66,11 @@ export function AuthModal() {
       return;
     }
 
+    if (authMode === "signup" && password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -73,6 +80,7 @@ export function AuthModal() {
           setSuccessMessage("Check your email to confirm your account!");
           setEmail("");
           setPassword("");
+          setConfirmPassword("");
         } else {
           setError(result.error || "Failed to create account");
         }
@@ -178,6 +186,32 @@ export function AuthModal() {
                 autoComplete={isLogin ? "current-password" : "new-password"}
               />
             </div>
+
+            {!isLogin && (
+              <div className="auth-input-group">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+                <input
+                  type="password"
+                  placeholder="Confirm Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={loading}
+                  autoComplete="new-password"
+                />
+              </div>
+            )}
 
             {error && <p className="auth-error">{error}</p>}
             {successMessage && <p className="auth-success">{successMessage}</p>}
