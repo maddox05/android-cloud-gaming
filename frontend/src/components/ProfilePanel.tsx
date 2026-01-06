@@ -34,7 +34,7 @@ export function ProfilePanel({
         {user ? (
           <div className="panel-content">
             <div className="panel-user">
-              <Avatar src={avatarUrl} size="lg" />
+              <Avatar src={avatarUrl || "/imgs/example-profile.svg"} size="lg" />
               <div className="panel-user-info">
                 <span className="panel-user-name">
                   {user.user_metadata?.name || "User"}
@@ -48,11 +48,10 @@ export function ProfilePanel({
                 <CreditCardIcon />
                 Payment Settings
               </a>
+              <button className="panel-signout" onClick={onSignOut}>
+                Sign Out
+              </button>
             </div>
-
-            <button className="panel-signout" onClick={onSignOut}>
-              Sign Out
-            </button>
           </div>
         ) : (
           <div className="panel-content">

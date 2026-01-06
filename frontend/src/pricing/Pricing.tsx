@@ -54,6 +54,9 @@ export default function Pricing() {
     trackViewContent("Pricing Page");
   }, []);
 
+  // Check if user is logged in but missing required data
+  const hasInvalidUserData = user && (!user.id || !user.email);
+
   return (
     <div className="pricing-page">
       <div className="pricing-header">
@@ -62,30 +65,38 @@ export default function Pricing() {
       </div>
 
       <div className="pricing-container" style={{ position: "relative" }}>
-        {!user && (
-          <div
-            className="login-overlay"
-            onClick={startLogin}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 10,
-              cursor: "pointer",
-            }}
-          />
-        )}
-        {scriptLoaded && (
-          // @ts-expect-error stripe-pricing-table is a custom element
-          <stripe-pricing-table
-            key={user?.id ?? "anonymous"}
-            pricing-table-id="prctbl_1Sibp9Io5niLkgKCQoirRLr0"
-            publishable-key="pk_live_51ShAGcIo5niLkgKCCwvIhzBqI2xLDdOZ3CxzDEwegRTHpfWzCwJkyTBc7cGNhlF9Tej0O5nmc7jQ2uJr2TJiOgSw00aACeMl1e"
-            client-reference-id={user?.id}
-            customer-email={user?.email}
-          />
+        {hasInvalidUserData ? (
+          <div className="pricing-error">
+            <p>Unable to load pricing. Please try signing out and signing back in.</p>
+          </div>
+        ) : (
+          <>
+            {!user && (
+              <div
+                className="login-overlay"
+                onClick={startLogin}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 10,
+                  cursor: "pointer",
+                }}
+              />
+            )}
+            {scriptLoaded && (
+              // @ts-expect-error stripe-pricing-table is a custom element
+              <stripe-pricing-table
+                key={user?.id ?? "anonymous"}
+                pricing-table-id="prctbl_1Sibp9Io5niLkgKCQoirRLr0"
+                publishable-key="pk_live_51ShAGcIo5niLkgKCCwvIhzBqI2xLDdOZ3CxzDEwegRTHpfWzCwJkyTBc7cGNhlF9Tej0O5nmc7jQ2uJr2TJiOgSw00aACeMl1e"
+                client-reference-id={user?.id}
+                customer-email={user?.email}
+              />
+            )}
+          </>
         )}
       </div>
 

@@ -194,6 +194,22 @@
   background: var(--accent-hover);
 }
 
+/* Pricing Error */
+.pricing-error {
+  text-align: center;
+  padding: 64px 24px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.pricing-error p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
 /* ========================= */
 /* Responsive               */
 /* ========================= */

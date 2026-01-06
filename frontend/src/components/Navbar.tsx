@@ -116,7 +116,7 @@ export default function Navbar() {
             onClick={handleProfileClick}
             title={user ? "Account" : "Sign In"}
           >
-            <Avatar src={userAvatarUrl} size="md" />
+            <Avatar src={user ? (userAvatarUrl || "/imgs/example-profile.svg") : undefined} size="md" />
           </button>
         </div>
 
@@ -128,7 +128,7 @@ export default function Navbar() {
             onClick={handleProfileClick}
             title={user ? "Account" : "Sign In"}
           >
-            <Avatar src={userAvatarUrl} size="sm" />
+            <Avatar src={user ? (userAvatarUrl || "/imgs/example-profile.svg") : undefined} size="sm" />
           </button>
           <button
             className="burger-btn"
