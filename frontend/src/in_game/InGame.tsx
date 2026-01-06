@@ -97,6 +97,8 @@ export default function InGame() {
           alert("WebRTC connection failed. Please try another wifi network.");
         } else if (code === ERROR_CODE.CONNECTION_TIMEOUT) {
           alert("AFK? Not on my watch. Connection timed out.");
+        } else if (code === ERROR_CODE.WORKER_CRASHED) {
+          alert(`The game server crashed: ${message}`);
         } else {
           alert(`An error occurred: ${message}. Returning to home page.`);
         }

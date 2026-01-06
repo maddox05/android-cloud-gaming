@@ -170,6 +170,7 @@ async function createPeerConnection(): Promise<PC> {
         };
         signalSocket.send(JSON.stringify(errorMsg));
       }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       restart();
     }
@@ -209,14 +210,14 @@ function webrtc_cleanup() {
 function notifyCrashAndExit(reason: string): void {
   console.error(`Worker crashed: ${reason}`);
 
-  // Notify signal server of crash so it can disconnect the client
+  // Notify signal server of crash so it can inform the client
   if (signalSocket && signalSocket.readyState === WebSocket.OPEN) {
-    // const crashMsg: WorkerCrashedMessage = {
-    //   type: "worker-crashed",
-    //   reason: reason,
-    // };
-    // signalSocket.send(JSON.stringify(crashMsg));
-    // we could send for debug logging but ehh
+    const errorMsg: ErrorMessage = {
+      type: MSG.ERROR,
+      code: ERROR_CODE.WORKER_CRASHED,
+      message: "Rip", // todo add back reason, ommited for now for security
+    };
+    signalSocket.send(JSON.stringify(errorMsg));
   }
 
   restart(1);
@@ -399,6 +400,18 @@ async function main() {
   console.log("Worker ready and waiting for client!");
   isRestarting = false;
 }
+
+// Catch unhandled errors from event callbacks (like onmessage)
+process.on("uncaughtException", (err) => {
+  const errorMessage = err instanceof Error ? err.message : String(err);
+  notifyCrashAndExit(`Uncaught exception: ${errorMessage}`);
+});
+
+process.on("unhandledRejection", (reason) => {
+  const errorMessage =
+    reason instanceof Error ? reason.message : String(reason);
+  notifyCrashAndExit(`Unhandled rejection: ${errorMessage}`);
+});
 
 main().catch((err) => {
   const errorMessage = err instanceof Error ? err.message : String(err);

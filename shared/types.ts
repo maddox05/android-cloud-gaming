@@ -81,6 +81,7 @@ export const ERROR_CODE = {
   INVALID_REQUEST: "INVALID_REQUEST",
   QUEUE_TIMEOUT: "QUEUE_TIMEOUT",
   SESSION_TIMEOUT: "SESSION_TIMEOUT",
+  WORKER_CRASHED: "WORKER_CRASHED",
 } as const;
 
 /** Error codes for error messages */
