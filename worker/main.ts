@@ -105,6 +105,7 @@ async function createPeerConnection(): Promise<PC> {
   pc.onicecandidate = (event) => {
     if (
       event.candidate &&
+      event.candidate.candidate &&
       signalSocket &&
       signalSocket.readyState === WebSocket.OPEN
     ) {
@@ -360,8 +361,26 @@ async function connectToSignalServer() {
         break;
 
       case MSG.ICE_CANDIDATE:
-        // Client sent ICE candidate
+        /**
+                   * some candidates send null candidates differently this one sends a fucking empty string
+           * Adding remote ICE candidate... {
+worker-1   |   candidate: '',
+worker-1   |   sdpMLineIndex: 0,
+worker-1   |   sdpMid: '0',
+worker-1   |   usernameFragment: '33135709'
+worker-1   | }
+           */
+        if (
+          !msg.candidate ||
+          typeof msg.candidate !== "object" ||
+          typeof msg.candidate.candidate !== "string" ||
+          msg.candidate.candidate.length === 0
+        ) {
+          // end-of-candidates or malformed → ignore
+          return;
+        }
         if (peerConnection && msg.candidate) {
+          console.log("Adding remote ICE candidate...", msg.candidate);
           await peerConnection.addIceCandidate(msg.candidate);
           console.log("Added remote ICE candidate!");
         }
