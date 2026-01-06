@@ -112,6 +112,13 @@ export class H264Decoder {
           if (this.videoWidth > 0 && this.videoHeight > 0) {
             this.canvas.width = this.videoWidth;
             this.canvas.height = this.videoHeight;
+            if (this.videoHeight > this.videoWidth) {
+              this.canvas.style.width = "auto";
+              this.canvas.style.height = "100%";
+            } else {
+              this.canvas.style.width = "100%";
+              this.canvas.style.height = "auto";
+            }
             // this.canvas.style.aspectRatio = `${this.videoWidth} / ${this.videoHeight}`;
             // then canvas can scale itself via css. i kinda dont get why this is needed TODO
           } // todo put this somewhere else
