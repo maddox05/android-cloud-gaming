@@ -23,7 +23,7 @@ export async function signInWithGoogle(): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.origin,
+      redirectTo: window.location.href,
     },
   });
 
@@ -49,7 +49,7 @@ export async function signUpWithEmail(
     email,
     password,
     options: {
-      emailRedirectTo: window.location.origin,
+      emailRedirectTo: window.location.href,
     },
   });
 
