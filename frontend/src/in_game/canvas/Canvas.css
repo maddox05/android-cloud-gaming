@@ -14,7 +14,4 @@
 .stream-canvas {
   display: block;
   touch-action: none;
-  /* width: 100%;
-  height: 100%; */
 }
-/* ensure canvas is correct aspect ratio TODO */

@@ -8,6 +8,7 @@ import { trackPageView } from "./utils/metaPixel";
 
 const Home = lazy(() => import("./home/Home"));
 const Pricing = lazy(() => import("./pricing/Pricing"));
+const Roadmap = lazy(() => import("./roadmap/Roadmap"));
 const Queue = lazy(() => import("./queue/Queue"));
 const InGame = lazy(() => import("./in_game/InGame"));
 const About = lazy(() => import("./pages/About"));
@@ -32,6 +33,7 @@ function AppLayout() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/roadmap" element={<Roadmap />} />
           <Route path="/about" element={<About />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/copyright-policy" element={<CopyrightPolicy />} />

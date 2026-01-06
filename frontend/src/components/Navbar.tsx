@@ -38,7 +38,10 @@ function DiscordBadge({
   );
 }
 
-const NAV_LINKS = [{ to: "/pricing", label: "Pricing" }];
+const NAV_LINKS = [
+  { to: "/pricing", label: "Pricing" },
+  { to: "/roadmap", label: "Roadmap" },
+];
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);

@@ -139,6 +139,7 @@ export default function Home() {
     <main className="main-content">
       {/* Games Grid - First */}
       <section className="games-section">
+        <h2 className="section-title">All Games</h2>
         <div className="game-grid">
           {GAMES_LIST.map((game) => (
             <GameCard

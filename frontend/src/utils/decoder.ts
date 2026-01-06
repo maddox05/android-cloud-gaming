@@ -108,7 +108,7 @@ export class H264Decoder {
           console.log("Parsed SPS");
           console.log("Video dimensions:", dims.width, "x", dims.height);
           this.onDimensionsChanged?.(dims.width, dims.height);
-          // Set canvas dimensions (styling handled by ResizeObserver elsewhere)
+          // Set canvas dimensions (styling handled by MutationObserver elsewhere)
           if (this.videoWidth > 0 && this.videoHeight > 0) {
             this.canvas.width = this.videoWidth;
             this.canvas.height = this.videoHeight;

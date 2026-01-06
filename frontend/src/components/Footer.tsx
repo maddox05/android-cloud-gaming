@@ -69,6 +69,9 @@ export default function Footer() {
             <Link to="/pricing" className="footer-link">
               Pricing
             </Link>
+            <Link to="/roadmap" className="footer-link">
+              Roadmap
+            </Link>
           </nav>
         </div>
 
