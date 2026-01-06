@@ -18,7 +18,7 @@ export default function Footer() {
         <div className="footer-section footer-brand">
           <Link to="/" className="footer-logo">
             <img
-              src="/favicon.png"
+              src="/imgs/egg_cloud_logo.png"
               alt="MaddoxCloud"
               className="footer-logo-icon"
             />

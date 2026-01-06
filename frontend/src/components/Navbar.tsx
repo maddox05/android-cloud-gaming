@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { User } from "@supabase/supabase-js";
-import {
-  getCurrentUser,
-  signOut,
-  onAuthStateChange,
-} from "../utils/supabase";
+import { getCurrentUser, signOut, onAuthStateChange } from "../utils/supabase";
 import { useAuth } from "../context/AuthContext";
 import { Avatar } from "./Avatar";
 import { BurgerIcon, CloseIcon, DiscordIcon, GiftIcon } from "./Icons";
@@ -19,7 +15,11 @@ interface DiscordBadgeProps {
   href?: string;
 }
 
-function DiscordBadge({ text, showGift = false, href = "https://discord.gg/U4QYdzXEnr" }: DiscordBadgeProps) {
+function DiscordBadge({
+  text,
+  showGift = false,
+  href = "https://discord.gg/U4QYdzXEnr",
+}: DiscordBadgeProps) {
   return (
     <a
       href={href}
@@ -98,7 +98,7 @@ export default function Navbar() {
       <header className="header">
         <div className="header-left">
           <Link to="/" className="logo">
-            <img src="/favicon.png" alt="" className="logo-icon" />
+            <img src="/imgs/egg_cloud_logo.png" alt="" className="logo-icon" />
             <span className="logo-text">MaddoxCloud</span>
           </Link>
         </div>
@@ -116,7 +116,12 @@ export default function Navbar() {
             onClick={handleProfileClick}
             title={user ? "Account" : "Sign In"}
           >
-            <Avatar src={user ? (userAvatarUrl || "/imgs/example-profile.svg") : undefined} size="md" />
+            <Avatar
+              src={
+                user ? userAvatarUrl || "/imgs/example-profile.svg" : undefined
+              }
+              size="md"
+            />
           </button>
         </div>
 
@@ -128,7 +133,12 @@ export default function Navbar() {
             onClick={handleProfileClick}
             title={user ? "Account" : "Sign In"}
           >
-            <Avatar src={user ? (userAvatarUrl || "/imgs/example-profile.svg") : undefined} size="sm" />
+            <Avatar
+              src={
+                user ? userAvatarUrl || "/imgs/example-profile.svg" : undefined
+              }
+              size="sm"
+            />
           </button>
           <button
             className="burger-btn"

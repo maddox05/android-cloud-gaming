@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /payment-success
+Disallow: /queue/
+Disallow: /app/
+
+Sitemap: https://maddoxcloud.com/sitemap.xml

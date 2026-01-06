@@ -71,7 +71,7 @@ export default function ComparisonTable() {
                 <div className="company-cell winner">
                   <CrownIcon />
                   <img
-                    src="/favicon.png"
+                    src="/imgs/egg_cloud_logo.png"
                     alt="MaddoxCloud"
                     className="company-logo"
                   />
