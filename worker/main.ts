@@ -362,7 +362,7 @@ async function connectToSignalServer() {
 
       case MSG.ICE_CANDIDATE:
         /**
-                   * some candidates send null candidates differently this one sends a fucking empty string
+                   * some candidates send null candidates differently this one sends a fucking empty string (Firefox)
            * Adding remote ICE candidate... {
 worker-1   |   candidate: '',
 worker-1   |   sdpMLineIndex: 0,
