@@ -60,16 +60,140 @@ export async function verifyToken(
 }
 
 /**
- * Check if user has active subscription by looking up their checkout sessions
+ * Check subscription by checkout session (primary method)
+ * Looks up checkout sessions by client_reference_id (supabase user id)
+ */
+async function checkSubscriptionByCheckoutSession(
+  client: SupabaseClient,
+  userId: string
+): Promise<boolean> {
+  const { data: sessions, error: sessionsError } = await client
+    .schema("stripe")
+    .from("checkout_sessions")
+    .select("id, subscription, payment_status")
+    .eq("client_reference_id", userId);
+
+  if (sessionsError) {
+    console.error("Checkout sessions lookup error:", sessionsError.message);
+    return false;
+  }
+
+  if (!sessions || sessions.length === 0) {
+    console.log(`No checkout sessions found for user ${userId}`);
+    return false;
+  }
+
+  for (const session of sessions) {
+    const { subscription, payment_status } = session as {
+      id: string;
+      subscription: string | null;
+      payment_status: string;
+    };
+
+    if (payment_status !== "paid") {
+      continue;
+    }
+
+    if (!subscription) {
+      continue;
+    }
+
+    const { data: sub, error: subError } = await client
+      .schema("stripe")
+      .from("subscriptions")
+      .select("id, status")
+      .eq("id", subscription)
+      .single();
+
+    if (subError) {
+      console.error(
+        `Subscription lookup error for ${subscription}:`,
+        subError.message
+      );
+      continue;
+    }
+
+    if (sub && (sub.status === "active" || sub.status === "trialing")) {
+      console.log(`User ${userId} has active subscription: ${sub.id}`);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Check subscription by email (fallback method)
+ * Looks up customer by email, then checks their subscriptions
+ */
+async function checkSubscriptionByEmail(
+  client: SupabaseClient,
+  email: string,
+  userId: string
+): Promise<boolean> {
+  console.log(
+    `Fallback: checking subscription by email for ${userId} (${email})`
+  );
+
+  const { data: customers, error: custError } = await client
+    .schema("stripe")
+    .from("customers")
+    .select("id")
+    .ilike("email", email);
+
+  if (custError) {
+    console.error("Customer lookup error:", custError.message);
+    return false;
+  }
+
+  if (!customers || customers.length === 0) {
+    console.log(`No customers found for email ${email}`);
+    return false;
+  }
+
+  if (customers.length > 1) {
+    console.log(
+      `Multiple customers found for email ${email}, this should NOT HAPPEN!`
+    );
+  }
+
+  for (const customer of customers) {
+    const customerId = (customer as { id: string }).id;
+
+    const { data: subs, error: subError } = await client
+      .schema("stripe")
+      .from("subscriptions")
+      .select("id, status")
+      .eq("customer", customerId)
+      .in("status", ["active", "trialing"]);
+
+    if (subError) {
+      console.error("Subscription query error:", subError.message);
+      continue;
+    }
+
+    if (subs && subs.length > 0) {
+      console.log(
+        `User ${userId} has active subscription (via email fallback): ${
+          (subs[0] as { id: string }).id
+        }`
+      );
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Check if user has active subscription
  * Flow:
- * 1. Get all checkout sessions for this supabase user (via client_reference_id)
- * 2. For each completed session, get the subscription ID
- * 3. Check if that subscription is active
- * 4. Return true if any subscription is active
+ * 1. First check by checkout session (client_reference_id)
+ * 2. If not found, fallback to check by email
  */
 export async function checkSubscription(
   userId: string,
-  _email?: string
+  email?: string
 ): Promise<boolean> {
   const client = getSupabase();
 
@@ -79,104 +203,24 @@ export async function checkSubscription(
   }
 
   try {
-    // Get all checkout sessions for this user (client_reference_id stores supabase user id)
-    const { data: sessions, error: sessionsError } = await client
-      .schema("stripe")
-      .from("checkout_sessions")
-      .select("id, subscription, payment_status")
-      .eq("client_reference_id", userId);
-
-    if (sessionsError) {
-      console.error("Checkout sessions lookup error:", sessionsError.message);
-      return false;
+    // First: check by checkout session
+    const foundByCheckoutSession = await checkSubscriptionByCheckoutSession(
+      client,
+      userId
+    );
+    if (foundByCheckoutSession) {
+      return true;
     }
 
-    if (!sessions || sessions.length === 0) {
-      console.log(`No checkout sessions found for user ${userId}`);
-      return false;
-    }
-
-    // Check each completed checkout session
-    for (const session of sessions) {
-      const { subscription, payment_status } = session as {
-        id: string;
-        subscription: string | null;
-        payment_status: string;
-      };
-
-      // Skip sessions that aren't paid/completed
-      if (payment_status !== "paid") {
-        continue;
-      }
-
-      // Skip sessions without a subscription (e.g., one-time purchases)
-      if (!subscription) {
-        continue;
-      }
-
-      // Check if this subscription is active
-      const { data: sub, error: subError } = await client
-        .schema("stripe")
-        .from("subscriptions")
-        .select("id, status")
-        .eq("id", subscription)
-        .single();
-
-      if (subError) {
-        console.error(
-          `Subscription lookup error for ${subscription}:`,
-          subError.message
-        );
-        continue;
-      }
-
-      if (sub && (sub.status === "active" || sub.status === "trialing")) {
-        console.log(`User ${userId} has active subscription: ${sub.id}`);
+    // Second: fallback to check by email
+    if (email) {
+      const foundByEmail = await checkSubscriptionByEmail(
+        client,
+        email,
+        userId
+      );
+      if (foundByEmail) {
         return true;
-      }
-    }
-
-    // Fallback: check by email if checkout sessions didn't find an active subscription (this is so awful) TODO change to payment links
-    if (_email) {
-      console.log(`Fallback: checking subscription by email for ${userId}`);
-
-      const { data: customers, error: custError } = await client
-        .schema("stripe")
-        .from("customers")
-        .select("id")
-        .ilike("email", _email);
-
-      if (custError) {
-        console.error("Customer lookup error:", custError.message);
-      } else if (customers.length > 1) {
-        console.log(
-          `Multiple customers found for email ${_email}, this should NOT HAPPEN!`
-        );
-      } else if (customers && customers.length > 0) {
-        for (const customer of customers) {
-          const customerId = (customer as { id: string }).id;
-
-          const { data: subs, error: subError } = await client
-            .schema("stripe")
-            .from("subscriptions")
-            .select("id, status")
-            .eq("customer", customerId)
-            .in("status", ["active", "trialing"]);
-
-          if (subError) {
-            console.error("Subscription query error:", subError.message);
-            continue;
-          }
-
-          if (subs && subs.length > 0) {
-            console.log(
-              `User ${userId} has active subscription (via email fallback): ${
-                (subs[0] as { id: string }).id
-              }`
-            );
-            return true;
-          }
-        }
       }
     }
 
