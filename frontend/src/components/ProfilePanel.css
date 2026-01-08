@@ -84,6 +84,88 @@
   color: var(--text-muted);
 }
 
+/* Panel Setting - Video Quality */
+.panel-setting {
+  margin-bottom: 24px;
+}
+
+.panel-setting-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.panel-quality-options {
+  display: flex;
+  gap: 8px;
+}
+
+.panel-quality-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.panel-quality-btn .quality-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.panel-quality-btn .quality-spec {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.panel-quality-btn:hover {
+  background: var(--bg-primary);
+  border-color: var(--text-muted);
+}
+
+.panel-quality-btn.active {
+  background: var(--accent, #6366f1);
+  border-color: var(--accent, #6366f1);
+}
+
+.panel-quality-btn.active .quality-label,
+.panel-quality-btn.active .quality-spec {
+  color: #fff;
+}
+
+/* Playtime Display */
+.playtime-display {
+  display: flex;
+  flex-direction: column;
+}
+
+.playtime-value {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.playtime-unlimited {
+  color: var(--accent, #6366f1);
+}
+
+.playtime-loading {
+  color: var(--text-muted);
+}
+
 /* Panel Links */
 .panel-links {
   display: flex;

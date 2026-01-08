@@ -264,7 +264,7 @@ let sessionStarted = false;
  * Initialize the session - start redroid, connect video/input, create peer connection
  * Called when a client wants to connect (receives "start" message)
  */
-async function initializeSession(gameId: string): Promise<void> {
+async function initializeSession(gameId: string, maxVideoSize: number): Promise<void> {
   if (sessionStarted) {
     console.log("Session already started");
     return;
@@ -274,8 +274,8 @@ async function initializeSession(gameId: string): Promise<void> {
   console.log("Client wants to connect, initializing session...");
 
   // Start Redroid with the game package (kiosk mode)
-  console.log(`Starting Redroid with game: ${gameId}...`);
-  await redroidRunner.start(gameId);
+  console.log(`Starting Redroid with game: ${gameId}, maxVideoSize: ${maxVideoSize}...`);
+  await redroidRunner.start(gameId, maxVideoSize);
 
   // Connect to scrcpy sockets in ORDER: video first, then control
   // scrcpy uses a single abstract socket - connections are served in order
@@ -342,7 +342,8 @@ async function connectToSignalServer() {
           signalSocket!.send(JSON.stringify(offerMsg));
 
           // Initialize the session with the game
-          await initializeSession(workerStartMsg.gameId);
+          const maxVideoSize = workerStartMsg.maxVideoSize ?? 640;
+          await initializeSession(workerStartMsg.gameId, maxVideoSize);
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : String(err);
           notifyCrashAndExit(`Failed to start worker: ${errorMessage}`);

@@ -1,35 +1,62 @@
-import { getClient, findAvailableWorkerWithGame } from "./registry.js";
+import { findAvailableWorkerWithGame } from "./registry.js";
 import type Client from "./Client.js";
 import { ERROR_CODE } from "../shared/types.js";
 import { QUEUE_TIMEOUT_THRESHOLD } from "./consts.js";
 import { generateTurnCredentials } from "./helpers.js";
 
-// Global queue - ordered array of client IDs
-const queue: string[] = [];
+// Global queue - ordered array of Client objects
+const queue: Client[] = [];
 
 // ============================================
 // Queue Operations
 // ============================================
 
-export function addToQueue(clientId: string): void {
-  if (!queue.includes(clientId)) {
-    queue.push(clientId);
+export function addToQueue(client: Client): void {
+  // i can see race issues with this instantly (if i go multi threaded)
+  if (queue.includes(client)) {
     console.log(
-      `Client ${clientId} added to queue at position ${queue.length}`
+      `tried to add client ${client.id} to the queue when bro was alr queued`
+    );
+    return;
+  }
+
+  if (client.accessType === "paid") {
+    // Start from end, walk back through paid users, insert after last paid
+    let insertIndex = -1;
+    for (let i = 0; i < queue.length; i++) {
+      if (queue[i].accessType === "free") {
+        insertIndex = i;
+        break;
+      }
+    }
+    if (insertIndex === -1) {
+      queue.push(client);
+    } else {
+      queue.splice(insertIndex, 0, client);
+    }
+    console.log(
+      `Client ${client.id} (paid) added to queue at position ${
+        insertIndex !== -1 ? insertIndex + 1 : queue.length
+      }`
+    );
+  } else {
+    queue.push(client);
+    console.log(
+      `Client ${client.id} (free) added to queue at position ${queue.length}`
     );
   }
 }
 
-export function removeFromQueue(clientId: string): void {
-  const index = queue.indexOf(clientId);
+export function removeFromQueue(client: Client): void {
+  const index = queue.indexOf(client);
   if (index !== -1) {
     queue.splice(index, 1);
-    console.log(`Client ${clientId} removed from queue`);
+    console.log(`Client ${client.id} removed from queue`);
   }
 }
 
-export function getQueuePosition(clientId: string): number {
-  const index = queue.indexOf(clientId);
+export function getQueuePosition(client: Client): number {
+  const index = queue.indexOf(client);
   return index === -1 ? -1 : index + 1; // 1-indexed position
 }
 
@@ -38,18 +65,11 @@ export function getQueueLength(): number {
 }
 
 export function getQueuedClients(): Client[] {
-  const clients: Client[] = [];
-  for (const clientId of queue) {
-    const client = getClient(clientId);
-    if (client) {
-      clients.push(client);
-    }
-  }
-  return clients;
+  return [...queue];
 }
 
 export function getAllQueuedClientIds(): string[] {
-  return [...queue];
+  return queue.map((client) => client.id);
 }
 
 // ============================================
@@ -58,16 +78,15 @@ export function getAllQueuedClientIds(): string[] {
 
 export async function processQueue(): Promise<void> {
   // Iterate copy of queue to allow modifications during iteration
-  for (const clientId of [...queue]) {
-    const client = getClient(clientId);
-    if (!client || !client.game) continue;
+  for (const client of [...queue]) {
+    if (!client.game) continue;
 
     // Find available worker for this client's game
     const worker = findAvailableWorkerWithGame(client.game);
 
     if (worker) {
       // Remove from queue first
-      removeFromQueue(clientId);
+      removeFromQueue(client);
 
       // Generate TURN credentials for this session
       const turnInfo = await generateTurnCredentials();
@@ -87,11 +106,8 @@ export async function processQueue(): Promise<void> {
   }
 
   // Send queue info updates to remaining clients
-  for (const clientId of queue) {
-    const client = getClient(clientId);
-    if (client) {
-      client.sendQueueInfo();
-    }
+  for (const client of queue) {
+    client.sendQueueInfo();
   }
 }
 
@@ -102,22 +118,14 @@ export async function processQueue(): Promise<void> {
 export function checkQueueTimeouts(): void {
   const now = Date.now();
 
-  for (const clientId of [...queue]) {
-    const client = getClient(clientId);
-
-    // Clean up orphaned queue entries
-    if (!client) {
-      removeFromQueue(clientId);
-      continue;
-    }
-
+  for (const client of [...queue]) {
     if (client.queuedAt && now - client.queuedAt > QUEUE_TIMEOUT_THRESHOLD) {
       console.log(`Client ${client.id} timed out in queue`);
       client.sendError(
         ERROR_CODE.QUEUE_TIMEOUT,
         "Queue timeout - you've been waiting too long. Please try again."
       );
-      removeFromQueue(clientId);
+      removeFromQueue(client);
       client.disconnect("queue_timeout");
     }
   }

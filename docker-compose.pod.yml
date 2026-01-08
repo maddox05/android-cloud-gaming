@@ -14,7 +14,7 @@ services:
     command:
       - androidboot.use_redroid_overlayfs=1
 
-      - ro.secure=0 # maybe remove this??
+      - ro.secure=0 # maybe remove this?? its having trouble setting this prop
     networks:
       - internal # Gives container an IP that host-networked worker can reach
 

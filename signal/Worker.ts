@@ -158,11 +158,12 @@ export default class Worker {
     this.send({ type: MSG.PING });
   }
 
-  sendWorkerStart(gameId: string): void {
+  sendWorkerStart(gameId: string, maxVideoSize: number): void {
     this.send({
       type: MSG.WORKER_START,
       gameId,
       turnInfo: this.turnInfo ?? undefined,
+      maxVideoSize,
     });
   }
 

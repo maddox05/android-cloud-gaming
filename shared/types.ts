@@ -51,6 +51,7 @@ export interface WorkerStartMessage {
   type: typeof MSG.WORKER_START;
   gameId: string;
   turnInfo?: TurnInfo;
+  maxVideoSize?: number;
 }
 
 /** Pod sends SDP offer to client */
@@ -82,6 +83,7 @@ export const ERROR_CODE = {
   QUEUE_TIMEOUT: "QUEUE_TIMEOUT",
   SESSION_TIMEOUT: "SESSION_TIMEOUT",
   WORKER_CRASHED: "WORKER_CRASHED",
+  DAILY_TIME_EXCEEDED: "DAILY_TIME_EXCEEDED",
 } as const;
 
 /** Error codes for error messages */
@@ -125,12 +127,14 @@ export interface AuthenticatedMessage {
 export interface QueueMessage {
   type: typeof MSG.QUEUE;
   appId: string;
+  maxVideoSize?: number;
 }
 
 /** Server sends queue position updates to client */
 export interface QueueInfoMessage {
   type: typeof MSG.QUEUE_INFO;
   position: number;
+  total: number;
 }
 
 /** Server notifies client that worker is assigned and ready */

@@ -4,7 +4,11 @@ import Client from "./Client.js";
 import Worker from "./Worker.js";
 import { getAllClients, getAllWorkers, getWorkerCount } from "./registry.js";
 import { processQueue, checkQueueTimeouts } from "./queue.js";
-import { verifyToken, checkSubscription } from "./auth.js";
+import {
+  verifyToken,
+  checkSubscription,
+  getUserAccessType,
+} from "./db/auth.js";
 import { ERROR_CODE, MSG } from "../shared/types.js";
 import {
   SERVER_PORT as PORT,
@@ -12,6 +16,8 @@ import {
   PING_TIMEOUT_THRESHOLD,
   QUEUE_PROCESS_INTERVAL,
 } from "./consts.js";
+import { getUserTimeSpentToday } from "./db/database.js";
+import { FREE_USER_MAX_TIME_MS } from "../shared/const.js";
 
 // ============================================
 // Environment Validation
@@ -87,27 +93,45 @@ app.ws("/", (ws, req) => {
         return;
       }
 
-      const hasSubscription = await checkSubscription(user.id, user.email);
-      if (!hasSubscription) {
-        console.log(
-          `User ${user.id} (${user.email}) rejected - no active subscription`
-        );
-        ws.send(
-          JSON.stringify({
-            type: MSG.ERROR,
-            code: ERROR_CODE.NO_SUBSCRIPTION,
-            message:
-              "Active subscription required. Please subscribe to play. If you believe this is an error, contact support, we will help ASAP!",
-          })
-        );
-        ws.close();
-        return;
-      }
+      // const hasSubscription = await checkSubscription(user.id);
+      // if (!hasSubscription) {
+      //   console.log(
+      //     `User ${user.id} (${user.email}) rejected - no active subscription`
+      //   );
+      //   ws.send(
+      //     JSON.stringify({
+      //       type: MSG.ERROR,
+      //       code: ERROR_CODE.NO_SUBSCRIPTION,
+      //       message:
+      //         "Active subscription required. Please subscribe to play. If you believe this is an error, contact support, we will help ASAP!",
+      //     })
+      //   );
+      //   ws.close();
+      //   return;
+      // }
 
       console.log(`Client authenticated: ${user.id}`);
 
-      // Create client (class sets up handlers) and send authenticated message
-      const client = new Client(ws, user.id);
+      // Create client (class sets up handlers)
+      const accessType = await getUserAccessType(user.id);
+      const client = new Client(ws, user.id, accessType);
+
+      // For free users, check if they've exceeded daily time limit
+      if (accessType === "free") {
+        const timeUsedTodayMs = await getUserTimeSpentToday(user.id);
+        client.timeUsedTodayMs = timeUsedTodayMs;
+
+        // If already exceeded, send authenticated then disconnect
+        if (timeUsedTodayMs >= FREE_USER_MAX_TIME_MS) {
+          console.log(
+            `Free user ${user.id} exceeded daily limit (${timeUsedTodayMs}ms used)`
+          );
+          client.sendAuthenticated(); // todo this is kinda retarded maybe change later
+          client.disconnect("daily_time_exceeded");
+          return;
+        }
+      }
+
       client.sendAuthenticated();
     });
   } else {
@@ -132,7 +156,7 @@ setInterval(() => {
     }
   }
 
-  // Check connecting timeouts (got QUEUE_READY but never sent START)
+  // Check connecting timeouts, send pings etc (also checksgot QUEUE_READY but never sent START)
   for (const client of getAllClients()) {
     client.sendPing();
     if (client.checkConnectingTimeout(now)) {
@@ -158,6 +182,10 @@ setInterval(() => {
     if (client.checkIsAtMaxSessionDuration(now)) {
       console.log(`Client ${client.id} reached max session duration`);
       client.disconnect("max_session_duration");
+    }
+    if (client.checkIfTimeUsed(now)) {
+      console.log(`Client ${client.id} (free) exceeded daily time limit`);
+      client.disconnect("daily_time_exceeded");
     }
   }
 }, CHECK_LOOP_INTERVAL);

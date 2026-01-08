@@ -162,6 +162,7 @@ export default function Navbar() {
         user={user}
         avatarUrl={userAvatarUrl}
         isOpen={showPanel}
+        isPaid={true} // TODO: Check actual subscription status when free tier is implemented
         onClose={() => setShowPanel(false)}
         onSignIn={startLogin}
         onSignOut={handleSignOut}

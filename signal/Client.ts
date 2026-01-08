@@ -7,7 +7,13 @@ import {
   removeClientWs,
   generateClientId,
 } from "./registry.js";
-import { addToQueue, removeFromQueue, getQueuePosition } from "./queue.js";
+import {
+  addToQueue,
+  removeFromQueue,
+  getQueuePosition,
+  getQueueLength,
+} from "./queue.js";
+import type { UserAccessType } from "./types.js";
 import {
   ERROR_CODE,
   MSG,
@@ -21,7 +27,8 @@ import {
   INPUT_TIMEOUT_THRESHOLD,
   CONNECTING_TIMEOUT_THRESHOLD,
 } from "./consts.js";
-import { MAX_SESSION_TIME_MS } from "../shared/const.js";
+import { logSession } from "./db/database.js";
+import { MAX_SESSION_TIME_MS, FREE_USER_MAX_TIME_MS } from "../shared/const.js";
 import { assert } from "console";
 
 export type ClientConnectionState =
@@ -35,6 +42,7 @@ export default class Client {
   readonly id: string;
   readonly userId: string;
   readonly ws: WebSocket;
+  readonly accessType: UserAccessType; //user free or paid
 
   // Pairing - direct reference
   worker: Worker | null = null;
@@ -43,6 +51,7 @@ export default class Client {
   connectionState: ClientConnectionState = "waiting";
   game: string | null = null;
   turnInfo: TurnInfo | null = null;
+  maxVideoSize: number = 640; // Default ULD
 
   // Timestamps
   lastPing: number;
@@ -50,13 +59,17 @@ export default class Client {
   queuedAt: number | null = null;
   assignedAt: number | null = null;
 
+  // Time tracking for free users (milliseconds)
+  timeUsedTodayMs: number = 0;
+
   // Cleanup flag
   private isDisconnected = false;
 
-  constructor(ws: WebSocket, userId: string) {
+  constructor(ws: WebSocket, userId: string, accessType: UserAccessType) {
     this.id = generateClientId();
     this.userId = userId;
     this.ws = ws;
+    this.accessType = accessType;
     this.lastPing = Date.now();
     this.lastInput = Date.now();
 
@@ -129,7 +142,7 @@ export default class Client {
   }
 
   private handleQueue(msg: QueueMessage): void {
-    const { appId } = msg;
+    const { appId, maxVideoSize } = msg;
 
     if (!appId) {
       this.sendError(
@@ -156,13 +169,16 @@ export default class Client {
 
     // Set state and add to queue
     this.game = appId;
+    this.maxVideoSize = maxVideoSize ?? 640;
     this.connectionState = "queued";
     this.queuedAt = Date.now();
 
-    addToQueue(this.id);
+    addToQueue(this);
     this.sendQueueInfo();
 
-    console.log(`Client ${this.id} queued for game: ${appId}`);
+    console.log(
+      `Client ${this.id} queued for game: ${appId} (maxVideoSize: ${this.maxVideoSize})`
+    );
   }
 
   private handleClientStarted(): void {
@@ -195,7 +211,7 @@ export default class Client {
     // Mark as connected and tell worker to start with game info
     // (worker already has turnInfo from queue assignment)
     this.connectionState = "connected";
-    this.worker.sendWorkerStart(this.game);
+    this.worker.sendWorkerStart(this.game, this.maxVideoSize);
 
     console.log(
       `Client ${this.id} started connection with worker ${this.worker.id}`
@@ -248,10 +264,11 @@ export default class Client {
   }
 
   sendQueueInfo(): void {
-    const position = getQueuePosition(this.id);
-    this.send({ type: MSG.QUEUE_INFO, position });
+    const position = getQueuePosition(this);
+    const total = getQueueLength();
+    this.send({ type: MSG.QUEUE_INFO, position, total });
     console.log(
-      `Sending QUEUE_INFO to client ${this.id}: position ${position}`
+      `Sending QUEUE_INFO to client ${this.id}: position ${position}/${total}`
     );
   }
 
@@ -307,6 +324,18 @@ export default class Client {
     //    3:30 - 3:00 = 0:30 > 1hr? no (all in ms tho)
   }
 
+  // Check if free user has exceeded daily time limit
+  checkIfTimeUsed(now: number): boolean {
+    // Paid users have no daily limit
+    if (this.accessType === "paid") return false;
+
+    // Only check when connected with an active session
+    if (this.connectionState !== "connected" || !this.assignedAt) return false;
+
+    const currentSessionTime = now - this.assignedAt;
+    return this.timeUsedTodayMs + currentSessionTime >= FREE_USER_MAX_TIME_MS;
+  }
+
   // ============================================
   // Disconnect
   // ============================================
@@ -318,9 +347,27 @@ export default class Client {
 
     console.log(`Client ${this.id} disconnecting: ${reason}`);
 
+    // Log session if client was actually in a game
+    if (
+      this.connectionState === "connected" &&
+      this.game !== null &&
+      this.assignedAt !== null
+    ) {
+      logSession({
+        user_id: this.userId,
+        package_name: this.game,
+        max_video_size: this.maxVideoSize,
+        started_at: this.assignedAt,
+        ended_at: Date.now(),
+        ended_reason: reason,
+      }).catch((err) => {
+        console.error(`Failed to log session for client ${this.id}:`, err);
+      });
+    }
+
     // Remove from queue if queued
     if (this.connectionState === "queued") {
-      removeFromQueue(this.id);
+      removeFromQueue(this);
     }
 
     // Notify and disconnect paired worker (without it calling back to us)
