@@ -133,13 +133,39 @@
 }
 
 .panel-quality-btn.active {
-  background: var(--accent, #6366f1);
-  border-color: var(--accent, #6366f1);
+  background: var(--text-primary);
+  border-color: var(--text-primary);
 }
 
 .panel-quality-btn.active .quality-label,
 .panel-quality-btn.active .quality-spec {
+  color: var(--bg-primary);
+}
+
+.panel-quality-btn.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.panel-quality-btn.locked:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+}
+
+.panel-quality-btn .quality-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pro-badge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: var(--accent, #6366f1);
   color: #fff;
+  padding: 2px 5px;
+  border-radius: 4px;
 }
 
 /* Playtime Display */
@@ -164,6 +190,85 @@
 
 .playtime-loading {
   color: var(--text-muted);
+}
+
+/* Free User Playtime with CTA */
+.playtime-free-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.playtime-progress-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.playtime-stats {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.playtime-remaining-text {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.playtime-total-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.playtime-progress-bar {
+  height: 6px;
+  background: var(--bg-primary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.playtime-progress-fill {
+  height: 100%;
+  background: var(--text-muted);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.playtime-upgrade-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, var(--accent) 0%, #ea580c 100%);
+  border: none;
+  border-radius: var(--radius);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+}
+
+.playtime-upgrade-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+}
+
+.playtime-upgrade-cta:active {
+  transform: translateY(0);
+}
+
+.playtime-upgrade-cta svg {
+  flex-shrink: 0;
 }
 
 /* Panel Links */

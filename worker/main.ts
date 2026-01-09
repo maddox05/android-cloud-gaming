@@ -15,7 +15,7 @@ import type {
 } from "../shared/types.js";
 import { STUN_SERVERS } from "../shared/const.js";
 
-import { MSG, ERROR_CODE } from "../shared/types.js";
+import { MSG, ERROR_CODE, FREE_USER_MAX_VIDEO_SIZE } from "../shared/types.js";
 import { GAMES_LIST } from "../shared/const.js";
 
 const { RTCPeerConnection, RTCSessionDescription } = wrtc;
@@ -110,7 +110,7 @@ async function createPeerConnection(): Promise<PC> {
       signalSocket.readyState === WebSocket.OPEN
     ) {
       const iceMsg: IceCandidateMessage = {
-        type: "ice-candidate",
+        type: MSG.ICE_CANDIDATE,
         candidate: event.candidate.toJSON(),
       };
 
@@ -295,7 +295,7 @@ async function connectToSignalServer() {
 
     // Register with signal server
     const register: RegisterMessage = {
-      type: "register",
+      type: MSG.REGISTER,
       games: GAMES_LIST.map((g) => g.id),
     };
     signalSocket!.send(JSON.stringify(register));
@@ -342,7 +342,7 @@ async function connectToSignalServer() {
           signalSocket!.send(JSON.stringify(offerMsg));
 
           // Initialize the session with the game
-          const maxVideoSize = workerStartMsg.maxVideoSize ?? 640;
+          const maxVideoSize = workerStartMsg.maxVideoSize ?? FREE_USER_MAX_VIDEO_SIZE;
           await initializeSession(workerStartMsg.gameId, maxVideoSize);
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : String(err);

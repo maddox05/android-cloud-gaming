@@ -5,4 +5,4 @@
 export type { ClientConnectionState } from "./Client.js";
 export type { WorkerStatus } from "./Worker.js";
 
-export type UserAccessType = "free" | "paid" | null;
+export type { AccessType } from "../shared/types.js";

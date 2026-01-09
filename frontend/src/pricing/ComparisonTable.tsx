@@ -227,6 +227,12 @@ export default function ComparisonTable() {
         </table>
       </div>
 
+      <p className="comparison-disclaimer">
+        * Competitor information was gathered on November 25, 2025 and is
+        subject to change. Features and pricing may vary. We recommend verifying
+        current details on their respective websites.
+      </p>
+
       <div className="comparison-footer">
         <p>The choice is clear, Lock in your early access spot</p>
       </div>

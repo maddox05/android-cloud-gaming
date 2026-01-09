@@ -1,10 +1,10 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthModalProvider } from "./context/AuthModalContext";
+import { UserProvider } from "./context/UserContext";
 import { AuthModal } from "./components/AuthModal";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import { trackPageView } from "./utils/metaPixel";
 
 const Home = lazy(() => import("./home/Home"));
 const Pricing = lazy(() => import("./pricing/Pricing"));
@@ -20,11 +20,6 @@ const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 function AppLayout() {
   const location = useLocation();
   const hideNavFooter = location.pathname.startsWith("/app/") || location.pathname.startsWith("/queue/");
-
-  // Track page views on route changes
-  useEffect(() => {
-    trackPageView();
-  }, [location.pathname]);
 
   return (
     <>
@@ -51,10 +46,12 @@ function AppLayout() {
 
 export default function Router() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppLayout />
-      </BrowserRouter>
-    </AuthProvider>
+    <UserProvider>
+      <AuthModalProvider>
+        <BrowserRouter>
+          <AppLayout />
+        </BrowserRouter>
+      </AuthModalProvider>
+    </UserProvider>
   );
 }

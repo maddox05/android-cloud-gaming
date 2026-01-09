@@ -1,0 +1,134 @@
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  type ReactNode,
+} from "react";
+import type { User } from "@supabase/supabase-js";
+import type { AccessType } from "../../../shared/types";
+import { getAccessToken, onAuthStateChange } from "../utils/supabase";
+import { config } from "../config";
+
+interface UserContextValue {
+  user: User | null;
+  accessType: AccessType;
+  isLoading: boolean;
+  isPaid: boolean;
+  isFree: boolean;
+  refetchAccessType: () => Promise<void>;
+}
+
+const UserContext = createContext<UserContextValue | null>(null);
+
+const { SIGNAL_HTTP_URL } = config;
+
+// Module-level cache to prevent duplicate fetches (survives hot reload)
+let cachedUserId: string | null = null;
+let cachedAccessType: AccessType = null;
+
+async function fetchAccessType(token: string): Promise<AccessType> {
+  try {
+    const response = await fetch(
+      `${SIGNAL_HTTP_URL}/userAccess?token=${encodeURIComponent(token)}`
+    );
+    if (!response.ok) {
+      console.error("Failed to fetch access type:", response.status);
+      return null;
+    }
+    const data = await response.json();
+    return data.accessType as AccessType;
+  } catch (error) {
+    console.error("Error fetching access type:", error);
+    return null;
+  }
+}
+
+export function UserProvider({ children }: { children: ReactNode }) {
+  // Initialize from cache if available (survives hot reload)
+  const [user, setUser] = useState<User | null>(null);
+  const [accessType, setAccessType] = useState<AccessType>(cachedAccessType);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const refetchAccessType = async () => {
+    const token = await getAccessToken();
+    if (token) {
+      const type = await fetchAccessType(token);
+      setAccessType(type);
+      cachedAccessType = type;
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChange(async (event, session) => {
+      console.log("[UserContext] Auth event:", event);
+
+      const newUser = session?.user ?? null;
+      setUser(newUser);
+
+      // If user signed out, clear everything
+      if (!newUser) {
+        setAccessType(null);
+        cachedUserId = null;
+        cachedAccessType = null;
+        setIsLoading(false);
+        return;
+      }
+
+      // Skip if we've already fetched for this exact user (module-level cache)
+      if (cachedUserId === newUser.id && cachedAccessType !== null) {
+        console.log(
+          "[UserContext] Using cached access type for user:",
+          newUser.id
+        );
+        setAccessType(cachedAccessType);
+        setIsLoading(false);
+        return;
+      }
+
+      // // Skip TOKEN_REFRESHED - we already have the data
+      // if (event === "TOKEN_REFRESHED") {
+      //   console.log("[UserContext] Skipping TOKEN_REFRESHED");
+      //   setIsLoading(false);
+      //   return;
+      // }
+
+      // Fetch access type for this user
+      if (session?.access_token) {
+        console.log("[UserContext] Fetching access type for user:", newUser.id);
+        const type = await fetchAccessType(session.access_token);
+        setAccessType(type);
+        cachedUserId = newUser.id;
+        cachedAccessType = type;
+      }
+      setIsLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({
+      user,
+      accessType,
+      isLoading,
+      isPaid: accessType === "paid",
+      isFree: accessType === "free",
+      refetchAccessType,
+    }),
+    [user, accessType, isLoading]
+  );
+
+  return (
+    <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>
+  );
+}
+
+export function useUser() {
+  const context = useContext(UserContext);
+  if (!context) {
+    throw new Error("useUser must be used within a UserProvider");
+  }
+  return context;
+}

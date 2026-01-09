@@ -2,6 +2,35 @@
 // Used by: signal server, pod server, frontend
 
 // ============================================
+// User Access Types
+// ============================================
+
+export type AccessType = "free" | "paid" | null;
+
+// ============================================
+// Video Quality Types
+// ============================================
+
+export type VideoQuality = "HD" | "LD" | "ULD";
+
+export const MAX_VIDEO_SIZE_MAP: Record<VideoQuality, number> = {
+  HD: 1920,
+  LD: 1280,
+  ULD: 640,
+} as const;
+
+/** Get VideoQuality from a maxVideoSize number */
+export function getVideoQualityFromSize(size: number): VideoQuality | null {
+  for (const [quality, value] of Object.entries(MAX_VIDEO_SIZE_MAP)) {
+    if (value === size) return quality as VideoQuality;
+  }
+  return null;
+}
+
+/** Free users can only use ULD quality */
+export const FREE_USER_MAX_VIDEO_SIZE = MAX_VIDEO_SIZE_MAP.ULD;
+
+// ============================================
 // Message Type Constants
 // ============================================
 export interface Game {
@@ -84,6 +113,8 @@ export const ERROR_CODE = {
   SESSION_TIMEOUT: "SESSION_TIMEOUT",
   WORKER_CRASHED: "WORKER_CRASHED",
   DAILY_TIME_EXCEEDED: "DAILY_TIME_EXCEEDED",
+  ALREADY_IN_QUEUE: "ALREADY_IN_QUEUE",
+  ALREADY_IN_GAME: "ALREADY_IN_GAME",
 } as const;
 
 /** Error codes for error messages */

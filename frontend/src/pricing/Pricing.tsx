@@ -1,18 +1,13 @@
 import { useEffect, useState } from "react";
-import {
-  getCurrentUser,
-  onAuthStateChange,
-} from "../utils/supabase";
-import { useAuth } from "../context/AuthContext";
-import type { User } from "@supabase/supabase-js";
+import { useAuthModal } from "../context/AuthModalContext";
+import { useUser } from "../context/UserContext";
 import ComparisonTable from "./ComparisonTable";
-import { trackViewContent } from "../utils/metaPixel";
 import "./Pricing.css";
 
 export default function Pricing() {
-  const [user, setUser] = useState<User | null>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
-  const { startLogin } = useAuth();
+  const { startLogin } = useAuthModal();
+  const { user } = useUser();
 
   useEffect(() => {
     const scriptId = "stripe-pricing-table-script";
@@ -37,21 +32,6 @@ export default function Pricing() {
       setScriptLoaded(true);
     };
     document.head.appendChild(script);
-  }, []);
-
-  useEffect(() => {
-    getCurrentUser().then(setUser);
-
-    const unsubscribe = onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return unsubscribe;
-  }, []);
-
-  // Track pricing page view for Meta Pixel
-  useEffect(() => {
-    trackViewContent("Pricing Page");
   }, []);
 
   // Check if user is logged in but missing required data

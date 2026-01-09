@@ -117,3 +117,19 @@ export function getAvailableWorkerCount(): number {
   }
   return count;
 }
+
+// User checks (not check by just registry id, but also by supabase user and reference)
+
+export function amIAlreadyInGame(client: Client): boolean {
+  for (const c of clientRegistry.values()) {
+    if (!c.worker) continue; // not in a game
+    if (
+      c === client ||
+      c.id === client.id ||
+      (client.userId && c.userId === client.userId)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}

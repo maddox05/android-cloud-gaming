@@ -1,12 +1,10 @@
-export type VideoQuality = "HD" | "LD" | "ULD";
+import type { VideoQuality } from "../../../shared/types";
+import { MAX_VIDEO_SIZE_MAP } from "../../../shared/types";
+
+export type { VideoQuality };
+export { MAX_VIDEO_SIZE_MAP as VIDEO_SIZE_MAP };
 
 const VIDEO_QUALITY_KEY = "videoQuality";
-
-const QUALITY_MAP: Record<VideoQuality, number> = {
-  HD: 1920,
-  LD: 1080,
-  ULD: 640,
-};
 
 export function getVideoQuality(): VideoQuality {
   const stored = localStorage.getItem(VIDEO_QUALITY_KEY);
@@ -21,5 +19,5 @@ export function setVideoQuality(quality: VideoQuality): void {
 }
 
 export function getMaxVideoSize(): number {
-  return QUALITY_MAP[getVideoQuality()];
+  return MAX_VIDEO_SIZE_MAP[getVideoQuality()];
 }

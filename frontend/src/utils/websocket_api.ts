@@ -51,7 +51,7 @@ class WebSocketAPI {
         throw new Error("Not authenticated");
       }
 
-      const url = `${config.SIGNAL_URL}?role=client&token=${encodeURIComponent(
+      const url = `${config.SIGNAL_WS_URL}?role=client&token=${encodeURIComponent(
         token
       )}`;
       console.log("Connecting to signal server");

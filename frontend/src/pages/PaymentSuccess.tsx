@@ -1,12 +1,10 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { trackPurchase, trackSubscribe } from "../utils/metaPixel";
 import "./Pages.css";
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const hasTracked = useRef(false);
 
   const sessionId = searchParams.get("session_id");
 
@@ -15,33 +13,6 @@ export default function PaymentSuccess() {
       setStatus("error");
       return;
     }
-
-    // Prevent double-tracking on React strict mode re-renders
-    if (hasTracked.current) return;
-
-    // TODO: Verify session with Supabase before firing pixel
-    // Example implementation:
-    // const { data } = await supabase
-    //   .schema('stripe')
-    //   .from('checkout_sessions')
-    //   .select('payment_status, amount_total')
-    //   .eq('id', sessionId)
-    //   .single();
-    //
-    // if (data?.payment_status !== 'paid') {
-    //   setStatus("error");
-    //   return;
-    // }
-    // const value = data.amount_total ? data.amount_total / 100 : undefined;
-
-    // For now, trust the session_id exists and fire the pixel
-    // The session_id is cryptographically random and hard to guess
-    hasTracked.current = true;
-
-    // Fire Meta Pixel events with session_id for deduplication
-    // TODO: Pass actual purchase value from Supabase verification
-    trackSubscribe(sessionId);
-    trackPurchase(sessionId);
 
     setStatus("success");
   }, [sessionId]);

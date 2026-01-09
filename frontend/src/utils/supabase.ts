@@ -7,12 +7,16 @@ const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
 export { supabase };
 
 export async function getCurrentUser(): Promise<User | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return user;
 }
 
 export async function getSession(): Promise<Session | null> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   return session;
 }
 
@@ -25,7 +29,7 @@ export async function signInWithGoogle(): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.href,
+      redirectTo: window.location.host + window.location.pathname,
     },
   });
 
@@ -51,7 +55,7 @@ export async function signUpWithEmail(
     email,
     password,
     options: {
-      emailRedirectTo: window.location.href,
+      emailRedirectTo: window.location.host + window.location.pathname,
     },
   });
 
@@ -88,6 +92,8 @@ export async function isLoggedIn(): Promise<boolean> {
 export function onAuthStateChange(
   callback: (event: AuthChangeEvent, session: Session | null) => void
 ): () => void {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(callback);
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(callback);
   return () => subscription.unsubscribe();
 }

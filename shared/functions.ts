@@ -25,7 +25,7 @@ export async function getUserTimeSpentToday(
 
     const { data, error } = await supabase
       .from("game_sessions")
-      .select("started_at, ended_at")
+      .select("duration_seconds")
       .eq("user_id", userId)
       .gte("started_at", startOfToday);
 
@@ -41,9 +41,7 @@ export async function getUserTimeSpentToday(
     // Sum up all session durations
     let totalMs = 0;
     for (const session of data) {
-      const started = new Date(session.started_at).getTime();
-      const ended = new Date(session.ended_at).getTime();
-      totalMs += ended - started;
+      totalMs += session.duration_seconds * 1000;
     }
 
     return totalMs;

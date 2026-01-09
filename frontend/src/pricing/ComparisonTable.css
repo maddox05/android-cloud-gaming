@@ -288,3 +288,13 @@
     display: none;
   }
 }
+
+/* Disclaimer */
+.comparison-disclaimer {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 24px;
+  padding: 0 16px;
+  line-height: 1.5;
+}

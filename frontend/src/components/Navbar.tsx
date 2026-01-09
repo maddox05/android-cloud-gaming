@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { User } from "@supabase/supabase-js";
-import { getCurrentUser, signOut, onAuthStateChange } from "../utils/supabase";
-import { useAuth } from "../context/AuthContext";
+import { signOut } from "../utils/supabase";
+import { useAuthModal } from "../context/AuthModalContext";
+import { useUser } from "../context/UserContext";
 import { Avatar } from "./Avatar";
 import { BurgerIcon, CloseIcon, DiscordIcon, GiftIcon } from "./Icons";
 import { MobileMenu } from "./MobileMenu";
@@ -44,21 +44,13 @@ const NAV_LINKS = [
 ];
 
 export default function Navbar() {
-  const [user, setUser] = useState<User | null>(null);
   const [showPanel, setShowPanel] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const { startLogin } = useAuth();
+  const { startLogin } = useAuthModal();
+  const { user, isPaid } = useUser();
 
   const userAvatarUrl =
     user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
-
-  useEffect(() => {
-    getCurrentUser().then(setUser);
-    const unsubscribe = onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-    return unsubscribe;
-  }, []);
 
   // Close panel when clicking outside
   useEffect(() => {
@@ -162,7 +154,7 @@ export default function Navbar() {
         user={user}
         avatarUrl={userAvatarUrl}
         isOpen={showPanel}
-        isPaid={true} // TODO: Check actual subscription status when free tier is implemented
+        isPaid={isPaid}
         onClose={() => setShowPanel(false)}
         onSignIn={startLogin}
         onSignOut={handleSignOut}

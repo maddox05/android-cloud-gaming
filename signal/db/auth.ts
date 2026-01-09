@@ -5,13 +5,18 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase.js";
-import type { UserAccessType } from "../types.js";
+import type { AccessType } from "../types.js";
 
-export async function getUserAccessType(
-  userId: string
-): Promise<UserAccessType> {
+export async function getUserAccessType(userId: string): Promise<AccessType> {
   const hasSubscription = await checkSubscription(userId);
-  return hasSubscription ? "paid" : "free";
+  if (hasSubscription === true) {
+    return "paid";
+  } else if (false) {
+    // TODO for FREE USER CHANGES, check if user has code, if so return free
+    return "free";
+  } else {
+    return null; // todo set null
+  }
 }
 
 /**

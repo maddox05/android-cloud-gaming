@@ -6,6 +6,7 @@ import { CloseIcon, CreditCardIcon } from "./Icons";
 import {
   getVideoQuality,
   setVideoQuality,
+  VIDEO_SIZE_MAP,
   type VideoQuality,
 } from "../utils/videoQuality";
 import { PlaytimeDisplay } from "./PlaytimeDisplay";
@@ -34,6 +35,8 @@ export function ProfilePanel({
     useState<VideoQuality>(getVideoQuality);
 
   const handleQualityChange = (quality: VideoQuality) => {
+    // Free users can only use ULD
+    if (!isPaid && quality !== "ULD") return;
     setVideoQuality(quality);
     setVideoQualityState(quality);
   };
@@ -66,28 +69,32 @@ export function ProfilePanel({
             <div className="panel-setting">
               <span className="panel-setting-label">Stream Quality</span>
               <div className="panel-quality-options">
-                {(
-                  [
-                    { key: "HD", label: "HD", spec: "1920p" },
-                    { key: "LD", label: "LD", spec: "1080p" },
-                    { key: "ULD", label: "ULD", spec: "640p" },
-                  ] as const
-                ).map(({ key, label, spec }) => (
-                  <button
-                    key={key}
-                    className={`panel-quality-btn ${
-                      videoQuality === key ? "active" : ""
-                    }`}
-                    onClick={() => handleQualityChange(key)}
-                  >
-                    <span className="quality-label">{label}</span>
-                    <span className="quality-spec">{spec}</span>
-                  </button>
-                ))}
+                {(Object.keys(VIDEO_SIZE_MAP) as VideoQuality[]).map((key) => {
+                  const width = VIDEO_SIZE_MAP[key];
+                  const height = Math.round((width * 9) / 16); // 16:9 aspect ratio
+                  const proOnly = key !== "ULD";
+                  const isLocked = proOnly && !isPaid;
+                  return (
+                    <button
+                      key={key}
+                      className={`panel-quality-btn ${
+                        videoQuality === key ? "active" : ""
+                      } ${isLocked ? "locked" : ""}`}
+                      onClick={() => handleQualityChange(key)}
+                      disabled={isLocked}
+                    >
+                      <span className="quality-label">
+                        {key}
+                        {isLocked && <span className="pro-badge">Pro</span>}
+                      </span>
+                      <span className="quality-spec">{height}p</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            <PlaytimeDisplay userId={user.id} isPaid={isPaid} />
+            <PlaytimeDisplay userId={user.id} isPaid={isPaid} onUpgradeClick={onClose} />
 
             <div className="panel-links">
               <a href={config.STRIPE_BILLING_URL} className="panel-link">

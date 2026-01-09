@@ -72,6 +72,15 @@ export function getAllQueuedClientIds(): string[] {
   return queue.map((client) => client.id);
 }
 
+export function amIQueued(client: Client): boolean {
+  return queue.some(
+    (c) =>
+      c === client ||
+      c.id === client.id ||
+      (client.userId && c.userId === client.userId)
+  );
+}
+
 // ============================================
 // Queue Processing (FUNCA)
 // ============================================

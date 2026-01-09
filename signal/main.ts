@@ -1,5 +1,6 @@
 import express from "express";
 import expressWs from "express-ws";
+import cors from "cors";
 import Client from "./Client.js";
 import Worker from "./Worker.js";
 import { getAllClients, getAllWorkers, getWorkerCount } from "./registry.js";
@@ -18,6 +19,7 @@ import {
 } from "./consts.js";
 import { getUserTimeSpentToday } from "./db/database.js";
 import { FREE_USER_MAX_TIME_MS } from "../shared/const.js";
+import { setMaxIdleHTTPParsers } from "http";
 
 // ============================================
 // Environment Validation
@@ -40,9 +42,32 @@ if (missingEnvVars.length > 0) {
 
 const { app } = expressWs(express());
 
+// Enable CORS for all origins
+app.use(cors());
+
 // Health check endpoint
 app.get("/health", (_req, res) => {
   res.send("OK");
+});
+
+app.get("/userAccess", async (req, res) => {
+  const token = req.query.token as string | undefined;
+
+  if (!token) {
+    return res.status(401).json({
+      error: "Authentication required",
+    });
+  }
+
+  const user = await verifyToken(token);
+  if (!user) {
+    return res.status(401).json({
+      error: "Invalid or expired token",
+    });
+  }
+
+  const accessType = await getUserAccessType(user.id);
+  return res.json({ accessType });
 });
 
 // WebSocket endpoint
@@ -57,7 +82,7 @@ app.ws("/", (ws, req) => {
   }
 
   if (role === "worker") {
-    // Workers don't need auth - class handles everything
+    // Workers don't need auth (todo at some point)
     new Worker(ws);
   } else if (role === "client") {
     if (getWorkerCount() === 0) {
@@ -117,7 +142,12 @@ app.ws("/", (ws, req) => {
       const client = new Client(ws, user.id, accessType);
 
       // For free users, check if they've exceeded daily time limit
-      if (accessType === "free") {
+      if (accessType === null) {
+        // client should not even be able to send here unless they are smart
+        client.sendAuthenticated(); // todo this is kinda retarded maybe change later
+        client.disconnect("no_access");
+        return;
+      } else if (accessType === "free") {
         const timeUsedTodayMs = await getUserTimeSpentToday(user.id);
         client.timeUsedTodayMs = timeUsedTodayMs;
 
@@ -127,7 +157,7 @@ app.ws("/", (ws, req) => {
             `Free user ${user.id} exceeded daily limit (${timeUsedTodayMs}ms used)`
           );
           client.sendAuthenticated(); // todo this is kinda retarded maybe change later
-          client.disconnect("daily_time_exceeded");
+          client.disconnect("daily_time_exceeded"); // make this a contsant???
           return;
         }
       }

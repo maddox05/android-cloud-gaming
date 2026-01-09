@@ -6,17 +6,20 @@ import {
   setClientWs,
   removeClientWs,
   generateClientId,
+  amIAlreadyInGame,
 } from "./registry.js";
 import {
   addToQueue,
   removeFromQueue,
   getQueuePosition,
   getQueueLength,
+  amIQueued,
 } from "./queue.js";
-import type { UserAccessType } from "./types.js";
+import type { AccessType } from "./types.js";
 import {
   ERROR_CODE,
   MSG,
+  FREE_USER_MAX_VIDEO_SIZE,
   type SignalMessage,
   type QueueMessage,
   type ErrorMessage,
@@ -29,7 +32,6 @@ import {
 } from "./consts.js";
 import { logSession } from "./db/database.js";
 import { MAX_SESSION_TIME_MS, FREE_USER_MAX_TIME_MS } from "../shared/const.js";
-import { assert } from "console";
 
 export type ClientConnectionState =
   | "waiting"
@@ -42,7 +44,7 @@ export default class Client {
   readonly id: string;
   readonly userId: string;
   readonly ws: WebSocket;
-  readonly accessType: UserAccessType; //user free or paid
+  readonly accessType: AccessType; //user free or paid
 
   // Pairing - direct reference
   worker: Worker | null = null;
@@ -51,7 +53,7 @@ export default class Client {
   connectionState: ClientConnectionState = "waiting";
   game: string | null = null;
   turnInfo: TurnInfo | null = null;
-  maxVideoSize: number = 640; // Default ULD
+  maxVideoSize: number = FREE_USER_MAX_VIDEO_SIZE; // Default ULD
 
   // Timestamps
   lastPing: number;
@@ -65,7 +67,7 @@ export default class Client {
   // Cleanup flag
   private isDisconnected = false;
 
-  constructor(ws: WebSocket, userId: string, accessType: UserAccessType) {
+  constructor(ws: WebSocket, userId: string, accessType: AccessType) {
     this.id = generateClientId();
     this.userId = userId;
     this.ws = ws;
@@ -140,7 +142,7 @@ export default class Client {
         break;
     }
   }
-
+  // checks if the user ia allowed to queue with the given options, and any bad state the user may have had
   private handleQueue(msg: QueueMessage): void {
     const { appId, maxVideoSize } = msg;
 
@@ -169,11 +171,35 @@ export default class Client {
 
     // Set state and add to queue
     this.game = appId;
-    this.maxVideoSize = maxVideoSize ?? 640;
+
+    // Free users can only use ULD quality
+    // if free user somehow changed thier maxvideo size to smth else, chaneg it it to what they are allowed
+    if (this.accessType === "free") {
+      this.maxVideoSize = FREE_USER_MAX_VIDEO_SIZE;
+    } else {
+      this.maxVideoSize = maxVideoSize ?? FREE_USER_MAX_VIDEO_SIZE;
+    }
+
     this.connectionState = "queued";
     this.queuedAt = Date.now();
 
+    // check if userId is already in queue or in game, then user cannot queue again.
+    // user always has to queue before being in game, so i dont need to do these checks anywhere else
+    if (amIQueued(this)) {
+      this.sendError(
+        ERROR_CODE.ALREADY_IN_QUEUE,
+        "You are already in the queue"
+      );
+      return;
+    }
+
+    if (amIAlreadyInGame(this)) {
+      this.sendError(ERROR_CODE.ALREADY_IN_GAME, "You are already in a game");
+      return;
+    }
+
     addToQueue(this);
+
     this.sendQueueInfo();
 
     console.log(
