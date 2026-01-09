@@ -13,7 +13,7 @@ services:
       - /data-diff:size=500m,mode=1777 # RAM-backed, auto-deleted on stop
     command:
       - androidboot.use_redroid_overlayfs=1
-
+      - androidboot.use_memfd
       - ro.secure=0 # maybe remove this??
     networks:
       - internal # Gives container an IP that host-networked worker can reach
