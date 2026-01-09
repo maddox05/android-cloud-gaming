@@ -57,10 +57,21 @@ esac
 echo "Installing prerequisites..."
 pkg_install curl wget git unzip
 
-# Install Docker using official convenience script (works on all distros)
+# Install Docker
 echo "Installing Docker..."
 if ! command -v docker &> /dev/null; then
-    curl -fsSL https://get.docker.com | sudo sh
+    # Try official script first, fall back to package manager
+    if curl -fsSL https://get.docker.com | sudo sh 2>/dev/null; then
+        echo "Docker installed via official script."
+    else
+        echo "Official script failed, installing from package manager..."
+        case $PKG_MANAGER in
+            apt)     pkg_install docker.io docker-compose ;;
+            dnf)     pkg_install docker docker-compose ;;
+            yum)     pkg_install docker docker-compose ;;
+            pacman)  pkg_install docker docker-compose ;;
+        esac
+    fi
     sudo usermod -aG docker $USER
     echo "Docker installed. You may need to log out and back in for group changes."
 else
