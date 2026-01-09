@@ -72,6 +72,9 @@ export default function Footer() {
             <Link to="/roadmap" className="footer-link">
               Roadmap
             </Link>
+            <Link to="/about" className="footer-link">
+              About
+            </Link>
           </nav>
         </div>
 
@@ -79,9 +82,6 @@ export default function Footer() {
         <div className="footer-section">
           <h4 className="footer-heading">Legal</h4>
           <nav className="footer-nav">
-            <Link to="/about" className="footer-link">
-              About
-            </Link>
             <Link to="/privacy-policy" className="footer-link">
               Privacy Policy
             </Link>
