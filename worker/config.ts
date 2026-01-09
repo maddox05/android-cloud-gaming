@@ -1,5 +1,9 @@
 import { execSync } from "child_process";
 
+function sleep(ms: number): void {
+  execSync(`sleep ${ms / 1000}`);
+}
+
 function isValidIP(ip: string): boolean {
   const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
   if (!ipv4Regex.test(ip)) return false;
@@ -68,17 +72,31 @@ function getRedroidHost(): string {
   console.log(`Looking for containers: ${containerNames.join(", ")}`);
   console.log(`Expected network: ${networkName}`);
 
-  for (const cmd of commands) {
-    for (const containerName of containerNames) {
-      const ip = tryGetContainerIP(cmd, containerName, networkName);
-      if (ip) {
-        console.log(`Resolved redroid container IP: ${ip} (via ${cmd})`);
-        return ip;
+  // Retry with backoff - redroid might not have its IP yet
+  const maxRetries = 10;
+  const retryDelayMs = 2000;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    console.log(`\nAttempt ${attempt}/${maxRetries}...`);
+
+    for (const cmd of commands) {
+      for (const containerName of containerNames) {
+        const ip = tryGetContainerIP(cmd, containerName, networkName);
+        if (ip) {
+          console.log(`Resolved redroid container IP: ${ip} (via ${cmd})`);
+          return ip;
+        }
       }
+    }
+
+    if (attempt < maxRetries) {
+      console.log(`No valid IP found, waiting ${retryDelayMs / 1000}s before retry...`);
+      sleep(retryDelayMs);
     }
   }
 
-  console.error(`Failed to resolve redroid container IP. Tried containers: ${containerNames.join(", ")} with podman and docker.`);
+  console.error(`Failed to resolve redroid container IP after ${maxRetries} attempts.`);
+  console.error(`Tried containers: ${containerNames.join(", ")} with podman and docker.`);
   console.error(`This setup requires rootful Docker/Podman (run with sudo). Rootless containers don't have routable IPs.`);
   process.exit(1);
 }
