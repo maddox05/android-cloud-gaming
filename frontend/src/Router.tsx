@@ -16,6 +16,9 @@ const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const CopyrightPolicy = lazy(() => import("./pages/CopyrightPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const JoinWaitlist = lazy(() => import("./waitlist/JoinWaitlist"));
+const Waitlist = lazy(() => import("./waitlist/Waitlist"));
+const RedeemInvite = lazy(() => import("./redeem/RedeemInvite"));
 
 function AppLayout() {
   const location = useLocation();
@@ -41,6 +44,10 @@ function AppLayout() {
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/queue/:appId" element={<Queue />} />
           <Route path="/app/:appId" element={<InGame />} />
+          <Route path="/waitlist" element={<JoinWaitlist />} />
+          <Route path="/waitlist/:userId" element={<Waitlist />} />
+          <Route path="/redeem" element={<RedeemInvite />} />
+          <Route path="/redeem/:inviteCode" element={<RedeemInvite />} />
         </Routes>
       </Suspense>
       {!hideNavFooter && <Footer />}

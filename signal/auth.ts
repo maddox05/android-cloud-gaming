@@ -15,7 +15,7 @@ let supabase: SupabaseClient | null = null;
 /**
  * Initialize Supabase client
  */
-function getSupabase(): SupabaseClient | null {
+export function getSupabase(): SupabaseClient | null {
   if (!supabase && SUPABASE_URL && SUPABASE_SERVICE_KEY) {
     supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
   }
@@ -228,6 +228,39 @@ export async function checkSubscription(
     return false;
   } catch (err) {
     console.error("Subscription check error:", err);
+    return false;
+  }
+}
+
+/**
+ * Check if user has free access via redeemed invite code
+ * Queries the invite_codes table for has_access = true
+ */
+export async function checkFreeAccess(userId: string): Promise<boolean> {
+  const client = getSupabase();
+
+  if (!client) {
+    console.error("Supabase not configured");
+    return false;
+  }
+
+  try {
+    const { data, error } = await client
+      .from("invite_codes")
+      .select("has_access")
+      .eq("user_id", userId)
+      .eq("has_access", true)
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      return false;
+    }
+
+    console.log(`User ${userId} has free access via invite code`);
+    return true;
+  } catch (err) {
+    console.error("Free access check error:", err);
     return false;
   }
 }
