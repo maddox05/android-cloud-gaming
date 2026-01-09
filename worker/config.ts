@@ -62,7 +62,8 @@ function getRedroidHost(): string {
     }
   }
 
-  console.error(`Failed to resolve redroid container IP. Tried containers: ${containerNames.join(", ")} with podman and docker`);
+  console.error(`Failed to resolve redroid container IP. Tried containers: ${containerNames.join(", ")} with podman and docker.`);
+  console.error(`This setup requires rootful Docker/Podman (run with sudo). Rootless containers don't have routable IPs.`);
   process.exit(1);
 }
 
