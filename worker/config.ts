@@ -10,13 +10,22 @@ function isValidIP(ip: string): boolean {
 function tryGetContainerIP(cmd: string, containerName: string, networkName: string): string | null {
   try {
     // Get full JSON and parse it instead of using Go templates
+    console.log(`Trying: ${cmd} inspect ${containerName}`);
     const json = execSync(
-      `${cmd} inspect ${containerName} 2>/dev/null`,
+      `${cmd} inspect ${containerName} 2>&1`,
       { encoding: "utf-8" }
     ).trim();
 
-    const data = JSON.parse(json);
+    let data;
+    try {
+      data = JSON.parse(json);
+    } catch {
+      console.log(`  JSON parse failed, raw output: ${json.substring(0, 200)}`);
+      return null;
+    }
+
     const networks = data[0]?.NetworkSettings?.Networks;
+    console.log(`  Networks found: ${networks ? Object.keys(networks).join(", ") : "none"}`);
 
     if (!networks) {
       return null;
@@ -24,17 +33,19 @@ function tryGetContainerIP(cmd: string, containerName: string, networkName: stri
 
     // Try specific network first
     if (networks[networkName]?.IPAddress && isValidIP(networks[networkName].IPAddress)) {
+      console.log(`  Found IP in ${networkName}: ${networks[networkName].IPAddress}`);
       return networks[networkName].IPAddress;
     }
 
     // Fallback: get first available network IP
-    for (const net of Object.values(networks) as { IPAddress?: string }[]) {
+    for (const [netName, net] of Object.entries(networks) as [string, { IPAddress?: string }][]) {
+      console.log(`  Network ${netName} IP: "${net.IPAddress || "empty"}"`);
       if (net.IPAddress && isValidIP(net.IPAddress)) {
         return net.IPAddress;
       }
     }
-  } catch {
-    // Command failed or JSON parse failed
+  } catch (e) {
+    console.log(`  Command failed: ${e}`);
   }
   return null;
 }
@@ -42,6 +53,8 @@ function tryGetContainerIP(cmd: string, containerName: string, networkName: stri
 function getRedroidHost(): string {
   // With network_mode: host, we need to find the container's IP via Docker/Podman
   const podName = process.env.POD_NAME;
+  console.log(`POD_NAME: "${podName}"`);
+
   if (!podName) {
     console.error("POD_NAME environment variable not set, cannot resolve redroid container IP");
     process.exit(1);
@@ -51,6 +64,9 @@ function getRedroidHost(): string {
   const containerNames = [`${podName}-redroid-1`, `${podName}_redroid_1`];
   const networkName = `${podName}_internal`;
   const commands = ["podman", "docker"]; // Try podman first on Fedora
+
+  console.log(`Looking for containers: ${containerNames.join(", ")}`);
+  console.log(`Expected network: ${networkName}`);
 
   for (const cmd of commands) {
     for (const containerName of containerNames) {
