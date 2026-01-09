@@ -1,104 +1,27 @@
 import { execSync } from "child_process";
 
-function sleep(ms: number): void {
-  execSync(`sleep ${ms / 1000}`);
-}
-
-function isValidIP(ip: string): boolean {
-  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-  if (!ipv4Regex.test(ip)) return false;
-  const parts = ip.split('.').map(Number);
-  return parts.every(part => part >= 0 && part <= 255);
-}
-
-function tryGetContainerIP(cmd: string, containerName: string, networkName: string): string | null {
-  try {
-    // Get full JSON and parse it instead of using Go templates
-    console.log(`Trying: ${cmd} inspect ${containerName}`);
-    const json = execSync(
-      `${cmd} inspect ${containerName} 2>&1`,
-      { encoding: "utf-8" }
-    ).trim();
-
-    let data;
-    try {
-      data = JSON.parse(json);
-    } catch {
-      console.log(`  JSON parse failed, raw output: ${json.substring(0, 200)}`);
-      return null;
-    }
-
-    const networks = data[0]?.NetworkSettings?.Networks;
-    console.log(`  Networks found: ${networks ? Object.keys(networks).join(", ") : "none"}`);
-
-    if (!networks) {
-      return null;
-    }
-
-    // Try specific network first
-    if (networks[networkName]?.IPAddress && isValidIP(networks[networkName].IPAddress)) {
-      console.log(`  Found IP in ${networkName}: ${networks[networkName].IPAddress}`);
-      return networks[networkName].IPAddress;
-    }
-
-    // Fallback: get first available network IP
-    for (const [netName, net] of Object.entries(networks) as [string, { IPAddress?: string }][]) {
-      console.log(`  Network ${netName} IP: "${net.IPAddress || "empty"}"`);
-      if (net.IPAddress && isValidIP(net.IPAddress)) {
-        return net.IPAddress;
-      }
-    }
-  } catch (e) {
-    console.log(`  Command failed: ${e}`);
-  }
-  return null;
-}
-
 function getRedroidHost(): string {
-  // With network_mode: host, we need to find the container's IP via Docker/Podman
+  // With network_mode: host, we need to find the container's IP via Docker
   const podName = process.env.POD_NAME;
-  console.log(`POD_NAME: "${podName}"`);
-
-  if (!podName) {
-    console.error("POD_NAME environment variable not set, cannot resolve redroid container IP");
-    process.exit(1);
-  }
-
-  // Try different container naming conventions (docker-compose uses dash, podman-compose may use underscore)
-  const containerNames = [`${podName}-redroid-1`, `${podName}_redroid_1`];
-  const networkName = `${podName}_internal`;
-  const commands = ["podman", "docker"]; // Try podman first on Fedora
-
-  console.log(`Looking for containers: ${containerNames.join(", ")}`);
-  console.log(`Expected network: ${networkName}`);
-
-  // Retry with backoff - redroid might not have its IP yet
-  const maxRetries = 10;
-  const retryDelayMs = 2000;
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    console.log(`\nAttempt ${attempt}/${maxRetries}...`);
-
-    for (const cmd of commands) {
-      for (const containerName of containerNames) {
-        const ip = tryGetContainerIP(cmd, containerName, networkName);
-        if (ip) {
-          console.log(`Resolved redroid container IP: ${ip} (via ${cmd})`);
-          return ip;
-        }
+  if (podName) {
+    try {
+      const containerName = `${podName}-redroid-1`;
+      const ip = execSync(
+        `docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${containerName}`,
+        { encoding: "utf-8" }
+      ).trim();
+      if (ip) {
+        console.log(`Resolved redroid container IP: ${ip}`);
+        return ip;
       }
-    }
-
-    if (attempt < maxRetries) {
-      console.log(`No valid IP found, waiting ${retryDelayMs / 1000}s before retry...`);
-      sleep(retryDelayMs);
+    } catch (e) {
+      console.warn(
+        "Failed to get redroid container IP, falling back to localhost"
+      );
     }
   }
 
-  console.error(`Failed to resolve redroid container IP after ${maxRetries} attempts.`);
-  console.error(`Tried containers: ${containerNames.join(", ")} with podman and docker.`);
-  console.error(`This setup requires rootful Docker/Podman (run with sudo). Rootless containers don't have routable IPs.`);
-  process.exit(1);
+  return "localhost";
 }
 
 export const redroid_config = {
