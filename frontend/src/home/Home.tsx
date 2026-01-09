@@ -1,6 +1,6 @@
 import { useNavigate, Link } from "react-router-dom";
-import { isLoggedIn } from "../utils/supabase";
-import { useAuth } from "../context/AuthContext";
+import { useAuthModal } from "../context/AuthModalContext";
+import { useUser } from "../context/UserContext";
 import GameCard from "./GameCard";
 import "./Home.css";
 import { GAMES_LIST } from "../../../shared/const";
@@ -124,12 +124,19 @@ const FeatureIcon = ({ type }: { type: string }) => {
 
 export default function Home() {
   const navigate = useNavigate();
-  const { startLogin } = useAuth();
+  const { startLogin } = useAuthModal();
+  const { user, accessType } = useUser();
 
-  const handlePlay = async (appId: string) => {
-    const loggedIn = await isLoggedIn();
-    if (!loggedIn) {
+  const handlePlay = (appId: string) => {
+    if (!user) {
       startLogin();
+      return;
+    }
+    if (accessType === null) {
+      alert(
+        "Your account doesn't have access. Please join the waitlist or purchase the paid version!"
+      );
+      navigate("/pricing");
       return;
     }
     navigate(`/queue/${encodeURIComponent(appId)}`);

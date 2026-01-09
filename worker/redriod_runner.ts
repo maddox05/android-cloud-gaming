@@ -1,6 +1,8 @@
 import { spawn, exec, execSync } from "child_process";
 import { redroid_config, scrcpy_config } from "./config.js";
 import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/const.js";
+import { error } from "console";
+import { errorMonitor } from "events";
 
 const POD_NAME = process.env.POD_NAME;
 if (!POD_NAME) {
@@ -13,6 +15,7 @@ class RedroidRunner {
   private running = false;
   private scrcpyProc: ReturnType<typeof spawn> | null = null;
   private adbTarget: string;
+  private maxVideoSize: number | null;
   private videoSizeInterval: ReturnType<typeof setInterval> | null = null;
 
   public videoWidth: number = 0;
@@ -69,12 +72,13 @@ class RedroidRunner {
    * Start the redroid runner with a specific game package.
    * Sets up kiosk mode - hides navigation, launches game, and locks user in.
    */
-  async start(packageName: string): Promise<void> {
+  async start(packageName: string, maxSize: number): Promise<void> {
     if (this.running) {
       console.log("RedroidRunner already running");
       return;
     }
 
+    this.maxVideoSize = maxSize;
     const s = REDROID_SCRCPY_SERVER_SETTINGS;
 
     // Connect adb (retry a few times in case redroid isn't ready yet)
@@ -163,7 +167,7 @@ class RedroidRunner {
       `control=${s.control}`,
       `cleanup=${s.cleanup}`,
       `raw_stream=${s.rawStream}`, //todo switch from raw_stream to non
-      `max_size=${s.maxSize}`,
+      `max_size=${this.maxVideoSize}`,
       `max_fps=${s.maxFps}`,
       `video_bit_rate=${s.videoBitRate}`,
       `video_codec_options=${videoCodecOpts}`,
@@ -273,6 +277,9 @@ class RedroidRunner {
    * Queries the device display size, checks rotation, and applies max_size scaling to match scrcpy's output size.
    */
   async getVideoSize(): Promise<{ width: number; height: number } | null> {
+    if (!this.maxVideoSize) {
+      throw new Error("maxVideoSize not set");
+    }
     try {
       const result = await this.execAsync(
         `adb -s ${this.adbTarget} shell wm size`
@@ -295,7 +302,7 @@ class RedroidRunner {
         }
 
         // Apply max_size scaling (scrcpy scales the larger dimension)
-        const maxSize = REDROID_SCRCPY_SERVER_SETTINGS.maxSize;
+        const maxSize = this.maxVideoSize;
         const maxDim = Math.max(width, height);
         if (maxDim > maxSize) {
           const scale = maxSize / maxDim;

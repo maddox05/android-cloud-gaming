@@ -3,23 +3,20 @@
  * Verifies Supabase JWT tokens and checks Stripe subscriptions via Supabase tables
  */
 
-// TODO CHECK IF TS EVEN WORKS! I HAVENT CHECK HOW IT RLLY WORKS YET.
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getSupabase } from "./supabase.js";
+import type { AccessType } from "../types.js";
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-
-let supabase: SupabaseClient | null = null;
-
-/**
- * Initialize Supabase client
- */
-function getSupabase(): SupabaseClient | null {
-  if (!supabase && SUPABASE_URL && SUPABASE_SERVICE_KEY) {
-    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+export async function getUserAccessType(userId: string): Promise<AccessType> {
+  const hasSubscription = await checkSubscription(userId);
+  if (hasSubscription === true) {
+    return "paid";
+  } else if (false) {
+    // TODO for FREE USER CHANGES, check if user has code, if so return free
+    return "free";
+  } else {
+    return null; // todo set null
   }
-  return supabase;
 }
 
 /**
@@ -191,10 +188,7 @@ async function checkSubscriptionByEmail(
  * 1. First check by checkout session (client_reference_id)
  * 2. If not found, fallback to check by email
  */
-export async function checkSubscription(
-  userId: string,
-  email?: string
-): Promise<boolean> {
+export async function checkSubscription(userId: string): Promise<boolean> {
   const client = getSupabase();
 
   if (!client) {
@@ -212,11 +206,16 @@ export async function checkSubscription(
       return true;
     }
 
-    // Second: fallback to check by email
-    if (email) {
+    // Second: fallback to check by email (fetch from Supabase)
+    const { data: userData, error: userError } =
+      await client.auth.admin.getUserById(userId);
+
+    if (userError) {
+      console.error("Failed to fetch user email:", userError.message);
+    } else if (userData?.user?.email) {
       const foundByEmail = await checkSubscriptionByEmail(
         client,
-        email,
+        userData.user.email,
         userId
       );
       if (foundByEmail) {
@@ -244,7 +243,7 @@ export async function authenticateUser(
     return null;
   }
 
-  const hasSubscription = await checkSubscription(user.id, user.email);
+  const hasSubscription = await checkSubscription(user.id);
 
   if (!hasSubscription) {
     console.log(

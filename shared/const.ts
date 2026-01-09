@@ -5,10 +5,10 @@ export const STUN_SERVERS = [
 ];
 
 export const MAX_SESSION_TIME_MS = 60 * 60 * 1000; // 1 hour todo for laer use this in client & signal server
+export const FREE_USER_MAX_TIME_MS = 10 * 60 * 1000; // 10 minutes for free users
 
 export const REDROID_SCRCPY_SERVER_SETTINGS = {
   // Video settings
-  maxSize: 640, // max_size - scales video to fit this dimension
   maxFps: 20, // max_fps
   videoBitRate: 100000, // video_bit_rate
 

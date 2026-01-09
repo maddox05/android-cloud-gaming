@@ -120,7 +120,7 @@ export default function InGame() {
         handleExit();
       }
 
-      const handleDisconnected = () => {
+      const handleDisconnectedFromWebRTC = () => {
         console.log("Disconnected from Worker");
         setStatus(CONNECTION_STATUS.DISCONNECTED);
         setStatusMessage("Connection to worker lost");
@@ -150,7 +150,7 @@ export default function InGame() {
           // Subscribe to callbacks before connecting
           videoInputWebRTC.onVideo(handleVideoData);
           videoInputWebRTC.onError(handleWebRTCError);
-          videoInputWebRTC.onDisconnected(handleDisconnected);
+          videoInputWebRTC.onDisconnected(handleDisconnectedFromWebRTC);
 
           await videoInputWebRTC.connect();
 

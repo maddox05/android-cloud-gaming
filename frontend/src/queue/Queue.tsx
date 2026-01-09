@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { websocketAPI, type QueueInfo } from "../utils/websocket_api";
 import { videoInputWebRTC } from "../utils/video_and_input_webrtc";
 import { getGameName } from "../in_game/helpers";
+import { getMaxVideoSize } from "../utils/videoQuality";
 import {
   ERROR_CODE,
   type ErrorCode,
@@ -17,6 +18,7 @@ export default function Queue() {
   const { appId } = useParams<{ appId: string }>();
 
   const [position, setPosition] = useState<number | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
   const [timeInQueue, setTimeInQueue] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(true);
@@ -48,12 +50,18 @@ export default function Queue() {
           handleExit();
           return;
         }
-        setError(message);
+        setError(`Unknown Error: ${message}`);
       };
 
-      const handleShutdown = () => {
-        console.log("Disconnected from server");
-        setError("Connection lost");
+      const handleShutdown = (reason: string) => {
+        const connection_lost_text = "Connection Lost/Shutdown:";
+        // gets called by ws.onclose and shutdown from server, so they both race and final shutdown wins.
+        setError(
+          (before) =>
+            `Connection Lost/Shutdown: ${reason} ${
+              before?.replaceAll(connection_lost_text, "") || ""
+            }`
+        );
       };
 
       const handleQueueInfo = (info: QueueInfo) => {
@@ -70,6 +78,7 @@ export default function Queue() {
           }, 1000);
         }
         setPosition(info.position);
+        setTotal(info.total);
         setIsConnecting(false);
       };
 
@@ -93,8 +102,14 @@ export default function Queue() {
         try {
           console.log("Connecting to signal server...");
           await websocketAPI.connect();
-          console.log("Connected, sending QUEUE for appId:", appId);
-          websocketAPI.sendQueue(appId);
+          const maxVideoSize = getMaxVideoSize();
+          console.log(
+            "Connected, sending QUEUE for appId:",
+            appId,
+            "maxVideoSize:",
+            maxVideoSize
+          );
+          websocketAPI.sendQueue(appId, maxVideoSize);
         } catch (err) {
           console.error("Failed to connect:", err);
           setError("Failed to connect to server, servers are down.");
@@ -144,7 +159,10 @@ export default function Queue() {
           <div className="queue-info">
             <div className="queue-stat">
               <span className="queue-stat-label">Position</span>
-              <span className="queue-stat-value">{position}</span>
+              <span className="queue-stat-value">
+                {position}
+                {total ? `/${total}` : ""}
+              </span>
             </div>
             <div className="queue-stat">
               <span className="queue-stat-label">Estimated Wait</span>

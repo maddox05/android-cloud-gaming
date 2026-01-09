@@ -6,11 +6,20 @@ import {
   setClientWs,
   removeClientWs,
   generateClientId,
+  amIAlreadyInGame,
 } from "./registry.js";
-import { addToQueue, removeFromQueue, getQueuePosition } from "./queue.js";
+import {
+  addToQueue,
+  removeFromQueue,
+  getQueuePosition,
+  getQueueLength,
+  amIQueued,
+} from "./queue.js";
+import type { AccessType } from "./types.js";
 import {
   ERROR_CODE,
   MSG,
+  FREE_USER_MAX_VIDEO_SIZE,
   type SignalMessage,
   type QueueMessage,
   type ErrorMessage,
@@ -21,8 +30,8 @@ import {
   INPUT_TIMEOUT_THRESHOLD,
   CONNECTING_TIMEOUT_THRESHOLD,
 } from "./consts.js";
-import { MAX_SESSION_TIME_MS } from "../shared/const.js";
-import { assert } from "console";
+import { logSession } from "./db/database.js";
+import { MAX_SESSION_TIME_MS, FREE_USER_MAX_TIME_MS } from "../shared/const.js";
 
 export type ClientConnectionState =
   | "waiting"
@@ -35,6 +44,7 @@ export default class Client {
   readonly id: string;
   readonly userId: string;
   readonly ws: WebSocket;
+  readonly accessType: AccessType; //user free or paid
 
   // Pairing - direct reference
   worker: Worker | null = null;
@@ -43,6 +53,7 @@ export default class Client {
   connectionState: ClientConnectionState = "waiting";
   game: string | null = null;
   turnInfo: TurnInfo | null = null;
+  maxVideoSize: number = FREE_USER_MAX_VIDEO_SIZE; // Default ULD
 
   // Timestamps
   lastPing: number;
@@ -50,13 +61,17 @@ export default class Client {
   queuedAt: number | null = null;
   assignedAt: number | null = null;
 
+  // Time tracking for free users (milliseconds)
+  timeUsedTodayMs: number = 0;
+
   // Cleanup flag
   private isDisconnected = false;
 
-  constructor(ws: WebSocket, userId: string) {
+  constructor(ws: WebSocket, userId: string, accessType: AccessType) {
     this.id = generateClientId();
     this.userId = userId;
     this.ws = ws;
+    this.accessType = accessType;
     this.lastPing = Date.now();
     this.lastInput = Date.now();
 
@@ -127,9 +142,9 @@ export default class Client {
         break;
     }
   }
-
+  // checks if the user ia allowed to queue with the given options, and any bad state the user may have had
   private handleQueue(msg: QueueMessage): void {
-    const { appId } = msg;
+    const { appId, maxVideoSize } = msg;
 
     if (!appId) {
       this.sendError(
@@ -156,13 +171,40 @@ export default class Client {
 
     // Set state and add to queue
     this.game = appId;
+
+    // Free users can only use ULD quality
+    // if free user somehow changed thier maxvideo size to smth else, chaneg it it to what they are allowed
+    if (this.accessType === "free") {
+      this.maxVideoSize = FREE_USER_MAX_VIDEO_SIZE;
+    } else {
+      this.maxVideoSize = maxVideoSize ?? FREE_USER_MAX_VIDEO_SIZE;
+    }
+
     this.connectionState = "queued";
     this.queuedAt = Date.now();
 
-    addToQueue(this.id);
+    // check if userId is already in queue or in game, then user cannot queue again.
+    // user always has to queue before being in game, so i dont need to do these checks anywhere else
+    if (amIQueued(this)) {
+      this.sendError(
+        ERROR_CODE.ALREADY_IN_QUEUE,
+        "You are already in the queue"
+      );
+      return;
+    }
+
+    if (amIAlreadyInGame(this)) {
+      this.sendError(ERROR_CODE.ALREADY_IN_GAME, "You are already in a game");
+      return;
+    }
+
+    addToQueue(this);
+
     this.sendQueueInfo();
 
-    console.log(`Client ${this.id} queued for game: ${appId}`);
+    console.log(
+      `Client ${this.id} queued for game: ${appId} (maxVideoSize: ${this.maxVideoSize})`
+    );
   }
 
   private handleClientStarted(): void {
@@ -195,7 +237,7 @@ export default class Client {
     // Mark as connected and tell worker to start with game info
     // (worker already has turnInfo from queue assignment)
     this.connectionState = "connected";
-    this.worker.sendWorkerStart(this.game);
+    this.worker.sendWorkerStart(this.game, this.maxVideoSize);
 
     console.log(
       `Client ${this.id} started connection with worker ${this.worker.id}`
@@ -248,10 +290,11 @@ export default class Client {
   }
 
   sendQueueInfo(): void {
-    const position = getQueuePosition(this.id);
-    this.send({ type: MSG.QUEUE_INFO, position });
+    const position = getQueuePosition(this);
+    const total = getQueueLength();
+    this.send({ type: MSG.QUEUE_INFO, position, total });
     console.log(
-      `Sending QUEUE_INFO to client ${this.id}: position ${position}`
+      `Sending QUEUE_INFO to client ${this.id}: position ${position}/${total}`
     );
   }
 
@@ -307,6 +350,18 @@ export default class Client {
     //    3:30 - 3:00 = 0:30 > 1hr? no (all in ms tho)
   }
 
+  // Check if free user has exceeded daily time limit
+  checkIfTimeUsed(now: number): boolean {
+    // Paid users have no daily limit
+    if (this.accessType === "paid") return false;
+
+    // Only check when connected with an active session
+    if (this.connectionState !== "connected" || !this.assignedAt) return false;
+
+    const currentSessionTime = now - this.assignedAt;
+    return this.timeUsedTodayMs + currentSessionTime >= FREE_USER_MAX_TIME_MS;
+  }
+
   // ============================================
   // Disconnect
   // ============================================
@@ -318,9 +373,27 @@ export default class Client {
 
     console.log(`Client ${this.id} disconnecting: ${reason}`);
 
+    // Log session if client was actually in a game
+    if (
+      this.connectionState === "connected" &&
+      this.game !== null &&
+      this.assignedAt !== null
+    ) {
+      logSession({
+        user_id: this.userId,
+        package_name: this.game,
+        max_video_size: this.maxVideoSize,
+        started_at: this.assignedAt,
+        ended_at: Date.now(),
+        ended_reason: reason,
+      }).catch((err) => {
+        console.error(`Failed to log session for client ${this.id}:`, err);
+      });
+    }
+
     // Remove from queue if queued
     if (this.connectionState === "queued") {
-      removeFromQueue(this.id);
+      removeFromQueue(this);
     }
 
     // Notify and disconnect paired worker (without it calling back to us)

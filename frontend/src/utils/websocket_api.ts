@@ -14,6 +14,7 @@ import {
 
 export interface QueueInfo {
   position: number;
+  total: number;
 }
 
 type Unsubscribe = () => void;
@@ -50,7 +51,7 @@ class WebSocketAPI {
         throw new Error("Not authenticated");
       }
 
-      const url = `${config.SIGNAL_URL}?role=client&token=${encodeURIComponent(
+      const url = `${config.SIGNAL_WS_URL}?role=client&token=${encodeURIComponent(
         token
       )}`;
       console.log("Connecting to signal server");
@@ -145,6 +146,7 @@ class WebSocketAPI {
         const queueMsg = msg as QueueInfoMessage;
         const info: QueueInfo = {
           position: queueMsg.position,
+          total: queueMsg.total,
         };
         console.log(
           "Calling",
@@ -157,7 +159,10 @@ class WebSocketAPI {
 
       case MSG.QUEUE_READY: {
         const queueReadyMsg = msg as QueueReadyMessage;
-        console.log("Queue ready - worker assigned", queueReadyMsg.turnInfo ? "(with TURN)" : "(no TURN)");
+        console.log(
+          "Queue ready - worker assigned",
+          queueReadyMsg.turnInfo ? "(with TURN)" : "(no TURN)"
+        );
         this.onQueueReadyCallbacks.forEach((cb) => cb(queueReadyMsg.turnInfo));
         break;
       }
@@ -241,8 +246,8 @@ class WebSocketAPI {
   }
 
   // Public API: Send messages
-  sendQueue(appId: string): void {
-    this.send({ type: MSG.QUEUE, appId });
+  sendQueue(appId: string, maxVideoSize: number): void {
+    this.send({ type: MSG.QUEUE, appId, maxVideoSize });
   }
 
   sendClientStarted(): void {

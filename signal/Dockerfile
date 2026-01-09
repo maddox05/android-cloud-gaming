@@ -6,6 +6,7 @@ COPY signal/package*.json ./
 RUN npm ci
 
 COPY signal/*.ts ./
+COPY signal/db/ ./db/
 COPY signal/tsconfig.json ./
 COPY shared /shared
 

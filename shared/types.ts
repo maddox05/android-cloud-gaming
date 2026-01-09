@@ -2,6 +2,35 @@
 // Used by: signal server, pod server, frontend
 
 // ============================================
+// User Access Types
+// ============================================
+
+export type AccessType = "free" | "paid" | null;
+
+// ============================================
+// Video Quality Types
+// ============================================
+
+export type VideoQuality = "HD" | "LD" | "ULD";
+
+export const MAX_VIDEO_SIZE_MAP: Record<VideoQuality, number> = {
+  HD: 1920,
+  LD: 1280,
+  ULD: 640,
+} as const;
+
+/** Get VideoQuality from a maxVideoSize number */
+export function getVideoQualityFromSize(size: number): VideoQuality | null {
+  for (const [quality, value] of Object.entries(MAX_VIDEO_SIZE_MAP)) {
+    if (value === size) return quality as VideoQuality;
+  }
+  return null;
+}
+
+/** Free users can only use ULD quality */
+export const FREE_USER_MAX_VIDEO_SIZE = MAX_VIDEO_SIZE_MAP.ULD;
+
+// ============================================
 // Message Type Constants
 // ============================================
 export interface Game {
@@ -51,6 +80,7 @@ export interface WorkerStartMessage {
   type: typeof MSG.WORKER_START;
   gameId: string;
   turnInfo?: TurnInfo;
+  maxVideoSize?: number;
 }
 
 /** Pod sends SDP offer to client */
@@ -82,6 +112,9 @@ export const ERROR_CODE = {
   QUEUE_TIMEOUT: "QUEUE_TIMEOUT",
   SESSION_TIMEOUT: "SESSION_TIMEOUT",
   WORKER_CRASHED: "WORKER_CRASHED",
+  DAILY_TIME_EXCEEDED: "DAILY_TIME_EXCEEDED",
+  ALREADY_IN_QUEUE: "ALREADY_IN_QUEUE",
+  ALREADY_IN_GAME: "ALREADY_IN_GAME",
 } as const;
 
 /** Error codes for error messages */
@@ -125,12 +158,14 @@ export interface AuthenticatedMessage {
 export interface QueueMessage {
   type: typeof MSG.QUEUE;
   appId: string;
+  maxVideoSize?: number;
 }
 
 /** Server sends queue position updates to client */
 export interface QueueInfoMessage {
   type: typeof MSG.QUEUE_INFO;
   position: number;
+  total: number;
 }
 
 /** Server notifies client that worker is assigned and ready */

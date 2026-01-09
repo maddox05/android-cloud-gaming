@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, type ReactNode } from
 
 type AuthMode = "login" | "signup";
 
-interface AuthContextValue {
+interface AuthModalContextValue {
   isAuthModalOpen: boolean;
   authMode: AuthMode;
   startLogin: () => void;
@@ -11,9 +11,9 @@ interface AuthContextValue {
   setAuthMode: (mode: AuthMode) => void;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+const AuthModalContext = createContext<AuthModalContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthModalProvider({ children }: { children: ReactNode }) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("login");
 
@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider
+    <AuthModalContext.Provider
       value={{
         isAuthModalOpen,
         authMode,
@@ -43,14 +43,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-    </AuthContext.Provider>
+    </AuthModalContext.Provider>
   );
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
+export function useAuthModal() {
+  const context = useContext(AuthModalContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error("useAuthModal must be used within an AuthModalProvider");
   }
   return context;
 }

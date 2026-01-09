@@ -125,7 +125,7 @@ class InputHandler {
     let xPercent: number;
     let yPercent: number;
 
-    if (msg.type === "drag") {
+    if (msg.type === MSG.DRAG) {
       xPercent = msg.xPercent;
       yPercent = msg.yPercent;
 
@@ -143,7 +143,7 @@ class InputHandler {
         default:
           return;
       }
-    } else if (msg.type === "click") {
+    } else if (msg.type === MSG.CLICK) {
       xPercent = msg.xPercent;
       yPercent = msg.yPercent;
       action = msg.action === "down" ? ACTION_DOWN : ACTION_UP;
