@@ -74,9 +74,12 @@ if ! command -v docker &> /dev/null; then
     fi
     sudo usermod -aG docker $USER
     echo "Docker installed. You may need to log out and back in for group changes."
-else
-    echo "Docker is already installed."
 fi
+
+# Start Docker service
+echo "Starting Docker service..."
+sudo systemctl enable docker
+sudo systemctl start docker
 
 # Install ADB
 echo "Installing ADB..."
@@ -164,11 +167,6 @@ else
     echo "⚠ Golden image not found at $GOLDEN_IMAGE"
     echo "  Set GOLDEN_IMAGE_URL in .env or provide the file manually."
 fi
-
-# Enable and start Docker service
-echo "Enabling Docker service..."
-sudo systemctl enable docker
-sudo systemctl start docker
 
 echo ""
 echo "============================================"
