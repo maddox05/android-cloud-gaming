@@ -17,188 +17,70 @@ fi
 REDROID_IMAGE="${REDROID_IMAGE:-redroid/redroid}"
 REDROID_TAG="${REDROID_TAG:-12.0.0_64only-latest}"
 
-# Detect distribution and package manager
-detect_distro() {
-    if [ -f /etc/os-release ]; then
-        . /etc/os-release
-        DISTRO=$ID
-        DISTRO_LIKE=$ID_LIKE
-    elif [ -f /etc/debian_version ]; then
-        DISTRO="debian"
-    elif [ -f /etc/redhat-release ]; then
-        DISTRO="rhel"
-    elif [ -f /etc/arch-release ]; then
-        DISTRO="arch"
-    else
-        DISTRO="unknown"
-    fi
+# Detect package manager
+if command -v apt-get &> /dev/null; then
+    PKG_MANAGER="apt"
+elif command -v dnf &> /dev/null; then
+    PKG_MANAGER="dnf"
+elif command -v yum &> /dev/null; then
+    PKG_MANAGER="yum"
+elif command -v pacman &> /dev/null; then
+    PKG_MANAGER="pacman"
+else
+    echo "ERROR: No supported package manager found (apt, dnf, yum, pacman)"
+    exit 1
+fi
+echo "Detected package manager: $PKG_MANAGER"
 
-    # Determine package manager
-    if command -v apt-get &> /dev/null; then
-        PKG_MANAGER="apt"
-    elif command -v dnf &> /dev/null; then
-        PKG_MANAGER="dnf"
-    elif command -v yum &> /dev/null; then
-        PKG_MANAGER="yum"
-    elif command -v pacman &> /dev/null; then
-        PKG_MANAGER="pacman"
-    else
-        echo "ERROR: No supported package manager found (apt, dnf, yum, pacman)"
-        exit 1
-    fi
-
-    echo "Detected distribution: $DISTRO (package manager: $PKG_MANAGER)"
-}
-
-# Update system packages
-update_system() {
-    echo "Updating system packages..."
+# Universal package install helper
+pkg_install() {
     case $PKG_MANAGER in
-        apt)
-            sudo apt-get update
-            sudo apt-get upgrade -y
-            ;;
-        dnf)
-            sudo dnf upgrade -y --refresh
-            ;;
-        yum)
-            sudo yum update -y
-            ;;
-        pacman)
-            sudo pacman -Syu --noconfirm
-            ;;
-    esac
-}
-
-# Install packages (handles different package names per distro)
-install_packages() {
-    echo "Installing packages: $@"
-    case $PKG_MANAGER in
-        apt)
-            sudo apt-get install -y "$@"
-            ;;
-        dnf)
-            sudo dnf install -y "$@"
-            ;;
-        yum)
-            sudo yum install -y "$@"
-            ;;
-        pacman)
-            sudo pacman -S --noconfirm --needed "$@"
-            ;;
-    esac
-}
-
-# Install prerequisites based on distro
-install_prerequisites() {
-    echo "Installing prerequisites..."
-    case $PKG_MANAGER in
-        apt)
-            install_packages ca-certificates curl gnupg lsb-release wget git unzip
-            ;;
-        dnf|yum)
-            install_packages ca-certificates curl gnupg2 wget git unzip
-            ;;
-        pacman)
-            install_packages ca-certificates curl gnupg wget git unzip
-            ;;
-    esac
-}
-
-# Install Docker based on distro
-install_docker() {
-    echo "Installing Docker..."
-    if command -v docker &> /dev/null; then
-        echo "Docker is already installed."
-        return
-    fi
-
-    case $PKG_MANAGER in
-        apt)
-            # Add Docker's official GPG key
-            sudo install -m 0755 -d /etc/apt/keyrings
-            curl -fsSL https://download.docker.com/linux/$DISTRO/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-            sudo chmod a+r /etc/apt/keyrings/docker.gpg
-
-            # Set up the repository
-            echo \
-              "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$DISTRO \
-              $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-            # Install Docker Engine
-            sudo apt-get update
-            install_packages docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-            ;;
-        dnf)
-            # Add Docker repo for Fedora/RHEL
-            sudo dnf -y install dnf-plugins-core
-            if [ "$DISTRO" = "fedora" ]; then
-                sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-            else
-                sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
-            fi
-            install_packages docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-            ;;
-        yum)
-            # Add Docker repo for CentOS/older RHEL
-            sudo yum install -y yum-utils
-            sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-            install_packages docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-            ;;
-        pacman)
-            install_packages docker docker-compose
-            ;;
-    esac
-
-    # Add current user to docker group
-    sudo usermod -aG docker $USER
-    echo "Docker installed successfully. You may need to log out and back in for group changes to take effect."
-}
-
-# Install ADB based on distro
-install_adb() {
-    echo "Installing ADB..."
-    case $PKG_MANAGER in
-        apt)
-            install_packages android-tools-adb android-tools-fastboot
-            ;;
-        dnf|yum)
-            install_packages android-tools
-            ;;
-        pacman)
-            install_packages android-tools
-            ;;
-    esac
-}
-
-# Install kernel modules based on distro
-install_kernel_modules() {
-    echo "Installing kernel extra modules..."
-    KERNEL_VERSION=$(uname -r)
-    case $PKG_MANAGER in
-        apt)
-            install_packages linux-modules-extra-${KERNEL_VERSION} || echo "Extra modules package not available for this kernel"
-            ;;
-        dnf|yum)
-            install_packages kernel-modules-extra || echo "Extra modules package not available for this kernel"
-            ;;
-        pacman)
-            echo "Arch typically includes all kernel modules by default"
-            ;;
+        apt)     sudo apt-get install -y "$@" ;;
+        dnf)     sudo dnf install -y "$@" ;;
+        yum)     sudo yum install -y "$@" ;;
+        pacman)  sudo pacman -S --noconfirm --needed "$@" ;;
     esac
 }
 
 echo "Starting Android Cloud Gaming Server Setup..."
 
-# Detect distro and package manager
-detect_distro
+# Update system
+echo "Updating system packages..."
+case $PKG_MANAGER in
+    apt)     sudo apt-get update && sudo apt-get upgrade -y ;;
+    dnf)     sudo dnf upgrade -y --refresh ;;
+    yum)     sudo yum update -y ;;
+    pacman)  sudo pacman -Syu --noconfirm ;;
+esac
 
-# Run installation steps
-update_system
-install_prerequisites
-install_docker
-install_adb
-install_kernel_modules
+# Install prerequisites
+echo "Installing prerequisites..."
+pkg_install curl wget git unzip
+
+# Install Docker using official convenience script (works on all distros)
+echo "Installing Docker..."
+if ! command -v docker &> /dev/null; then
+    curl -fsSL https://get.docker.com | sudo sh
+    sudo usermod -aG docker $USER
+    echo "Docker installed. You may need to log out and back in for group changes."
+else
+    echo "Docker is already installed."
+fi
+
+# Install ADB
+echo "Installing ADB..."
+case $PKG_MANAGER in
+    apt)     pkg_install android-tools-adb ;;
+    *)       pkg_install android-tools ;;
+esac
+
+# Install kernel extra modules (optional, may not exist)
+echo "Installing kernel extra modules..."
+case $PKG_MANAGER in
+    apt)     pkg_install linux-modules-extra-$(uname -r) 2>/dev/null || true ;;
+    dnf|yum) pkg_install kernel-modules-extra 2>/dev/null || true ;;
+    pacman)  echo "Arch includes all kernel modules by default" ;;
+esac
 
 # Set up Redroid (Android in Docker)
 echo "Setting up Redroid..."
@@ -207,25 +89,25 @@ echo "Setting up Redroid..."
 echo "Attempting to load Android kernel modules..."
 MODULES_LOADED=true
 
+# Persist modules - /etc/modules-load.d/ works on all modern systemd distros
+persist_module() {
+    sudo mkdir -p /etc/modules-load.d
+    echo "$1" | sudo tee -a /etc/modules-load.d/redroid.conf > /dev/null
+}
+
 if sudo modprobe binder_linux devices="binder,hwbinder,vndbinder" 2>/dev/null; then
     echo "✓ binder_linux module loaded"
-    # Make it load on boot
-    if ! grep -q "binder_linux" /etc/modules; then
-        echo "binder_linux" | sudo tee -a /etc/modules
-    fi
+    grep -q "binder_linux" /etc/modules-load.d/redroid.conf 2>/dev/null || persist_module "binder_linux"
 else
-    echo "⚠ binder_linux module not available (this is common on AWS/cloud kernels)"
+    echo "⚠ binder_linux module not available (common on cloud kernels)"
     MODULES_LOADED=false
 fi
 
 if sudo modprobe ashmem_linux 2>/dev/null; then
     echo "✓ ashmem_linux module loaded"
-    # Make it load on boot
-    if ! grep -q "ashmem_linux" /etc/modules; then
-        echo "ashmem_linux" | sudo tee -a /etc/modules
-    fi
+    grep -q "ashmem_linux" /etc/modules-load.d/redroid.conf 2>/dev/null || persist_module "ashmem_linux"
 else
-    echo "⚠ ashmem_linux module not available (this is common on AWS/cloud kernels)"
+    echo "⚠ ashmem_linux module not available (common on cloud kernels)"
     MODULES_LOADED=false
 fi
 
