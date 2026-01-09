@@ -13,8 +13,9 @@ function getRedroidHost(): string {
   if (podName) {
     try {
       const containerName = `${podName}-redroid-1`;
+      const networkName = `${podName}_internal`;
       const ip = execSync(
-        `docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${containerName}`,
+        `docker inspect -f '{{(index .NetworkSettings.Networks "${networkName}").IPAddress}}' ${containerName}`,
         { encoding: "utf-8" }
       ).trim();
       if (ip && isValidIP(ip)) {
