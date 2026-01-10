@@ -13,7 +13,7 @@ import { config } from "../config";
 
 interface UserContextValue {
   user: User | null;
-  accessType: AccessType;
+  accessType: AccessType | undefined; // access type is undefined on default and null if the user doesnt have access
   isLoading: boolean;
   isPaid: boolean;
   isFree: boolean;
@@ -26,7 +26,7 @@ const { SIGNAL_HTTP_URL } = config;
 
 // Module-level cache to prevent duplicate fetches (survives hot reload)
 let cachedUserId: string | null = null;
-let cachedAccessType: AccessType = null;
+let cachedAccessType: AccessType | undefined = undefined;
 
 async function fetchAccessType(token: string): Promise<AccessType> {
   try {
@@ -48,7 +48,9 @@ async function fetchAccessType(token: string): Promise<AccessType> {
 export function UserProvider({ children }: { children: ReactNode }) {
   // Initialize from cache if available (survives hot reload)
   const [user, setUser] = useState<User | null>(null);
-  const [accessType, setAccessType] = useState<AccessType>(cachedAccessType);
+  const [accessType, setAccessType] = useState<AccessType | undefined>(
+    cachedAccessType
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   const refetchAccessType = async () => {
@@ -69,7 +71,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       // If user signed out, clear everything
       if (!newUser) {
-        setAccessType(null);
+        setAccessType(undefined);
         cachedUserId = null;
         cachedAccessType = null;
         setIsLoading(false);
@@ -77,7 +79,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
 
       // Skip if we've already fetched for this exact user (module-level cache)
-      if (cachedUserId === newUser.id && cachedAccessType !== null) {
+      if (cachedUserId === newUser.id && cachedAccessType !== undefined) {
         console.log(
           "[UserContext] Using cached access type for user:",
           newUser.id

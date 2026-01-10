@@ -133,6 +133,7 @@ export default function Home() {
       return;
     }
     if (accessType === null) {
+      // access type is undefined on default and null if the user doesnt have access
       alert(
         "Your account doesn't have access. Please join the waitlist or purchase the paid version!"
       );
