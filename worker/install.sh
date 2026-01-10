@@ -17,84 +17,58 @@ fi
 REDROID_IMAGE="${REDROID_IMAGE:-redroid/redroid}"
 REDROID_TAG="${REDROID_TAG:-12.0.0_64only-latest}"
 
-# Detect package manager
-if command -v apt-get &> /dev/null; then
-    PKG_MANAGER="apt"
-elif command -v dnf &> /dev/null; then
-    PKG_MANAGER="dnf"
-elif command -v yum &> /dev/null; then
-    PKG_MANAGER="yum"
-elif command -v pacman &> /dev/null; then
-    PKG_MANAGER="pacman"
-else
-    echo "ERROR: No supported package manager found (apt, dnf, yum, pacman)"
-    exit 1
-fi
-echo "Detected package manager: $PKG_MANAGER"
-
-# Universal package install helper
-pkg_install() {
-    case $PKG_MANAGER in
-        apt)     sudo apt-get install -y "$@" ;;
-        dnf)     sudo dnf install -y "$@" ;;
-        yum)     sudo yum install -y "$@" ;;
-        pacman)  sudo pacman -S --noconfirm --needed "$@" ;;
-    esac
-}
-
 echo "Starting Android Cloud Gaming Server Setup..."
 
-# Update system
+# Update system packages
 echo "Updating system packages..."
-case $PKG_MANAGER in
-    apt)     sudo apt-get update && sudo apt-get upgrade -y ;;
-    dnf)     sudo dnf upgrade -y --refresh ;;
-    yum)     sudo yum update -y ;;
-    pacman)  sudo pacman -Syu --noconfirm ;;
-esac
+sudo apt-get update
+sudo apt-get upgrade -y
 
 # Install prerequisites
 echo "Installing prerequisites..."
-pkg_install curl wget git unzip
+sudo apt-get install -y \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release \
+    wget \
+    git \
+    unzip
 
 # Install Docker
 echo "Installing Docker..."
 if ! command -v docker &> /dev/null; then
-    # Try official script first, fall back to package manager
-    if curl -fsSL https://get.docker.com | sudo sh 2>/dev/null; then
-        echo "Docker installed via official script."
-    else
-        echo "Official script failed, installing from package manager..."
-        case $PKG_MANAGER in
-            apt)     pkg_install docker.io docker-compose ;;
-            dnf)     pkg_install docker docker-compose ;;
-            yum)     pkg_install docker docker-compose ;;
-            pacman)  pkg_install docker docker-compose ;;
-        esac
-    fi
+    # Add Docker's official GPG key
+    sudo install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+    # Set up the repository
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+      $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    # Install Docker Engine
+    sudo apt-get update
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # Add current user to docker group
     sudo usermod -aG docker $USER
-    echo "Docker installed. You may need to log out and back in for group changes."
+    echo "Docker installed successfully. You may need to log out and back in for group changes to take effect."
+else
+    echo "Docker is already installed."
 fi
 
-# Start Docker service
-echo "Starting Docker service..."
-sudo systemctl enable docker
-sudo systemctl start docker
-
-# Install ADB
+# Install ADB (Android Debug Bridge)
 echo "Installing ADB..."
-case $PKG_MANAGER in
-    apt)     pkg_install android-tools-adb ;;
-    *)       pkg_install android-tools ;;
-esac
+sudo apt-get install -y android-tools-adb android-tools-fastboot
 
-# Install kernel extra modules (optional, may not exist)
+
+
+# Install kernel modules (needed for Redroid)
 echo "Installing kernel extra modules..."
-case $PKG_MANAGER in
-    apt)     pkg_install linux-modules-extra-$(uname -r) 2>/dev/null || true ;;
-    dnf|yum) pkg_install kernel-modules-extra 2>/dev/null || true ;;
-    pacman)  echo "Arch includes all kernel modules by default" ;;
-esac
+KERNEL_VERSION=$(uname -r)
+sudo apt-get install -y linux-modules-extra-${KERNEL_VERSION} || echo "Extra modules package not available for this kernel"
 
 # Set up Redroid (Android in Docker)
 echo "Setting up Redroid..."
@@ -103,25 +77,25 @@ echo "Setting up Redroid..."
 echo "Attempting to load Android kernel modules..."
 MODULES_LOADED=true
 
-# Persist modules - /etc/modules-load.d/ works on all modern systemd distros
-persist_module() {
-    sudo mkdir -p /etc/modules-load.d
-    echo "$1" | sudo tee -a /etc/modules-load.d/redroid.conf > /dev/null
-}
-
 if sudo modprobe binder_linux devices="binder,hwbinder,vndbinder" 2>/dev/null; then
     echo "✓ binder_linux module loaded"
-    grep -q "binder_linux" /etc/modules-load.d/redroid.conf 2>/dev/null || persist_module "binder_linux"
+    # Make it load on boot
+    if ! grep -q "binder_linux" /etc/modules; then
+        echo "binder_linux" | sudo tee -a /etc/modules
+    fi
 else
-    echo "⚠ binder_linux module not available (common on cloud kernels)"
+    echo "⚠ binder_linux module not available (this is common on AWS/cloud kernels)"
     MODULES_LOADED=false
 fi
 
 if sudo modprobe ashmem_linux 2>/dev/null; then
     echo "✓ ashmem_linux module loaded"
-    grep -q "ashmem_linux" /etc/modules-load.d/redroid.conf 2>/dev/null || persist_module "ashmem_linux"
+    # Make it load on boot
+    if ! grep -q "ashmem_linux" /etc/modules; then
+        echo "ashmem_linux" | sudo tee -a /etc/modules
+    fi
 else
-    echo "⚠ ashmem_linux module not available (common on cloud kernels)"
+    echo "⚠ ashmem_linux module not available (this is common on AWS/cloud kernels)"
     MODULES_LOADED=false
 fi
 
@@ -162,14 +136,18 @@ if [ -f "$GOLDEN_IMAGE" ]; then
     # Import the golden image into the volume
     echo "Importing golden image into redroid-base volume (this may take a while)..."
     sudo docker run --rm -v redroid-base:/data -v "$SCRIPT_DIR":/backup alpine sh -c "cd /data && tar xzf /backup/redroid-base.tar.gz"
-    echo "✓ Golden image imported successfully"
+    echo "✓ Golden image importeßd successfully"
 else
     echo "⚠ Golden image not found at $GOLDEN_IMAGE"
     echo "  Set GOLDEN_IMAGE_URL in .env or provide the file manually."
 fi
 
+# Enable and start Docker service
+echo "Enabling Docker service..."
+sudo systemctl enable docker
+sudo systemctl start docker
+
 echo ""
 echo "============================================"
 echo "Installation completed successfully!"
 echo "============================================"
-
