@@ -22,7 +22,7 @@ export {
   getWaitlistPosition,
   isOnWaitlist,
   getTotalWaitlistCount,
-  getUserInviteCode,
+  getUserReferralCode,
   removeSelfFromWaitlist,
   redeemInviteCode,
 } from "./waitlist_functions";

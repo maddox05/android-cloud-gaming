@@ -31,7 +31,6 @@ export default function Waitlist() {
   const [totalCount, setTotalCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -65,21 +64,10 @@ export default function Waitlist() {
     fetchData();
   }, [userId]);
 
-  const handleCopyLink = async () => {
-    const url = window.location.href;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
-  };
-
   const handleCopyCode = async () => {
-    if (!position?.invite_code) return;
+    if (!position?.referral_code) return;
     try {
-      await navigator.clipboard.writeText(position.invite_code);
+      await navigator.clipboard.writeText(position.referral_code);
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2000);
     } catch (err) {
@@ -88,8 +76,8 @@ export default function Waitlist() {
   };
 
   const handleCopyReferralLink = async () => {
-    if (!position?.invite_code) return;
-    const referralUrl = `${window.location.origin}/waitlist?ref=${position.invite_code}`;
+    if (!position?.referral_code) return;
+    const referralUrl = `${window.location.origin}/waitlist/ref/${position.referral_code}`;
     try {
       await navigator.clipboard.writeText(referralUrl);
       setCopiedCode(true);
@@ -185,20 +173,20 @@ export default function Waitlist() {
           </div>
         </div>
 
-        {/* Invite Code Section - Only show to owner */}
-        {isOwner && position.invite_code && (
-          <div className="invite-code-card">
-            <div className="invite-code-header">
-              <span className="invite-code-icon">🎁</span>
+        {/* Referral Code Section - Only show to owner */}
+        {isOwner && position.referral_code && (
+          <div className="referral-code-card">
+            <div className="referral-code-header">
+              <span className="referral-code-icon">🎁</span>
               <h3>Your Referral Code</h3>
             </div>
-            <p className="invite-code-description">
+            <p className="referral-code-description">
               Share this code with friends! When they join using your code, you'll move up in the queue.
             </p>
-            <div className="invite-code-display">
-              <span className="invite-code-value">{position.invite_code}</span>
+            <div className="referral-code-display">
+              <span className="referral-code-value">{position.referral_code}</span>
               <button 
-                className="invite-code-copy"
+                className="referral-code-copy"
                 onClick={handleCopyCode}
               >
                 {copiedCode ? "Copied!" : "Copy"}
@@ -211,22 +199,6 @@ export default function Waitlist() {
             >
               📋 Copy Referral Link
             </button>
-          </div>
-        )}
-
-        {isOwner && (
-          <div className="waitlist-share">
-            <p className="share-label">Share your waitlist page:</p>
-            <div className="share-url">
-              <input
-                type="text"
-                value={window.location.href}
-                readOnly
-              />
-              <button onClick={handleCopyLink}>
-                {copiedLink ? "Copied!" : "Copy"}
-              </button>
-            </div>
           </div>
         )}
 

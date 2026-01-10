@@ -111,8 +111,11 @@ export async function checkAccess(token: string): Promise<CheckAccessResult> {
  *
  * Validates that:
  * - The invite code exists
- * - The invite code belongs to the authenticated user
- * - The invite code hasn't been redeemed yet
+ * - The invite code hasn't been redeemed yet (user_id is null)
+ *
+ * When redeemed:
+ * - Sets user_id to the authenticated user
+ * - Sets time_redeemed to now
  *
  * @param token - The user's authentication token
  * @param inviteCode - The invite code to redeem
@@ -150,7 +153,7 @@ export async function redeemInvite(
     // Look up the invite code
     const { data: inviteData, error: lookupError } = await supabase
       .from("invite_codes")
-      .select("user_id, time_redeemed, has_access")
+      .select("user_id, time_redeemed")
       .eq("invite_code", inviteCode)
       .single();
 
@@ -164,19 +167,8 @@ export async function redeemInvite(
       };
     }
 
-    // Verify the invite code belongs to this user
-    if (inviteData.user_id !== user.id) {
-      return {
-        status: 403,
-        body: {
-          success: false,
-          error: "This invite code is not for your account",
-        },
-      };
-    }
-
-    // Check if already redeemed
-    if (inviteData.time_redeemed !== null || inviteData.has_access === true) {
+    // Check if already redeemed (user_id is set when redeemed)
+    if (inviteData.user_id !== null) {
       return {
         status: 400,
         body: {
@@ -186,15 +178,15 @@ export async function redeemInvite(
       };
     }
 
-    // Redeem the invite code
+    // Redeem the invite code by setting user_id and time_redeemed
     const { error: updateError } = await supabase
       .from("invite_codes")
       .update({
+        user_id: user.id,
         time_redeemed: new Date().toISOString(),
-        has_access: true,
       })
       .eq("invite_code", inviteCode)
-      .eq("user_id", user.id);
+      .is("user_id", null); // Extra safety: only update if still unclaimed
 
     if (updateError) {
       console.error("Redeem invite error:", updateError);

@@ -17,8 +17,9 @@ export default function RedeemInvite() {
   const [success, setSuccess] = useState(false);
 
   // Redirect users who already have access to home page
+  // accessType is undefined during loading, null if no access, "paid"/"free" if has access
   useEffect(() => {
-    if (user.accessType !== null) {
+    if (user.accessType === "paid" || user.accessType === "free") {
       navigate("/", { replace: true });
     }
   }, [user.accessType, navigate]);
@@ -37,6 +38,8 @@ export default function RedeemInvite() {
 
       if (result.success) {
         setSuccess(true);
+        // Refresh the user's access type so it's available throughout the app
+        await user.refetchAccessType();
       } else {
         setError(result.error || "Failed to redeem invite code");
       }

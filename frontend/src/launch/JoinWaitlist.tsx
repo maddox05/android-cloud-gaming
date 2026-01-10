@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams, Link } from "react-router-dom";
 import { useAuthModal } from "../context/AuthModalContext";
 import {
   joinWaitlist,
@@ -12,6 +12,7 @@ import { useUser } from "../context/UserContext";
 export default function JoinWaitlist() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { referralCode: urlReferralCode } = useParams<{ referralCode: string }>();
   const { startLogin } = useAuthModal();
   const user = useUser();
 
@@ -25,26 +26,25 @@ export default function JoinWaitlist() {
 
   const supabaseUserId = user.user?.id;
 
-  // Referral code - can be pre-filled from URL param (?ref=CODE)
-  const [referralCode, setReferralCode] = useState(
-    searchParams.get("ref") || ""
-  );
-  const [showReferralInput, setShowReferralInput] = useState(
-    !!searchParams.get("ref")
-  );
+  // Referral code - can be pre-filled from URL path (/waitlist/ref/CODE) or query param (?ref=CODE)
+  const initialReferralCode = urlReferralCode || searchParams.get("ref") || "";
+  const [referralCode, setReferralCode] = useState(initialReferralCode);
+  const [showNoReferralConfirm, setShowNoReferralConfirm] = useState(false);
 
   useEffect(() => {
     async function checkUserStatus() {
       setIsLoading(true);
       try {
         if (user && supabaseUserId) {
-          if (user.accessType !== null) {
+          // accessType is undefined during loading, null if no access, "paid"/"free" if has access
+          if (user.accessType === "paid" || user.accessType === "free") {
             setHasSubscription(true);
-          } else {
-            // Only check waitlist status if they don't have access
+          } else if (user.accessType === null) {
+            // Only check waitlist status if they definitively don't have access
             const onWaitlist = await isOnWaitlist(supabaseUserId);
             setAlreadyOnWaitlist(onWaitlist);
           }
+          // If accessType is undefined, we're still loading - don't make decisions yet
         }
         const count = await getTotalWaitlistCount();
         setTotalCount(count);
@@ -56,14 +56,21 @@ export default function JoinWaitlist() {
     }
 
     checkUserStatus();
-  }, [user.accessType]);
+  }, [user.accessType, supabaseUserId]);
 
-  const handleJoinWaitlist = async () => {
+  const handleJoinWaitlist = async (skipReferralCheck = false) => {
     if (!supabaseUserId) {
       startLogin();
       return;
     }
 
+    // If no referral code and we haven't confirmed, show the popup
+    if (!referralCode.trim() && !skipReferralCheck) {
+      setShowNoReferralConfirm(true);
+      return;
+    }
+
+    setShowNoReferralConfirm(false);
     setIsJoining(true);
     setError(null);
 
@@ -130,8 +137,8 @@ export default function JoinWaitlist() {
             <p
               style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}
             >
-              You have an active subscription and can start playing right away.
-              No need to join the waitlist!
+              You already have access and can start playing right away. No need
+              to join the waitlist!
             </p>
             <Link
               to="/"
@@ -186,38 +193,28 @@ export default function JoinWaitlist() {
 
             {/* Referral Code Section */}
             <div className="referral-section">
-              {!showReferralInput ? (
-                <button
-                  type="button"
-                  className="referral-toggle"
-                  onClick={() => setShowReferralInput(true)}
-                >
-                  Have a referral code?
-                </button>
-              ) : (
-                <div className="referral-input-wrapper">
-                  <label htmlFor="referral-code" className="referral-label">
-                    Referral Code (optional)
-                  </label>
-                  <input
-                    id="referral-code"
-                    type="text"
-                    className="referral-input"
-                    placeholder="Enter code (e.g., MX7K2P)"
-                    value={referralCode}
-                    onChange={(e) =>
-                      setReferralCode(e.target.value.toUpperCase())
-                    }
-                    maxLength={10}
-                    disabled={isJoining || success}
-                  />
-                </div>
-              )}
+              <div className="referral-input-wrapper">
+                <label htmlFor="referral-code" className="referral-label">
+                  Referral Code (optional)
+                </label>
+                <input
+                  id="referral-code"
+                  type="text"
+                  className="referral-input"
+                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value)}
+                  disabled={isJoining || success}
+                />
+                <p className="referral-hint">
+                  Have a friend on the waitlist? Enter their referral code to help them move up!
+                </p>
+              </div>
             </div>
 
             <button
               className="waitlist-button waitlist-button-primary"
-              onClick={handleJoinWaitlist}
+              onClick={() => handleJoinWaitlist()}
               disabled={isJoining || success}
             >
               {isJoining ? (
@@ -232,6 +229,33 @@ export default function JoinWaitlist() {
                 "Join Waitlist"
               )}
             </button>
+
+            {/* No Referral Code Confirmation Popup */}
+            {showNoReferralConfirm && (
+              <div className="referral-confirm-overlay">
+                <div className="referral-confirm-modal">
+                  <h3>No Referral Code?</h3>
+                  <p>
+                    Using a referral code helps your friend move up in the queue.
+                    Are you sure you want to continue without one?
+                  </p>
+                  <div className="referral-confirm-buttons">
+                    <button
+                      className="waitlist-button waitlist-button-secondary"
+                      onClick={() => setShowNoReferralConfirm(false)}
+                    >
+                      Add Code
+                    </button>
+                    <button
+                      className="waitlist-button waitlist-button-primary"
+                      onClick={() => handleJoinWaitlist(true)}
+                    >
+                      Continue Without Code
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {totalCount > 0 && (
               <p

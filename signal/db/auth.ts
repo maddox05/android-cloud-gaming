@@ -5,18 +5,28 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase.js";
+import { checkFreeAccess } from "./database.js";
 import type { AccessType } from "../types.js";
 
+/**
+ * Get the user's access type
+ * @returns "paid" if user has active subscription, "free" if user has redeemed invite code, null otherwise
+ */
 export async function getUserAccessType(userId: string): Promise<AccessType> {
+  // Check for paid subscription first
   const hasSubscription = await checkSubscription(userId);
-  if (hasSubscription === true) {
+  if (hasSubscription) {
     return "paid";
-  } else if (false) {
-    // TODO for FREE USER CHANGES, check if user has code, if so return free
-    return "free";
-  } else {
-    return null; // todo set null
   }
+
+  // Check for free access via redeemed invite code
+  const hasFreeAccess = await checkFreeAccess(userId);
+  if (hasFreeAccess) {
+    return "free";
+  }
+
+  // No access
+  return null;
 }
 
 /**

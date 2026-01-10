@@ -78,9 +78,8 @@ export async function getUserTimeSpentToday(userId: string): Promise<number> {
 
 /**
  * Check if user has free access via redeemed invite code
- * Queries the invite_codes table for has_access = true
- * DOES NOT CHECK IF ALREADY HAS CHECK SUBSCRIPTION
- * TODO CHANGE WHEN LAUNCH ENDS
+ * User has access if their user_id exists in the invite_codes table
+ * (user_id is set when they redeem a code)
  */
 export async function checkFreeAccess(userId: string): Promise<boolean> {
   const client = getSupabase();
@@ -93,9 +92,8 @@ export async function checkFreeAccess(userId: string): Promise<boolean> {
   try {
     const { data, error } = await client
       .from("invite_codes")
-      .select("has_access")
+      .select("invite_code")
       .eq("user_id", userId)
-      .eq("has_access", true)
       .limit(1)
       .single();
 

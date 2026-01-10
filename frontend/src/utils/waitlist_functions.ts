@@ -9,13 +9,13 @@ export interface WaitlistPosition {
   user_id: string;
   position: number;
   time_joined: string;
-  invite_code: string | null;
+  referral_code: string | null;
 }
 
 export interface JoinWaitlistResult {
   success: boolean;
   error?: string;
-  invite_code?: string;
+  referral_code?: string;
 }
 
 // ============================================================================
@@ -29,7 +29,7 @@ export interface JoinWaitlistResult {
  * - RLS prevents frontend from validating other users' referral codes
  * - Backend uses service key which bypasses RLS
  *
- * - Generates a unique invite code for the new user
+ * - Generates a unique referral code (UUID) for the new user
  * - If a referral code is provided and valid:
  *   - Rewards the referrer by moving them up in the queue
  *   - Optionally gives the new user a bonus (configurable)
@@ -68,7 +68,7 @@ export async function joinWaitlist(
       return { success: false, error: data.error || "Failed to join waitlist" };
     }
 
-    return { success: true, invite_code: data.invite_code };
+    return { success: true, referral_code: data.referral_code };
   } catch (err) {
     console.error("Join waitlist error:", err);
     return { success: false, error: "Network error - please try again" };
@@ -76,7 +76,7 @@ export async function joinWaitlist(
 }
 
 /*
- * Gets a user's position in the waitlist, including their invite code.
+ * Gets a user's position in the waitlist, including their referral code.
  *
  * Position is calculated dynamically by counting users with earlier time_joined.
  * This means positions automatically update when:
@@ -89,10 +89,10 @@ export async function joinWaitlist(
 export async function getWaitlistPosition(
   userId: string
 ): Promise<WaitlistPosition | null> {
-  // Get the user's entry including their invite code
+  // Get the user's entry including their referral code
   const { data: userEntry, error: userError } = await supabase
     .from("waitlist")
-    .select("user_id, time_joined, invite_code")
+    .select("user_id, time_joined, referral_code")
     .eq("user_id", userId)
     .single();
 
@@ -116,7 +116,7 @@ export async function getWaitlistPosition(
     user_id: userEntry.user_id,
     position: (count ?? 0) + 1,
     time_joined: userEntry.time_joined,
-    invite_code: userEntry.invite_code,
+    referral_code: userEntry.referral_code,
   };
 }
 
@@ -150,15 +150,15 @@ export async function getTotalWaitlistCount(): Promise<number> {
 }
 
 /*
- * Gets a user's invite code without fetching their full position.
+ * Gets a user's referral code without fetching their full position.
  * Useful for displaying the code on the UI.
  */
-export async function getUserInviteCode(
+export async function getUserReferralCode(
   userId: string
 ): Promise<string | null> {
   const { data, error } = await supabase
     .from("waitlist")
-    .select("invite_code")
+    .select("referral_code")
     .eq("user_id", userId)
     .single();
 
@@ -166,7 +166,7 @@ export async function getUserInviteCode(
     return null;
   }
 
-  return data.invite_code;
+  return data.referral_code;
 }
 
 /*
