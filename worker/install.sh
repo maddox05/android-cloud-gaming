@@ -136,7 +136,7 @@ if [ -f "$GOLDEN_IMAGE" ]; then
     # Import the golden image into the volume
     echo "Importing golden image into redroid-base volume (this may take a while)..."
     sudo docker run --rm -v redroid-base:/data -v "$SCRIPT_DIR":/backup alpine sh -c "cd /data && tar xzf /backup/redroid-base.tar.gz"
-    echo "✓ Golden image importeßd successfully"
+    echo "✓ Golden image imported successfully"
 else
     echo "⚠ Golden image not found at $GOLDEN_IMAGE"
     echo "  Set GOLDEN_IMAGE_URL in .env or provide the file manually."
