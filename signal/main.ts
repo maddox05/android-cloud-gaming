@@ -10,6 +10,13 @@ import {
   checkSubscription,
   getUserAccessType,
 } from "./db/auth.js";
+import { checkAccess, redeemInvite } from "./invite_access.js";
+import {
+  joinWaitlist,
+  generateInvites,
+  removeFromWaitlist,
+  adjustWaitlistPosition,
+} from "./waitlist_endpoints.js";
 import { ERROR_CODE, MSG } from "../shared/types.js";
 import {
   SERVER_PORT as PORT,
@@ -42,12 +49,131 @@ if (missingEnvVars.length > 0) {
 
 const { app } = expressWs(express());
 
-// Enable CORS for all origins
 app.use(cors());
 
-// Health check endpoint
-app.get("/health", (_req, res) => {
-  res.send("OK");
+// Middleware
+app.use(express.json());
+
+// Health check
+app.get("/health", (_req, res) => res.send("OK"));
+
+// ============================================
+// API Endpoints
+// ============================================
+
+/*
+ * redeem-invite endpoint:
+ * Redeems an invite code for the authenticated user
+ */
+app.post("/api/redeem-invite", async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    res.status(401).json({
+      success: false,
+      error: "Authorization header required",
+    });
+    return;
+  }
+
+  const { invite_code } = req.body;
+  if (!invite_code) {
+    res.status(400).json({
+      success: false,
+      error: "invite_code is required",
+    });
+    return;
+  }
+
+  const token = authHeader.substring(7);
+  const result = await redeemInvite(token, invite_code);
+  res.status(result.status).json(result.body);
+});
+
+/*
+ * join-waitlist endpoint:
+ * Joins the waitlist with an optional referral code
+ */
+app.post("/api/join-waitlist", async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    res.status(401).json({
+      success: false,
+      error: "Authorization header required",
+    });
+    return;
+  }
+
+  const token = authHeader.substring(7);
+  const { referral_code } = req.body;
+  const result = await joinWaitlist(token, referral_code);
+  res.status(result.status).json(result.body);
+});
+
+/*
+ * admin/generate-invites endpoint:
+ * Takes the first N users off the waitlist and generates invite codes for them
+ */
+app.post("/api/admin/generate-invites", async (req, res) => {
+  const { count } = req.body;
+
+  if (!count || typeof count !== "number" || count < 1) {
+    res.status(400).json({
+      success: false,
+      error: "count must be a positive number",
+    });
+    return;
+  }
+
+  const result = await generateInvites(count);
+  res.status(result.status).json(result.body);
+});
+
+/*
+ * admin/remove-from-waitlist endpoint:
+ * Removes a user from the waitlist
+ */
+app.post("/api/admin/remove-from-waitlist", async (req, res) => {
+  const { user_id } = req.body;
+
+  if (!user_id || typeof user_id !== "string") {
+    res.status(400).json({
+      success: false,
+      error: "user_id is required",
+    });
+    return;
+  }
+
+  const result = await removeFromWaitlist(user_id);
+  res.status(result.status).json(result.body);
+});
+
+/*
+ * admin/adjust-position endpoint:
+ * Adjusts a user's position in the waitlist by modifying their time_joined
+ */
+app.post("/api/admin/adjust-position", async (req, res) => {
+  const { user_id, hours } = req.body;
+
+  if (!user_id || typeof user_id !== "string") {
+    res.status(400).json({
+      success: false,
+      error: "user_id is required",
+    });
+    return;
+  }
+
+  if (typeof hours !== "number") {
+    res.status(400).json({
+      success: false,
+      error: "hours must be a number (positive moves up, negative moves down)",
+    });
+    return;
+  }
+
+  const result = await adjustWaitlistPosition(user_id, hours);
+  res.status(result.status).json(result.body);
 });
 
 app.get("/userAccess", async (req, res) => {

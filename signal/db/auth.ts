@@ -230,27 +230,3 @@ export async function checkSubscription(userId: string): Promise<boolean> {
     return false;
   }
 }
-
-/**
- * Full auth check - verify token and subscription
- */
-export async function authenticateUser(
-  token: string
-): Promise<{ id: string; email?: string } | null> {
-  const user = await verifyToken(token);
-
-  if (!user) {
-    return null;
-  }
-
-  const hasSubscription = await checkSubscription(user.id);
-
-  if (!hasSubscription) {
-    console.log(
-      `User ${user.id} (${user.email}) does not have active subscription - rejecting`
-    );
-    return null;
-  }
-
-  return user;
-}
