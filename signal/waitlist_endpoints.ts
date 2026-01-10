@@ -3,7 +3,8 @@
  * Handles joining the waitlist and generating invite codes for waitlist users
  */
 
-import { verifyToken, getSupabase } from "./auth.js";
+import { verifyToken } from "./db/auth.js";
+import { getSupabase } from "./db/supabase.js";
 
 // ============================================================================
 // Configuration
@@ -71,11 +72,11 @@ function generateInviteCode(): string {
 
 /**
  * Join the waitlist with an optional referral code
- * 
+ *
  * This is done on the backend because:
  * - RLS prevents frontend from validating other users' referral codes
  * - Service key bypasses RLS for these operations
- * 
+ *
  * @param token - The user's authentication token
  * @param referralCode - Optional referral code from another user
  * @returns JoinWaitlistResult with status code and response body
@@ -164,7 +165,8 @@ export async function joinWaitlist(
     let timeJoined = new Date();
     if (referrerId && WAITLIST_CONFIG.NEW_USER_BONUS_HOURS > 0) {
       timeJoined = new Date(
-        timeJoined.getTime() - WAITLIST_CONFIG.NEW_USER_BONUS_HOURS * 60 * 60 * 1000
+        timeJoined.getTime() -
+          WAITLIST_CONFIG.NEW_USER_BONUS_HOURS * 60 * 60 * 1000
       );
     }
 
@@ -208,7 +210,8 @@ export async function joinWaitlist(
       if (!fetchError && referrerEntry) {
         const currentTime = new Date(referrerEntry.time_joined);
         const newTime = new Date(
-          currentTime.getTime() - WAITLIST_CONFIG.REFERRER_REWARD_HOURS * 60 * 60 * 1000
+          currentTime.getTime() -
+            WAITLIST_CONFIG.REFERRER_REWARD_HOURS * 60 * 60 * 1000
         );
 
         const { error: updateError } = await supabase
@@ -227,7 +230,9 @@ export async function joinWaitlist(
       }
     }
 
-    console.log(`User ${user.id} joined waitlist with invite code ${inviteCode}`);
+    console.log(
+      `User ${user.id} joined waitlist with invite code ${inviteCode}`
+    );
     return {
       status: 200,
       body: {
@@ -253,13 +258,15 @@ export async function joinWaitlist(
 
 /**
  * Take the first N users off the waitlist and generate invite codes for them
- * 
+ *
  * TODO: Add admin authentication
- * 
+ *
  * @param count - Number of users to process (capped at 100)
  * @returns GenerateInvitesResult with status code and response body
  */
-export async function generateInvites(count: number): Promise<GenerateInvitesResult> {
+export async function generateInvites(
+  count: number
+): Promise<GenerateInvitesResult> {
   // Cap at reasonable number
   const processCount = Math.min(count, 100);
 
@@ -314,12 +321,14 @@ export async function generateInvites(count: number): Promise<GenerateInvitesRes
       const inviteCode = crypto.randomUUID();
 
       // Insert into invite_codes table
-      const { error: insertError } = await supabase.from("invite_codes").insert({
-        user_id: userId,
-        invite_code: inviteCode,
-        // time_redeemed defaults to null
-        // has_access defaults to false
-      });
+      const { error: insertError } = await supabase
+        .from("invite_codes")
+        .insert({
+          user_id: userId,
+          invite_code: inviteCode,
+          // time_redeemed defaults to null
+          // has_access defaults to false
+        });
 
       if (insertError) {
         console.error(`Failed to create invite for ${userId}:`, insertError);
@@ -375,17 +384,17 @@ export async function generateInvites(count: number): Promise<GenerateInvitesRes
 
 /**
  * Remove a user from the waitlist
- * 
+ *
  * This should be called when:
  * - A user gains access to the platform (via payment or invite)
  * - A user requests to be removed
  * - Admin manually removes a user
- * 
+ *
  * Note: Positions of users behind this user will automatically update
  * since positions are calculated dynamically.
- * 
+ *
  * TODO: Add admin authentication
- * 
+ *
  * @param userId - The user ID to remove from the waitlist
  * @returns AdminResult with status code and response body
  */
@@ -449,9 +458,9 @@ export async function removeFromWaitlist(userId: string): Promise<AdminResult> {
 
 /**
  * Adjust a user's position in the waitlist by modifying their time_joined
- * 
+ *
  * TODO: Add admin authentication
- * 
+ *
  * @param userId - The user ID to adjust
  * @param hoursToMove - Positive moves them up (earlier), negative moves them down (later)
  * @returns AdminResult with status code and response body
@@ -491,7 +500,9 @@ export async function adjustWaitlistPosition(
 
     // Calculate new time
     const currentTime = new Date(entry.time_joined);
-    const newTime = new Date(currentTime.getTime() - hoursToMove * 60 * 60 * 1000);
+    const newTime = new Date(
+      currentTime.getTime() - hoursToMove * 60 * 60 * 1000
+    );
 
     // Update the time_joined
     const { error: updateError } = await supabase
@@ -528,4 +539,3 @@ export async function adjustWaitlistPosition(
     };
   }
 }
-

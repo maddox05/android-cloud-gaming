@@ -3,7 +3,9 @@
  * Handles checking user access and redeeming invite codes
  */
 
-import { verifyToken, checkSubscription, checkFreeAccess, getSupabase } from "./auth.js";
+import { verifyToken, checkSubscription } from "./db/auth.js";
+import { checkFreeAccess } from "./db/database.js";
+import { getSupabase } from "./db/supabase.js";
 
 // ============================================================================
 // Types
@@ -34,7 +36,7 @@ export interface RedeemInviteResult {
 
 /**
  * Check if a user has access via subscription or redeemed invite code
- * 
+ *
  * @param token - The user's authentication token
  * @returns CheckAccessResult with status code and response body
  */
@@ -42,7 +44,7 @@ export async function checkAccess(token: string): Promise<CheckAccessResult> {
   try {
     // Verify the token and get user info
     const user = await verifyToken(token);
-    
+
     if (!user) {
       return {
         status: 401,
@@ -55,8 +57,8 @@ export async function checkAccess(token: string): Promise<CheckAccessResult> {
     }
 
     // Check if user has an active subscription
-    const hasSubscription = await checkSubscription(user.id, user.email);
-    
+    const hasSubscription = await checkSubscription(user.id);
+
     if (hasSubscription) {
       return {
         status: 200,
@@ -104,18 +106,14 @@ export async function checkAccess(token: string): Promise<CheckAccessResult> {
   }
 }
 
-// ============================================================================
-// Redeem Invite
-// ============================================================================
-
 /**
  * Redeem an invite code for the authenticated user
- * 
+ *
  * Validates that:
  * - The invite code exists
  * - The invite code belongs to the authenticated user
  * - The invite code hasn't been redeemed yet
- * 
+ *
  * @param token - The user's authentication token
  * @param inviteCode - The invite code to redeem
  * @returns RedeemInviteResult with status code and response body
@@ -127,7 +125,7 @@ export async function redeemInvite(
   try {
     // Verify the token and get user info
     const user = await verifyToken(token);
-    
+
     if (!user) {
       return {
         status: 401,
@@ -228,4 +226,3 @@ export async function redeemInvite(
     };
   }
 }
-

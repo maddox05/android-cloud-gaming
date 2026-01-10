@@ -1,21 +1,20 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuthModal } from "../context/AuthModalContext";
 import {
-  getCurrentUser,
   joinWaitlist,
   isOnWaitlist,
   getTotalWaitlistCount,
-  checkUserAccess,
 } from "../utils/supabase";
 import "./Waitlist.css";
+import { useUser } from "../context/UserContext";
 
 export default function JoinWaitlist() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { startLogin } = useAuth();
+  const { startLogin } = useAuthModal();
+  const user = useUser();
 
-  const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
   const [alreadyOnWaitlist, setAlreadyOnWaitlist] = useState(false);
@@ -23,26 +22,27 @@ export default function JoinWaitlist() {
   const [totalCount, setTotalCount] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  
+
+  const supabaseUserId = user.user?.id;
+
   // Referral code - can be pre-filled from URL param (?ref=CODE)
-  const [referralCode, setReferralCode] = useState(searchParams.get("ref") || "");
-  const [showReferralInput, setShowReferralInput] = useState(!!searchParams.get("ref"));
+  const [referralCode, setReferralCode] = useState(
+    searchParams.get("ref") || ""
+  );
+  const [showReferralInput, setShowReferralInput] = useState(
+    !!searchParams.get("ref")
+  );
 
   useEffect(() => {
     async function checkUserStatus() {
       setIsLoading(true);
       try {
-        const user = await getCurrentUser();
-        if (user) {
-          setUserId(user.id);
-          
-          // Check if user already has subscription access
-          const accessResult = await checkUserAccess();
-          if (accessResult.hasAccess) {
+        if (user && supabaseUserId) {
+          if (user.accessType !== null) {
             setHasSubscription(true);
           } else {
-            // Only check waitlist status if they don't have subscription
-            const onWaitlist = await isOnWaitlist(user.id);
+            // Only check waitlist status if they don't have access
+            const onWaitlist = await isOnWaitlist(supabaseUserId);
             setAlreadyOnWaitlist(onWaitlist);
           }
         }
@@ -56,10 +56,10 @@ export default function JoinWaitlist() {
     }
 
     checkUserStatus();
-  }, []);
+  }, [user.accessType]);
 
   const handleJoinWaitlist = async () => {
-    if (!userId) {
+    if (!supabaseUserId) {
       startLogin();
       return;
     }
@@ -72,7 +72,7 @@ export default function JoinWaitlist() {
     if (result.success) {
       setSuccess(true);
       setTimeout(() => {
-        navigate(`/waitlist/${userId}`);
+        navigate(`/waitlist/${supabaseUserId}`);
       }, 1500);
     } else {
       setError(result.error || "Failed to join waitlist");
@@ -82,8 +82,8 @@ export default function JoinWaitlist() {
   };
 
   const handleViewPosition = () => {
-    if (userId) {
-      navigate(`/waitlist/${userId}`);
+    if (supabaseUserId) {
+      navigate(`/waitlist/${supabaseUserId}`);
     }
   };
 
@@ -107,12 +107,12 @@ export default function JoinWaitlist() {
           <div className="waitlist-icon">🎮</div>
           <h1 className="waitlist-title">Join the Waitlist</h1>
           <p className="waitlist-subtitle">
-            Be among the first to experience cloud gaming on MaddoxCloud.
-            Join our waitlist and get early access when spots open up.
+            Be among the first to experience cloud gaming on MaddoxCloud. Join
+            our waitlist and get early access when spots open up.
           </p>
         </header>
 
-        {!userId ? (
+        {!supabaseUserId ? (
           <div className="waitlist-login-prompt">
             <p className="login-prompt-text">
               Sign in to join the waitlist and secure your spot.
@@ -126,13 +126,18 @@ export default function JoinWaitlist() {
           </div>
         ) : hasSubscription ? (
           <div className="waitlist-join-card">
-            <div className="waitlist-success">
-              🎉 You already have access!
-            </div>
-            <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}>
-              You have an active subscription and can start playing right away. No need to join the waitlist!
+            <div className="waitlist-success">🎉 You already have access!</div>
+            <p
+              style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}
+            >
+              You have an active subscription and can start playing right away.
+              No need to join the waitlist!
             </p>
-            <Link to="/" className="waitlist-button waitlist-button-primary" style={{ textDecoration: "none" }}>
+            <Link
+              to="/"
+              className="waitlist-button waitlist-button-primary"
+              style={{ textDecoration: "none" }}
+            >
               Start Playing
             </Link>
           </div>
@@ -200,7 +205,9 @@ export default function JoinWaitlist() {
                     className="referral-input"
                     placeholder="Enter code (e.g., MX7K2P)"
                     value={referralCode}
-                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                    onChange={(e) =>
+                      setReferralCode(e.target.value.toUpperCase())
+                    }
                     maxLength={10}
                     disabled={isJoining || success}
                   />
@@ -215,7 +222,10 @@ export default function JoinWaitlist() {
             >
               {isJoining ? (
                 <>
-                  <span className="waitlist-spinner" style={{ width: 20, height: 20 }} />
+                  <span
+                    className="waitlist-spinner"
+                    style={{ width: 20, height: 20 }}
+                  />
                   Joining...
                 </>
               ) : (
@@ -224,8 +234,15 @@ export default function JoinWaitlist() {
             </button>
 
             {totalCount > 0 && (
-              <p style={{ marginTop: "1rem", color: "var(--text-muted)", fontSize: "0.875rem" }}>
-                {totalCount.toLocaleString()} {totalCount === 1 ? "person" : "people"} already waiting
+              <p
+                style={{
+                  marginTop: "1rem",
+                  color: "var(--text-muted)",
+                  fontSize: "0.875rem",
+                }}
+              >
+                {totalCount.toLocaleString()}{" "}
+                {totalCount === 1 ? "person" : "people"} already waiting
               </p>
             )}
           </div>
@@ -233,12 +250,16 @@ export default function JoinWaitlist() {
 
         <div className="waitlist-info">
           <p>
-            Have a payment code?{" "}
-            <a href="/pricing">Skip the waitlist</a> and get immediate access.
-            Questions? Join our{" "}
-            <a href="https://discord.gg/U4QYdzXEnr" target="_blank" rel="noopener noreferrer">
+            Have a payment code? <a href="/pricing">Skip the waitlist</a> and
+            get immediate access. Questions? Join our{" "}
+            <a
+              href="https://discord.gg/U4QYdzXEnr"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Discord community
-            </a>.
+            </a>
+            .
           </p>
         </div>
       </div>

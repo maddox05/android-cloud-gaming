@@ -1,51 +1,27 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getCurrentUser, redeemInviteCode, checkUserAccess } from "../utils/supabase";
-import { useAuth } from "../context/AuthContext";
+import { redeemInviteCode } from "../utils/supabase";
+import { useAuthModal } from "../context/AuthModalContext";
+import { useUser } from "../context/UserContext";
 import "./RedeemInvite.css";
 
 export default function RedeemInvite() {
   const { inviteCode: urlInviteCode } = useParams<{ inviteCode: string }>();
   const navigate = useNavigate();
-  const { openAuthModal } = useAuth();
+  const { startLogin } = useAuthModal();
+  const user = useUser();
 
   const [inviteCode, setInviteCode] = useState(urlInviteCode || "");
-  const [userId, setUserId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [alreadyHasAccess, setAlreadyHasAccess] = useState(false);
-
-  useEffect(() => {
-    async function checkUserStatus() {
-      setIsLoading(true);
-      try {
-        const user = await getCurrentUser();
-        if (user) {
-          setUserId(user.id);
-          
-          // Check if user already has access
-          const accessResult = await checkUserAccess();
-          if (accessResult.hasAccess) {
-            setAlreadyHasAccess(true);
-          }
-        }
-      } catch (err) {
-        console.error("Error checking user status:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    checkUserStatus();
-  }, []);
 
   // Redirect users who already have access to home page
   useEffect(() => {
-    if (alreadyHasAccess) {
+    if (user.accessType !== null) {
       navigate("/", { replace: true });
     }
-  }, [alreadyHasAccess, navigate]);
+  }, [user.accessType, navigate]);
 
   const handleRedeem = async () => {
     if (!inviteCode.trim()) {
@@ -58,7 +34,7 @@ export default function RedeemInvite() {
 
     try {
       const result = await redeemInviteCode(inviteCode.trim());
-      
+
       if (result.success) {
         setSuccess(true);
       } else {
@@ -73,22 +49,8 @@ export default function RedeemInvite() {
   };
 
   const handleLogin = () => {
-    openAuthModal();
+    startLogin();
   };
-
-  // Loading state or redirecting (show spinner while checking access or redirecting)
-  if (isLoading || alreadyHasAccess) {
-    return (
-      <div className="redeem-container">
-        <div className="redeem-content">
-          <div className="redeem-loading">
-            <div className="redeem-spinner" />
-            <span>{alreadyHasAccess ? "Redirecting..." : "Loading..."}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Success state
   if (success) {
@@ -99,7 +61,8 @@ export default function RedeemInvite() {
             <div className="redeem-icon redeem-icon-success">🎉</div>
             <h1 className="redeem-title">Welcome!</h1>
             <p className="redeem-subtitle">
-              Your invite code has been redeemed successfully. You now have full access to the platform!
+              Your invite code has been redeemed successfully. You now have full
+              access to the platform!
             </p>
             <button
               className="redeem-button redeem-button-primary"
@@ -114,7 +77,7 @@ export default function RedeemInvite() {
   }
 
   // Not logged in
-  if (!userId) {
+  if (!user.user?.id) {
     return (
       <div className="redeem-container">
         <div className="redeem-content">
@@ -177,7 +140,8 @@ export default function RedeemInvite() {
               disabled={isRedeeming}
             />
             <p className="redeem-hint">
-              This is the code you received via email when you were selected from the waitlist.
+              This is the code you received via email when you were selected
+              from the waitlist.
             </p>
           </div>
 
@@ -192,12 +156,11 @@ export default function RedeemInvite() {
 
         <div className="redeem-info">
           <p>
-            Don't have an invite code?{" "}
-            <a href="/waitlist">Join the waitlist</a> to get early access.
+            Don't have an invite code? <a href="/waitlist">Join the waitlist</a>{" "}
+            to get early access.
           </p>
         </div>
       </div>
     </div>
   );
 }
-

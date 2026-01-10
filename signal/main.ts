@@ -26,7 +26,6 @@ import {
 } from "./consts.js";
 import { getUserTimeSpentToday } from "./db/database.js";
 import { FREE_USER_MAX_TIME_MS } from "../shared/const.js";
-import { setMaxIdleHTTPParsers } from "http";
 
 // ============================================
 // Environment Validation
@@ -43,13 +42,30 @@ if (missingEnvVars.length > 0) {
   process.exit(1);
 }
 
-// ============================================
-// Express + WebSocket Setup
-// ============================================
-
 const { app } = expressWs(express());
 
 app.use(cors());
+
+app.get("/userAccess", async (req, res) => {
+  // todo have user call supabase next time instead (if possible with subscription)
+  const token = req.query.token as string | undefined;
+
+  if (!token) {
+    return res.status(401).json({
+      error: "Authentication required",
+    });
+  }
+
+  const user = await verifyToken(token);
+  if (!user) {
+    return res.status(401).json({
+      error: "Invalid or expired token",
+    });
+  }
+
+  const accessType = await getUserAccessType(user.id);
+  return res.json({ accessType });
+});
 
 // Middleware
 app.use(express.json());
@@ -174,26 +190,6 @@ app.post("/api/admin/adjust-position", async (req, res) => {
 
   const result = await adjustWaitlistPosition(user_id, hours);
   res.status(result.status).json(result.body);
-});
-
-app.get("/userAccess", async (req, res) => {
-  const token = req.query.token as string | undefined;
-
-  if (!token) {
-    return res.status(401).json({
-      error: "Authentication required",
-    });
-  }
-
-  const user = await verifyToken(token);
-  if (!user) {
-    return res.status(401).json({
-      error: "Invalid or expired token",
-    });
-  }
-
-  const accessType = await getUserAccessType(user.id);
-  return res.json({ accessType });
 });
 
 // WebSocket endpoint

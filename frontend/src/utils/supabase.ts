@@ -3,7 +3,10 @@ import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 import { config } from "../config";
 
 // Export supabase client for use by other modules (e.g., waitlist_functions.ts)
-export const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+export const supabase = createClient(
+  config.SUPABASE_URL,
+  config.SUPABASE_ANON_KEY
+);
 
 // ============================================================================
 // Re-export waitlist functions for backwards compatibility
@@ -23,56 +26,6 @@ export {
   removeSelfFromWaitlist,
   redeemInviteCode,
 } from "./waitlist_functions";
-
-// ============================================================================
-// API FUNCTIONS (calls to signal server)
-// ============================================================================
-
-export interface AccessCheckResult {
-  hasAccess: boolean;
-  reason?: string;
-  message?: string;
-  userId?: string;
-}
-
-/*
- * Check if the current user has access to the platform (subscription or free access).
- * Calls the signal server API which verifies with Stripe.
- */
-export async function checkUserAccess(): Promise<AccessCheckResult> {
-  const token = await getAccessToken();
-  
-  if (!token) {
-    return { hasAccess: false, reason: "not_logged_in" };
-  }
-
-  // Convert WebSocket URL to HTTP URL
-  const apiUrl = config.SIGNAL_URL.replace("ws://", "http://").replace("wss://", "https://");
-
-  try {
-    const response = await fetch(`${apiUrl}/api/check-access`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      return { hasAccess: false, reason: data.reason, message: data.message };
-    }
-
-    return await response.json();
-  } catch (err) {
-    console.error("Check access error:", err);
-    return { hasAccess: false, reason: "network_error", message: "Failed to check access" };
-  }
-}
-
-// ============================================================================
-// AUTH FUNCTIONS
-// ============================================================================
-
-export { supabase };
 
 export async function getCurrentUser(): Promise<User | null> {
   const {
