@@ -3,10 +3,10 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   getWaitlistPosition,
   getTotalWaitlistCount,
-  getCurrentUser,
   removeSelfFromWaitlist,
   type WaitlistPosition,
-} from "../utils/supabase";
+} from "./waitlist_functions";
+import { getCurrentUser } from "../utils/supabase";
 import "./Waitlist.css";
 
 function getOrdinalSuffix(n: number): string {
@@ -154,11 +154,10 @@ export default function Waitlist() {
 
         <div className="waitlist-position-card">
           <p className="position-label">Position in Line</p>
-          <div className="position-number">
-            #{position.position}
-          </div>
+          <div className="position-number">#{position.position}</div>
           <p className="position-suffix">
-            {position.position}{getOrdinalSuffix(position.position)} in queue
+            {position.position}
+            {getOrdinalSuffix(position.position)} in queue
           </p>
 
           <div className="position-meta">
@@ -167,7 +166,9 @@ export default function Waitlist() {
               <div className="meta-label">Total in waitlist</div>
             </div>
             <div className="meta-item">
-              <div className="meta-value">{formatDate(position.time_joined)}</div>
+              <div className="meta-value">
+                {formatDate(position.time_joined)}
+              </div>
               <div className="meta-label">Joined on</div>
             </div>
           </div>
@@ -181,14 +182,14 @@ export default function Waitlist() {
               <h3>Your Referral Code</h3>
             </div>
             <p className="referral-code-description">
-              Share this code with friends! When they join using your code, you'll move up in the queue.
+              Share this code with friends! When they join using your code,
+              you'll move up in the queue.
             </p>
             <div className="referral-code-display">
-              <span className="referral-code-value">{position.referral_code}</span>
-              <button 
-                className="referral-code-copy"
-                onClick={handleCopyCode}
-              >
+              <span className="referral-code-value">
+                {position.referral_code}
+              </span>
+              <button className="referral-code-copy" onClick={handleCopyCode}>
                 {copiedCode ? "Copied!" : "Copy"}
               </button>
             </div>
@@ -207,9 +208,14 @@ export default function Waitlist() {
             Want faster access? Check out our{" "}
             <Link to="/pricing">pricing plans</Link> to skip the waitlist.
             Questions? Join our{" "}
-            <a href="https://discord.gg/U4QYdzXEnr" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://discord.gg/U4QYdzXEnr"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               Discord community
-            </a>.
+            </a>
+            .
           </p>
         </div>
 
@@ -226,9 +232,12 @@ export default function Waitlist() {
             ) : (
               <div className="leave-confirm-card">
                 <p className="leave-confirm-text">
-                  Are you sure you want to leave the waitlist? You'll lose your position and will need to rejoin at the back of the line.
+                  Are you sure you want to leave the waitlist? You'll lose your
+                  position and will need to rejoin at the back of the line.
                 </p>
-                {leaveError && <div className="waitlist-error">{leaveError}</div>}
+                {leaveError && (
+                  <div className="waitlist-error">{leaveError}</div>
+                )}
                 <div className="leave-confirm-buttons">
                   <button
                     className="waitlist-button waitlist-button-danger"

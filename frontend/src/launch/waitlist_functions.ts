@@ -1,4 +1,4 @@
-import { supabase, getCurrentUser, getAccessToken } from "./supabase";
+import { supabase, getCurrentUser, getAccessToken } from "../utils/supabase";
 import { config } from "../config";
 
 // ============================================================================

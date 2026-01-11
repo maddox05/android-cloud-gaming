@@ -8,25 +8,6 @@ export const supabase = createClient(
   config.SUPABASE_ANON_KEY
 );
 
-// ============================================================================
-// Re-export waitlist functions for backwards compatibility
-// ============================================================================
-
-export {
-  // Types
-  type WaitlistPosition,
-  type JoinWaitlistResult,
-  type RedeemInviteResult,
-  // Public functions
-  joinWaitlist,
-  getWaitlistPosition,
-  isOnWaitlist,
-  getTotalWaitlistCount,
-  getUserReferralCode,
-  removeSelfFromWaitlist,
-  redeemInviteCode,
-} from "./waitlist_functions";
-
 export async function getCurrentUser(): Promise<User | null> {
   const {
     data: { user },

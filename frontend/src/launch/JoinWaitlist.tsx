@@ -1,18 +1,25 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams, useParams, Link } from "react-router-dom";
+import {
+  useNavigate,
+  useSearchParams,
+  useParams,
+  Link,
+} from "react-router-dom";
 import { useAuthModal } from "../context/AuthModalContext";
 import {
   joinWaitlist,
   isOnWaitlist,
   getTotalWaitlistCount,
-} from "../utils/supabase";
+} from "./waitlist_functions";
 import "./Waitlist.css";
 import { useUser } from "../context/UserContext";
 
 export default function JoinWaitlist() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { referralCode: urlReferralCode } = useParams<{ referralCode: string }>();
+  const { referralCode: urlReferralCode } = useParams<{
+    referralCode: string;
+  }>();
   const { startLogin } = useAuthModal();
   const user = useUser();
 
@@ -207,7 +214,8 @@ export default function JoinWaitlist() {
                   disabled={isJoining || success}
                 />
                 <p className="referral-hint">
-                  Have a friend on the waitlist? Enter their referral code to help them move up!
+                  Have a friend on the waitlist? Enter their referral code to
+                  help them move up!
                 </p>
               </div>
             </div>
@@ -236,8 +244,8 @@ export default function JoinWaitlist() {
                 <div className="referral-confirm-modal">
                   <h3>No Referral Code?</h3>
                   <p>
-                    Using a referral code helps your friend move up in the queue.
-                    Are you sure you want to continue without one?
+                    Using a referral code helps your friend move up in the
+                    queue. Are you sure you want to continue without one?
                   </p>
                   <div className="referral-confirm-buttons">
                     <button
