@@ -5,12 +5,8 @@ import Client from "./Client.js";
 import Worker from "./Worker.js";
 import { getAllClients, getAllWorkers, getWorkerCount } from "./registry.js";
 import { processQueue, checkQueueTimeouts } from "./queue.js";
-import {
-  verifyToken,
-  checkSubscription,
-  getUserAccessType,
-} from "./db/auth.js";
-import { checkAccess, redeemInvite } from "./invite_access.js";
+import { verifyToken, getUserAccessType } from "./db/auth.js";
+import { redeemInvite } from "./invite_access.js";
 import { joinWaitlist } from "./waitlist_endpoints.js";
 import { ERROR_CODE, MSG } from "../shared/types.js";
 import {
