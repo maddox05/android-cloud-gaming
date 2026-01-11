@@ -31,7 +31,7 @@ export async function signInWithGoogle(): Promise<void> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.host + window.location.pathname,
+      redirectTo: window.location.origin + window.location.pathname,
     },
   });
 
@@ -57,7 +57,7 @@ export async function signUpWithEmail(
     email,
     password,
     options: {
-      emailRedirectTo: window.location.host + window.location.pathname,
+      emailRedirectTo: window.location.origin + window.location.pathname,
     },
   });
 

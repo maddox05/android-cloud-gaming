@@ -162,6 +162,17 @@ export default function RedeemInvite() {
             Don't have an invite code? <a href="/waitlist">Join the waitlist</a>{" "}
             to get early access.
           </p>
+          <p>
+            Want a code faster?{" "}
+            <a
+              href="https://discord.gg/U4QYdzXEnr"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Join our Discord
+            </a>{" "}
+            for random code drops and news.
+          </p>
         </div>
       </div>
     </div>

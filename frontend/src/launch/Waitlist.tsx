@@ -30,7 +30,6 @@ export default function Waitlist() {
   const [position, setPosition] = useState<WaitlistPosition | null>(null);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [isOwner, setIsOwner] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -39,21 +38,27 @@ export default function Waitlist() {
   useEffect(() => {
     async function fetchData() {
       if (!userId) {
-        setIsLoading(false);
+        navigate("/waitlist", { replace: true });
         return;
       }
 
       setIsLoading(true);
       try {
-        const [positionData, count, currentUser] = await Promise.all([
+        const currentUser = await getCurrentUser();
+
+        // Redirect non-owners to the join page
+        if (currentUser?.id !== userId) {
+          navigate("/waitlist", { replace: true });
+          return;
+        }
+
+        const [positionData, count] = await Promise.all([
           getWaitlistPosition(userId),
           getTotalWaitlistCount(),
-          getCurrentUser(),
         ]);
 
         setPosition(positionData);
         setTotalCount(count);
-        setIsOwner(currentUser?.id === userId);
       } catch (err) {
         console.error("Error fetching waitlist data:", err);
       } finally {
@@ -62,7 +67,7 @@ export default function Waitlist() {
     }
 
     fetchData();
-  }, [userId]);
+  }, [userId, navigate]);
 
   const handleCopyCode = async () => {
     if (!position?.referral_code) return;
@@ -142,13 +147,9 @@ export default function Waitlist() {
       <div className="waitlist-content">
         <header className="waitlist-header">
           <div className="waitlist-icon">🎮</div>
-          <h1 className="waitlist-title">
-            {isOwner ? "Your Waitlist Position" : "Waitlist Position"}
-          </h1>
+          <h1 className="waitlist-title">Your Waitlist Position</h1>
           <p className="waitlist-subtitle">
-            {isOwner
-              ? "You're on the list! We'll notify you when it's your turn."
-              : "See where this user stands in line for MaddoxCloud."}
+            You're on the list! We'll notify you when it's your turn.
           </p>
         </header>
 
@@ -174,8 +175,8 @@ export default function Waitlist() {
           </div>
         </div>
 
-        {/* Referral Code Section - Only show to owner */}
-        {isOwner && position.referral_code && (
+        {/* Referral Code Section */}
+        {position.referral_code && (
           <div className="referral-code-card">
             <div className="referral-code-header">
               <span className="referral-code-icon">🎁</span>
@@ -217,11 +218,14 @@ export default function Waitlist() {
             </a>
             .
           </p>
+          <p>
+            Have a code? <Link to="/redeem">Redeem it here</Link> to get instant
+            access.
+          </p>
         </div>
 
-        {/* Leave Waitlist - Only show to owner */}
-        {isOwner && (
-          <div className="leave-waitlist-section">
+        {/* Leave Waitlist */}
+        <div className="leave-waitlist-section">
             {!showLeaveConfirm ? (
               <button
                 className="leave-waitlist-button"
@@ -260,7 +264,6 @@ export default function Waitlist() {
               </div>
             )}
           </div>
-        )}
       </div>
     </div>
   );

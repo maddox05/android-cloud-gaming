@@ -40,6 +40,7 @@ function DiscordBadge({
 
 const NAV_LINKS = [
   { to: "/pricing", label: "Pricing" },
+  { to: "/waitlist", label: "Waitlist" },
   { to: "/roadmap", label: "Roadmap" },
 ];
 

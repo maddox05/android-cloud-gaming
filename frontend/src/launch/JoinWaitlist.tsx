@@ -17,7 +17,6 @@ export default function JoinWaitlist() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isJoining, setIsJoining] = useState(false);
-  const [alreadyOnWaitlist, setAlreadyOnWaitlist] = useState(false);
   const [hasSubscription, setHasSubscription] = useState(false);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +40,11 @@ export default function JoinWaitlist() {
           } else if (user.accessType === null) {
             // Only check waitlist status if they definitively don't have access
             const onWaitlist = await isOnWaitlist(supabaseUserId);
-            setAlreadyOnWaitlist(onWaitlist);
+            if (onWaitlist) {
+              // Redirect directly to their position page
+              navigate(`/waitlist/${supabaseUserId}`, { replace: true });
+              return;
+            }
           }
           // If accessType is undefined, we're still loading - don't make decisions yet
         }
@@ -55,7 +58,7 @@ export default function JoinWaitlist() {
     }
 
     checkUserStatus();
-  }, [user.accessType, supabaseUserId]);
+  }, [user.accessType, supabaseUserId, navigate]);
 
   const handleJoinWaitlist = async (skipReferralCheck = false) => {
     if (!supabaseUserId) {
@@ -85,12 +88,6 @@ export default function JoinWaitlist() {
     }
 
     setIsJoining(false);
-  };
-
-  const handleViewPosition = () => {
-    if (supabaseUserId) {
-      navigate(`/waitlist/${supabaseUserId}`);
-    }
   };
 
   if (isLoading) {
@@ -146,18 +143,6 @@ export default function JoinWaitlist() {
             >
               Start Playing
             </Link>
-          </div>
-        ) : alreadyOnWaitlist ? (
-          <div className="waitlist-join-card">
-            <div className="waitlist-success">
-              ✓ You're already on the waitlist!
-            </div>
-            <button
-              className="waitlist-button waitlist-button-primary"
-              onClick={handleViewPosition}
-            >
-              View Your Position
-            </button>
           </div>
         ) : (
           <div className="waitlist-join-card">
@@ -250,7 +235,7 @@ export default function JoinWaitlist() {
                       className="waitlist-button waitlist-button-primary"
                       onClick={() => handleJoinWaitlist(true)}
                     >
-                      Continue Without Code
+                      Continue without Code
                     </button>
                   </div>
                 </div>

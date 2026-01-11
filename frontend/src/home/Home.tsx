@@ -186,7 +186,7 @@ export default function Home() {
       {/* CTA Section */}
       <section className="cta-section">
         <Link to="/pricing" className="cta-button">
-          Start Trial
+          Buy Now
         </Link>
       </section>
     </main>

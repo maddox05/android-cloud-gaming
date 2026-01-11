@@ -210,6 +210,32 @@
   font-size: 1rem;
 }
 
+/* Free Access Info */
+.pricing-free-access {
+  text-align: center;
+  margin-top: 48px;
+  padding: 24px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.pricing-free-access p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.pricing-free-access a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.pricing-free-access a:hover {
+  text-decoration: underline;
+}
+
 /* ========================= */
 /* Responsive               */
 /* ========================= */

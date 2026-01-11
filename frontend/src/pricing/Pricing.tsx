@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuthModal } from "../context/AuthModalContext";
 import { useUser } from "../context/UserContext";
 import ComparisonTable from "./ComparisonTable";
@@ -47,7 +48,10 @@ export default function Pricing() {
       <div className="pricing-container" style={{ position: "relative" }}>
         {hasInvalidUserData ? (
           <div className="pricing-error">
-            <p>Unable to load pricing. Please try signing out and signing back in.</p>
+            <p>
+              Unable to load pricing. Please try signing out and signing back
+              in.
+            </p>
           </div>
         ) : (
           <>
@@ -78,6 +82,13 @@ export default function Pricing() {
             )}
           </>
         )}
+      </div>
+
+      <div className="pricing-free-access">
+        <p>
+          Want free access? <Link to="/waitlist">Join our waitlist</Link> and
+          wait for your turn or get an invite code.
+        </p>
       </div>
 
       <ComparisonTable />
