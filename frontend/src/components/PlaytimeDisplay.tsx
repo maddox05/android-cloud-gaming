@@ -3,23 +3,22 @@ import { Link } from "react-router-dom";
 import { supabase } from "../utils/supabase";
 import { getUserTimeSpentToday } from "../../../shared/functions";
 import { FREE_USER_MAX_TIME_MS } from "../../../shared/const";
-import type { AccessType } from "../../../shared/types";
+import { useUser } from "../context/UserContext";
 
 interface PlaytimeDisplayProps {
-  userId: string;
-  accessType: AccessType | undefined;
   onUpgradeClick?: () => void;
 }
 
-export function PlaytimeDisplay({
-  userId,
-  accessType,
-  onUpgradeClick,
-}: PlaytimeDisplayProps) {
+export function PlaytimeDisplay({ onUpgradeClick }: PlaytimeDisplayProps) {
+  const { user, accessType } = useUser();
   const [timeSpentMs, setTimeSpentMs] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const userId = user?.id;
+
   useEffect(() => {
     async function fetchTimeSpent() {
+      if (!userId) return;
       setLoading(true);
       const time = await getUserTimeSpentToday(supabase, userId);
       setTimeSpentMs(time);

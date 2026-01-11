@@ -13,7 +13,6 @@ import "./ProfilePanel.css";
 import { useUser } from "../context/UserContext";
 
 interface ProfilePanelProps {
-  avatarUrl?: string | null;
   isOpen: boolean;
   onClose: () => void;
   onSignIn: () => void;
@@ -21,19 +20,21 @@ interface ProfilePanelProps {
 }
 
 export function ProfilePanel({
-  avatarUrl,
   isOpen,
   onClose,
   onSignIn,
   onSignOut,
 }: ProfilePanelProps) {
-  const user = useUser();
+  const { user, accessType } = useUser();
   const [videoQuality, setVideoQualityState] =
     useState<VideoQuality>(getVideoQuality);
 
+  const avatarUrl =
+    user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
+
   const handleQualityChange = (quality: VideoQuality) => {
     // Free users can only use ULD
-    if (user.accessType !== "paid" && quality !== "ULD") return;
+    if (accessType !== "paid" && quality !== "ULD") return;
     setVideoQuality(quality);
     setVideoQualityState(quality);
   };
@@ -57,9 +58,9 @@ export function ProfilePanel({
               />
               <div className="panel-user-info">
                 <span className="panel-user-name">
-                  {user.user?.user_metadata.name || "User"}
+                  {user?.user_metadata?.name || "User"}
                 </span>
-                <span className="panel-user-email">{user.user?.email}</span>
+                <span className="panel-user-email">{user?.email}</span>
               </div>
             </div>
 
@@ -70,7 +71,7 @@ export function ProfilePanel({
                   const width = VIDEO_SIZE_MAP[key];
                   const height = Math.round((width * 9) / 16); // 16:9 aspect ratio
                   const proOnly = key !== "ULD";
-                  const isLocked = proOnly && user.accessType !== "paid";
+                  const isLocked = proOnly && accessType !== "paid";
                   return (
                     <button
                       key={key}
@@ -90,13 +91,7 @@ export function ProfilePanel({
                 })}
               </div>
             </div>
-            {user.user?.id && (
-              <PlaytimeDisplay
-                userId={user.user?.id}
-                accessType={user.accessType}
-                onUpgradeClick={onClose}
-              />
-            )}
+            {user?.id && <PlaytimeDisplay onUpgradeClick={onClose} />}
 
             <div className="panel-links">
               <a href={config.STRIPE_BILLING_URL} className="panel-link">

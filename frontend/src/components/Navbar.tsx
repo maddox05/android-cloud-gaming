@@ -48,7 +48,7 @@ export default function Navbar() {
   const [showPanel, setShowPanel] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const { startLogin } = useAuthModal();
-  const { user, isPaid } = useUser();
+  const { user } = useUser();
 
   const userAvatarUrl =
     user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
@@ -152,10 +152,7 @@ export default function Navbar() {
       />
 
       <ProfilePanel
-        user={user}
-        avatarUrl={userAvatarUrl}
         isOpen={showPanel}
-        isPaid={isPaid}
         onClose={() => setShowPanel(false)}
         onSignIn={startLogin}
         onSignOut={handleSignOut}
