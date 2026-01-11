@@ -1,10 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  useNavigate,
-  useSearchParams,
-  useParams,
-  Link,
-} from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuthModal } from "../context/AuthModalContext";
 import {
   joinWaitlist,
@@ -17,9 +12,6 @@ import { useUser } from "../context/UserContext";
 export default function JoinWaitlist() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { referralCode: urlReferralCode } = useParams<{
-    referralCode: string;
-  }>();
   const { startLogin } = useAuthModal();
   const user = useUser();
 
@@ -33,8 +25,8 @@ export default function JoinWaitlist() {
 
   const supabaseUserId = user.user?.id;
 
-  // Referral code - can be pre-filled from URL path (/waitlist/ref/CODE) or query param (?ref=CODE)
-  const initialReferralCode = urlReferralCode || searchParams.get("ref") || "";
+  // Referral code - pre-filled from query param (?ref=CODE)
+  const initialReferralCode = searchParams.get("ref") || "";
   const [referralCode, setReferralCode] = useState(initialReferralCode);
   const [showNoReferralConfirm, setShowNoReferralConfirm] = useState(false);
 

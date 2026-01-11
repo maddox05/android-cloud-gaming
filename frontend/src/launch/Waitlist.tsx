@@ -77,7 +77,7 @@ export default function Waitlist() {
 
   const handleCopyReferralLink = async () => {
     if (!position?.referral_code) return;
-    const referralUrl = `${window.location.origin}/waitlist/ref/${position.referral_code}`;
+    const referralUrl = `${window.location.origin}/waitlist?ref=${position.referral_code}`;
     try {
       await navigator.clipboard.writeText(referralUrl);
       setCopiedCode(true);

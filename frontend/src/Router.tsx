@@ -40,7 +40,6 @@ function AppLayout() {
           <Route path="/queue/:appId" element={<Queue />} />
           <Route path="/app/:appId" element={<InGame />} />
           <Route path="/waitlist" element={<JoinWaitlist />} />
-          <Route path="/waitlist/ref/:referralCode" element={<JoinWaitlist />} />
           <Route path="/waitlist/:userId" element={<Waitlist />} />
           <Route path="/redeem" element={<RedeemInvite />} />
           <Route path="/redeem/:inviteCode" element={<RedeemInvite />} />
