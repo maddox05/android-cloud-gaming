@@ -271,6 +271,41 @@
   flex-shrink: 0;
 }
 
+/* No Access - Get Access CTA */
+.playtime-no-access .panel-setting-label {
+  text-align: left;
+}
+
+.playtime-get-access-cta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, var(--accent) 0%, #ea580c 100%);
+  border: none;
+  border-radius: var(--radius);
+  color: white;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+}
+
+.playtime-get-access-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+}
+
+.playtime-get-access-cta:active {
+  transform: translateY(0);
+}
+
+.playtime-get-access-cta svg {
+  flex-shrink: 0;
+}
+
 /* Panel Links */
 .panel-links {
   display: flex;

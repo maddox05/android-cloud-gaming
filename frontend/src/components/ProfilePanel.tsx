@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { User } from "@supabase/supabase-js";
 import { config } from "../config";
 import { Avatar } from "./Avatar";
 import { CloseIcon, CreditCardIcon } from "./Icons";
@@ -11,32 +10,30 @@ import {
 } from "../utils/videoQuality";
 import { PlaytimeDisplay } from "./PlaytimeDisplay";
 import "./ProfilePanel.css";
+import { useUser } from "../context/UserContext";
 
 interface ProfilePanelProps {
-  user: User | null;
   avatarUrl?: string | null;
   isOpen: boolean;
-  isPaid: boolean;
   onClose: () => void;
   onSignIn: () => void;
   onSignOut: () => void;
 }
 
 export function ProfilePanel({
-  user,
   avatarUrl,
   isOpen,
-  isPaid,
   onClose,
   onSignIn,
   onSignOut,
 }: ProfilePanelProps) {
+  const user = useUser();
   const [videoQuality, setVideoQualityState] =
     useState<VideoQuality>(getVideoQuality);
 
   const handleQualityChange = (quality: VideoQuality) => {
     // Free users can only use ULD
-    if (!isPaid && quality !== "ULD") return;
+    if (user.accessType !== "paid" && quality !== "ULD") return;
     setVideoQuality(quality);
     setVideoQualityState(quality);
   };
@@ -60,9 +57,9 @@ export function ProfilePanel({
               />
               <div className="panel-user-info">
                 <span className="panel-user-name">
-                  {user.user_metadata?.name || "User"}
+                  {user.user?.user_metadata.name || "User"}
                 </span>
-                <span className="panel-user-email">{user.email}</span>
+                <span className="panel-user-email">{user.user?.email}</span>
               </div>
             </div>
 
@@ -73,7 +70,7 @@ export function ProfilePanel({
                   const width = VIDEO_SIZE_MAP[key];
                   const height = Math.round((width * 9) / 16); // 16:9 aspect ratio
                   const proOnly = key !== "ULD";
-                  const isLocked = proOnly && !isPaid;
+                  const isLocked = proOnly && user.accessType !== "paid";
                   return (
                     <button
                       key={key}
@@ -93,8 +90,13 @@ export function ProfilePanel({
                 })}
               </div>
             </div>
-
-            <PlaytimeDisplay userId={user.id} isPaid={isPaid} onUpgradeClick={onClose} />
+            {user.user?.id && (
+              <PlaytimeDisplay
+                userId={user.user?.id}
+                accessType={user.accessType}
+                onUpgradeClick={onClose}
+              />
+            )}
 
             <div className="panel-links">
               <a href={config.STRIPE_BILLING_URL} className="panel-link">

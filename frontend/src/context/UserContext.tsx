@@ -28,20 +28,20 @@ const { SIGNAL_HTTP_URL } = config;
 let cachedUserId: string | null = null;
 let cachedAccessType: AccessType | undefined = undefined;
 
-async function fetchAccessType(token: string): Promise<AccessType> {
+async function fetchAccessType(token: string): Promise<AccessType | undefined> {
   try {
     const response = await fetch(
       `${SIGNAL_HTTP_URL}/userAccess?token=${encodeURIComponent(token)}`
     );
     if (!response.ok) {
       console.error("Failed to fetch access type:", response.status);
-      return null;
+      return undefined;
     }
     const data = await response.json();
     return data.accessType as AccessType;
   } catch (error) {
     console.error("Error fetching access type:", error);
-    return null;
+    return undefined;
   }
 }
 
