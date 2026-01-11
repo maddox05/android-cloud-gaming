@@ -115,6 +115,17 @@ export function GoogleIcon({ size = 18, className }: IconProps) {
   );
 }
 
+export function MicrosoftIcon({ size = 18, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 21 21" className={className}>
+      <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+      <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
+    </svg>
+  );
+}
+
 export function YouTubeIcon({ size = 20, className }: IconProps) {
   return (
     <svg

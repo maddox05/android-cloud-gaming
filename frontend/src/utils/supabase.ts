@@ -41,6 +41,21 @@ export async function signInWithGoogle(): Promise<void> {
   }
 }
 
+export async function signInWithMicrosoft(): Promise<void> {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "azure",
+    options: {
+      scopes: "email",
+      redirectTo: window.location.origin + window.location.pathname,
+    },
+  });
+
+  if (error) {
+    console.error("Sign in error:", error);
+    throw error;
+  }
+}
+
 export async function signOut(): Promise<void> {
   const { error } = await supabase.auth.signOut();
   if (error) {

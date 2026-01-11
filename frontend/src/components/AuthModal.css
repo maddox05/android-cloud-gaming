@@ -115,6 +115,18 @@
   border-color: var(--text-muted);
 }
 
+/* Microsoft Button */
+.auth-btn-microsoft {
+  background: #2f2f2f;
+  border: 1px solid #4a4a4a;
+  color: #ffffff;
+}
+
+.auth-btn-microsoft:hover:not(:disabled) {
+  background: #3a3a3a;
+  border-color: #5a5a5a;
+}
+
 /* Primary Button */
 .auth-btn-primary {
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);

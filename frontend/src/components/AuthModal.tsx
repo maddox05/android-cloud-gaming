@@ -2,11 +2,12 @@ import { useState, useEffect, type FormEvent } from "react";
 import { useAuthModal } from "../context/AuthModalContext";
 import {
   signInWithGoogle,
+  signInWithMicrosoft,
   signInWithEmail,
   signUpWithEmail,
   onAuthStateChange,
 } from "../utils/supabase";
-import { CloseIcon, GoogleIcon, MailIcon } from "./Icons";
+import { CloseIcon, GoogleIcon, MicrosoftIcon, MailIcon } from "./Icons";
 import "./AuthModal.css";
 
 export function AuthModal() {
@@ -46,6 +47,19 @@ export function AuthModal() {
     } catch (err) {
       console.error("Google auth failed:", err);
       setError("Failed to sign in with Google");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMicrosoftAuth = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      await signInWithMicrosoft();
+    } catch (err) {
+      console.error("Microsoft auth failed:", err);
+      setError("Failed to sign in with Microsoft");
     } finally {
       setLoading(false);
     }
@@ -143,6 +157,16 @@ export function AuthModal() {
           >
             <GoogleIcon size={20} />
             <span>Continue with Google</span>
+          </button>
+
+          {/* Microsoft Button */}
+          <button
+            className="auth-btn auth-btn-microsoft"
+            onClick={handleMicrosoftAuth}
+            disabled={loading}
+          >
+            <MicrosoftIcon size={20} />
+            <span>Continue with Microsoft</span>
           </button>
 
           <div className="auth-divider">
