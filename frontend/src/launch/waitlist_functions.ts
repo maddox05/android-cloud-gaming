@@ -9,7 +9,8 @@ export interface WaitlistPosition {
   user_id: string;
   position: number;
   time_joined: string;
-  referral_code: string | null;
+  referral_code: string;
+  created_at: string;
 }
 
 export interface JoinWaitlistResult {
@@ -92,7 +93,7 @@ export async function getWaitlistPosition(
   // Get the user's entry including their referral code
   const { data: userEntry, error: userError } = await supabase
     .from("waitlist")
-    .select("user_id, time_joined, referral_code")
+    .select("user_id, time_joined, referral_code, created_at")
     .eq("user_id", userId)
     .single();
 
@@ -117,6 +118,7 @@ export async function getWaitlistPosition(
     position: (count ?? 0) + 1,
     time_joined: userEntry.time_joined,
     referral_code: userEntry.referral_code,
+    created_at: userEntry.created_at,
   };
 }
 

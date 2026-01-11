@@ -23,6 +23,28 @@ function formatDate(dateString: string): string {
   });
 }
 
+function calculateTimeJumped(createdAt: string, timeJoined: string): number {
+  const created = new Date(createdAt).getTime();
+  const joined = new Date(timeJoined).getTime();
+  const diffMs = created - joined;
+  // Each referral subtracts 1 hour, so diff in hours = number of referrals used
+  return Math.round(diffMs / (1000 * 60 * 60));
+}
+
+function formatTimeJumped(hours: number): string {
+  if (hours === 0) return "";
+  if (hours === 1) return "1 hour";
+  if (hours < 24) return `${hours} hours`;
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  if (remainingHours === 0) {
+    return days === 1 ? "1 day" : `${days} days`;
+  }
+  return days === 1
+    ? `1 day, ${remainingHours} hour${remainingHours > 1 ? "s" : ""}`
+    : `${days} days, ${remainingHours} hour${remainingHours > 1 ? "s" : ""}`;
+}
+
 export default function Waitlist() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
@@ -168,9 +190,17 @@ export default function Waitlist() {
             </div>
             <div className="meta-item">
               <div className="meta-value">
-                {formatDate(position.time_joined)}
+                {formatDate(position.created_at)}
               </div>
               <div className="meta-label">Joined on</div>
+            </div>
+            <div className="meta-item">
+              <div className="meta-value">
+                {formatTimeJumped(
+                  calculateTimeJumped(position.created_at, position.time_joined)
+                ) || "0 hours"}
+              </div>
+              <div className="meta-label">Time jumped from referrals</div>
             </div>
           </div>
         </div>
@@ -226,44 +256,42 @@ export default function Waitlist() {
 
         {/* Leave Waitlist */}
         <div className="leave-waitlist-section">
-            {!showLeaveConfirm ? (
-              <button
-                className="leave-waitlist-button"
-                onClick={() => setShowLeaveConfirm(true)}
-              >
-                Leave Waitlist
-              </button>
-            ) : (
-              <div className="leave-confirm-card">
-                <p className="leave-confirm-text">
-                  Are you sure you want to leave the waitlist? You'll lose your
-                  position and will need to rejoin at the back of the line.
-                </p>
-                {leaveError && (
-                  <div className="waitlist-error">{leaveError}</div>
-                )}
-                <div className="leave-confirm-buttons">
-                  <button
-                    className="waitlist-button waitlist-button-danger"
-                    onClick={handleLeaveWaitlist}
-                    disabled={isLeaving}
-                  >
-                    {isLeaving ? "Leaving..." : "Yes, Leave Waitlist"}
-                  </button>
-                  <button
-                    className="waitlist-button waitlist-button-secondary"
-                    onClick={() => {
-                      setShowLeaveConfirm(false);
-                      setLeaveError(null);
-                    }}
-                    disabled={isLeaving}
-                  >
-                    Cancel
-                  </button>
-                </div>
+          {!showLeaveConfirm ? (
+            <button
+              className="leave-waitlist-button"
+              onClick={() => setShowLeaveConfirm(true)}
+            >
+              Leave Waitlist
+            </button>
+          ) : (
+            <div className="leave-confirm-card">
+              <p className="leave-confirm-text">
+                Are you sure you want to leave the waitlist? You'll lose your
+                position and will need to rejoin at the back of the line.
+              </p>
+              {leaveError && <div className="waitlist-error">{leaveError}</div>}
+              <div className="leave-confirm-buttons">
+                <button
+                  className="waitlist-button waitlist-button-danger"
+                  onClick={handleLeaveWaitlist}
+                  disabled={isLeaving}
+                >
+                  {isLeaving ? "Leaving..." : "Yes, Leave Waitlist"}
+                </button>
+                <button
+                  className="waitlist-button waitlist-button-secondary"
+                  onClick={() => {
+                    setShowLeaveConfirm(false);
+                    setLeaveError(null);
+                  }}
+                  disabled={isLeaving}
+                >
+                  Cancel
+                </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
