@@ -4,7 +4,6 @@ import { videoInputWebRTC } from "../utils/video_and_input_webrtc";
 import { H264Decoder } from "../utils/decoder";
 import { websocketAPI } from "../utils/websocket_api";
 import Canvas from "./canvas/Canvas";
-import { getGameName } from "./helpers";
 import { CONNECTION_STATUS, type ConnectionStatus } from "../types";
 import {
   ERROR_CODE,
@@ -20,7 +19,6 @@ export default function InGame() {
   const [status, setStatus] = useState<ConnectionStatus>(
     CONNECTION_STATUS.CONNECTING
   );
-  const [statusMessage, setStatusMessage] = useState("Connecting...");
   const [loadingMessage, setLoadingMessage] = useState(
     "Connecting to server..."
   );
@@ -89,7 +87,6 @@ export default function InGame() {
         message: string
       ) => {
         setStatus(CONNECTION_STATUS.ERROR);
-        setStatusMessage(`Error: ${message}`);
 
         if (code === ERROR_CODE.NO_WORKERS_AVAILABLE) {
           alert("No game servers available. Please try again later.");
@@ -108,7 +105,6 @@ export default function InGame() {
       function handleWebRTCError(code: ErrorCode | undefined, message: string) {
         console.error("Error from WEBRTC:", code, message);
         setStatus(CONNECTION_STATUS.ERROR);
-        setStatusMessage(`Error: ${message}`);
 
         if (code === ERROR_CODE.WEBRTC_FAILED) {
           alert(
@@ -123,13 +119,11 @@ export default function InGame() {
       const handleDisconnectedFromWebRTC = () => {
         console.log("Disconnected from Worker");
         setStatus(CONNECTION_STATUS.DISCONNECTED);
-        setStatusMessage("Connection to worker lost");
         // no need to exit as if disconnected happens, signal server will follow up and exit us.
       };
 
       const handleVideoData = (data: ArrayBuffer) => {
         setStatus(CONNECTION_STATUS.CONNECTED);
-        setStatusMessage("Connected");
         if (decoderRef.current) {
           decoderRef.current.appendData(data);
         }
@@ -178,7 +172,6 @@ export default function InGame() {
         } catch (err) {
           console.error("Failed to connect:", err);
           setStatus(CONNECTION_STATUS.ERROR);
-          setStatusMessage("Connection failed");
           alert("Failed to connect to server. Returning to home page.");
           handleExit();
         }
@@ -190,7 +183,6 @@ export default function InGame() {
     videoInputWebRTC.sendInput(msg);
   }, []);
 
-  const gameName = appId ? getGameName(appId) : "Loading...";
   const isLoading = status === CONNECTION_STATUS.CONNECTING;
 
   return (
