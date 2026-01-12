@@ -132,7 +132,7 @@ const roadmapData: RoadmapItem[] = [
       "Ad-supported experience",
     ],
     icon: <RocketIcon />,
-    status: "current",
+    status: "completed",
   },
   {
     id: "byod-proxy",
@@ -147,7 +147,7 @@ const roadmapData: RoadmapItem[] = [
       "Seamless school gaming",
     ],
     icon: <SchoolIcon />,
-    status: "upcoming",
+    status: "completed",
   },
   {
     id: "save-data",
@@ -162,7 +162,7 @@ const roadmapData: RoadmapItem[] = [
       "Instant resume gameplay",
     ],
     icon: <SaveIcon />,
-    status: "upcoming",
+    status: "current",
   },
   {
     id: "account-login",
