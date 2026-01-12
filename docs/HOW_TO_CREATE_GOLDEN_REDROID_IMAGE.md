@@ -62,6 +62,8 @@ aws configure set aws_secret_access_key <YOUR_R2_SECRET_ACCESS_KEY>
 aws configure set default.region auto
 ```
 
+aws configure set aws_secret_access_key 8d8b33d1b7f9f6279b9eca7fa7ecfdf75aed5ffb6974f1b09bc05d665183a1be
+
 Upload the tar.gz to your R2 bucket:
 
 ```bash
