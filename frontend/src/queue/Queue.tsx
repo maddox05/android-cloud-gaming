@@ -4,6 +4,7 @@ import { websocketAPI, type QueueInfo } from "../utils/websocket_api";
 import { videoInputWebRTC } from "../utils/video_and_input_webrtc";
 import { getGameName } from "../in_game/helpers";
 import { getMaxVideoSize } from "../utils/videoQuality";
+import { showAlert } from "../services/alertService";
 import {
   ERROR_CODE,
   type ErrorCode,
@@ -42,11 +43,19 @@ export default function Queue() {
       const handleError = (code: ErrorCode | undefined, message: string) => {
         console.error("Queue error:", message);
         if (code === ERROR_CODE.NO_SUBSCRIPTION) {
-          window.alert(`Subscription error: ${message}`);
+          showAlert({
+            type: "error",
+            title: "Subscription Error",
+            message,
+          });
           handleExit();
           return;
         } else if (code === ERROR_CODE.AUTH_FAILED) {
-          window.alert(`Failed to authenticate: ${message}`);
+          showAlert({
+            type: "error",
+            title: "Authentication Failed",
+            message,
+          });
           handleExit();
           return;
         }

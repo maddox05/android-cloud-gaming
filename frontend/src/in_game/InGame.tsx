@@ -1,8 +1,9 @@
 import { useState, useRef, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { videoInputWebRTC } from "../utils/video_and_input_webrtc";
 import { H264Decoder } from "../utils/decoder";
 import { websocketAPI } from "../utils/websocket_api";
+import { showAlert } from "../services/alertService";
 import Canvas from "./canvas/Canvas";
 import { CONNECTION_STATUS, type ConnectionStatus } from "../types";
 import {
@@ -13,7 +14,6 @@ import {
 import "./InGame.css";
 
 export default function InGame() {
-  const navigate = useNavigate();
   const { appId } = useParams<{ appId: string }>();
 
   const [status, setStatus] = useState<ConnectionStatus>(
@@ -67,11 +67,18 @@ export default function InGame() {
 
   function handleExit(reason?: string) {
     if (reason) {
-      window.alert(`Exiting game: ${reason}`);
+      showAlert({
+        type: "info",
+        title: "Exiting Game",
+        message: reason,
+        onCloseRedirect: "/",
+      });
     }
     cleanup();
     websocketAPI.close();
-    window.location.href = "/";
+    if (!reason) {
+      window.location.href = "/";
+    }
   }
 
   if (!initialized.current) {
@@ -79,8 +86,12 @@ export default function InGame() {
     console.log("Starting InGame connection");
 
     if (!appId) {
-      alert("No game specified. Please select a game from the home page.");
-      setTimeout(() => navigate("/"), 0);
+      showAlert({
+        type: "error",
+        title: "No Game Selected",
+        message: "No game specified. Please select a game from the home page.",
+        onCloseRedirect: "/",
+      });
     } else {
       const handleSignalError = (
         code: ErrorCode | undefined,
@@ -89,17 +100,43 @@ export default function InGame() {
         setStatus(CONNECTION_STATUS.ERROR);
 
         if (code === ERROR_CODE.NO_WORKERS_AVAILABLE) {
-          alert("No game servers available. Please try again later.");
+          showAlert({
+            type: "error",
+            title: "Server Unavailable",
+            message: "No game servers available. Please try again later.",
+            onCloseRedirect: "/",
+          });
         } else if (code === ERROR_CODE.WEBRTC_FAILED) {
-          alert("WebRTC connection failed. Please try another wifi network.");
+          showAlert({
+            type: "error",
+            title: "Connection Failed",
+            message: "WebRTC connection failed. Please try another wifi network.",
+            onCloseRedirect: "/",
+          });
         } else if (code === ERROR_CODE.CONNECTION_TIMEOUT) {
-          alert("AFK? Not on my watch. Connection timed out.");
+          showAlert({
+            type: "warning",
+            title: "Connection Timeout",
+            message: "AFK? Not on my watch. Connection timed out.",
+            onCloseRedirect: "/",
+          });
         } else if (code === ERROR_CODE.WORKER_CRASHED) {
-          alert(`The game server crashed: ${message}`);
+          showAlert({
+            type: "error",
+            title: "Server Crashed",
+            message: `The game server crashed: ${message}`,
+            onCloseRedirect: "/",
+          });
         } else {
-          alert(`An error occurred: ${message}. Returning to home page.`);
+          showAlert({
+            type: "error",
+            title: "Error",
+            message: `${message}. Returning to home page.`,
+            onCloseRedirect: "/",
+          });
         }
-        handleExit();
+        cleanup();
+        websocketAPI.close();
       };
 
       function handleWebRTCError(code: ErrorCode | undefined, message: string) {
@@ -107,13 +144,23 @@ export default function InGame() {
         setStatus(CONNECTION_STATUS.ERROR);
 
         if (code === ERROR_CODE.WEBRTC_FAILED) {
-          alert(
-            "Client (you) WebRTC connection failed. This is most likely a server issue. please contact support."
-          );
+          showAlert({
+            type: "error",
+            title: "Connection Error",
+            message: "Client (you) WebRTC connection failed. This is most likely a server issue.",
+            link: { href: "https://discord.gg/U4QYdzXEnr", label: "Get Help on Discord" },
+            onCloseRedirect: "/",
+          });
         } else {
-          alert(`An error occurred: ${message}. Returning to home page.`);
+          showAlert({
+            type: "error",
+            title: "Error",
+            message: `${message}. Returning to home page.`,
+            onCloseRedirect: "/",
+          });
         }
-        handleExit();
+        cleanup();
+        websocketAPI.close();
       }
 
       const handleDisconnectedFromWebRTC = () => {
@@ -135,8 +182,12 @@ export default function InGame() {
       (async () => {
         try {
           if (!websocketAPI.isConnected()) {
-            window.alert("You need to wait in the queue!");
-            window.location.href = "/";
+            showAlert({
+              type: "warning",
+              title: "Queue Required",
+              message: "You need to wait in the queue!",
+              onCloseRedirect: "/",
+            });
             return;
           }
           setLoadingMessage("Setting up worker...");
@@ -172,8 +223,14 @@ export default function InGame() {
         } catch (err) {
           console.error("Failed to connect:", err);
           setStatus(CONNECTION_STATUS.ERROR);
-          alert("Failed to connect to server. Returning to home page.");
-          handleExit();
+          showAlert({
+            type: "error",
+            title: "Connection Failed",
+            message: "Failed to connect to server. Returning to home page.",
+            onCloseRedirect: "/",
+          });
+          cleanup();
+          websocketAPI.close();
         }
       })();
     }

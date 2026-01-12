@@ -1,6 +1,7 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useAuthModal } from "../context/AuthModalContext";
 import { useUser } from "../context/UserContext";
+import { showAlert } from "../services/alertService";
 import GameCard from "./GameCard";
 import { GitHubIcon } from "../components/Icons";
 import "./Home.css";
@@ -156,10 +157,12 @@ export default function Home() {
     }
     if (accessType === null) {
       // access type is undefined on default and null if the user doesnt have access
-      alert(
-        "Your account doesn't have access. Please join the waitlist or purchase the paid version!"
-      );
-      navigate("/pricing");
+      showAlert({
+        type: "warning",
+        title: "Access Required",
+        message: "Your account doesn't have access. Please join the waitlist or purchase the paid version!",
+        link: { href: "/pricing", label: "View Pricing" },
+      });
       return;
     }
     navigate(`/queue/${encodeURIComponent(appId)}`);

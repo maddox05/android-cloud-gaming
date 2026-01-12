@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthModalProvider } from "./context/AuthModalContext";
 import { UserProvider } from "./context/UserContext";
 import { AuthModal } from "./components/AuthModal";
+import { AlertPopup } from "./components/AlertPopup";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
@@ -47,6 +48,7 @@ function AppLayout() {
       </Suspense>
       {!hideNavFooter && <Footer />}
       <AuthModal />
+      <AlertPopup />
     </>
   );
 }
