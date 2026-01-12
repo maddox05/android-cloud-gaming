@@ -195,15 +195,6 @@ export default function InGame() {
 
   return (
     <div className="app-container">
-      <div className="app-header">
-        <h1>{gameName}</h1>
-        <button className="back-btn" onClick={() => handleExit()}>
-          Exit
-        </button>
-      </div>
-
-      <div className={`status-bar ${status}`}>{statusMessage}</div>
-
       <Canvas sendInput={sendInput} onCanvasReady={handleCanvasReady} />
 
       {isLoading && (

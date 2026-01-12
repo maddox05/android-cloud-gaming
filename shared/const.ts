@@ -53,4 +53,11 @@ export const GAMES_LIST: Game[] = [
     thumbnail:
       "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/YouTube_social_white_square_%282024%29.svg/1200px-YouTube_social_white_square_%282024%29.svg.png",
   },
+  {
+    id: "com.roblox.client",
+    name: "Roblox",
+    description: "Make Anything, Enjoy Anything",
+    thumbnail:
+      "https://yt3.googleusercontent.com/xTxr7gmbkxiPKjrmN5ut0Kn8UcHpkkgyTv-_EeDPphcQusrWyKfSZw13EKCYXQyYdeoC3ON1zQ=s900-c-k-c0x00ffffff-no-rj",
+  },
 ];
