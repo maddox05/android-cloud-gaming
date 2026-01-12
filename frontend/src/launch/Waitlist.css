@@ -516,6 +516,191 @@
   background: var(--border);
 }
 
+/* Share Buttons */
+.share-buttons-container {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.share-button {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+}
+
+.share-button svg {
+  flex-shrink: 0;
+}
+
+/* TikTok Button - Black with signature colors */
+.share-button-tiktok {
+  background: #000000;
+  color: white;
+  border: 1px solid #2f2f2f;
+  position: relative;
+  overflow: hidden;
+}
+
+.share-button-tiktok::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #25f4ee 0%, #fe2c55 100%);
+}
+
+.share-button-tiktok:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(37, 244, 238, 0.3),
+    0 0 20px rgba(254, 44, 85, 0.2);
+  border-color: #fe2c55;
+}
+
+.share-button-tiktok:active {
+  transform: translateY(0);
+}
+
+/* Reddit Button - Signature orange-red */
+.share-button-reddit {
+  background: #ff4500;
+  color: white;
+  border: 1px solid #ff4500;
+}
+
+.share-button-reddit:hover {
+  transform: translateY(-2px);
+  background: #ff5414;
+  box-shadow: 0 4px 16px rgba(255, 69, 0, 0.4);
+}
+
+.share-button-reddit:active {
+  transform: translateY(0);
+}
+
+/* Share Info Panels */
+.share-info-panel {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  border-radius: var(--radius);
+  text-align: left;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.share-info-tiktok {
+  background: rgba(37, 244, 238, 0.08);
+  border: 1px solid rgba(37, 244, 238, 0.2);
+}
+
+.share-info-reddit {
+  background: rgba(255, 69, 0, 0.08);
+  border: 1px solid rgba(255, 69, 0, 0.2);
+}
+
+.share-info-panel h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.share-bonus-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 100px;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #4ade80;
+}
+
+.bonus-icon {
+  font-size: 1rem;
+}
+
+.share-info-panel p {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+}
+
+.share-info-panel ul,
+.share-info-panel ol {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.8;
+  padding-left: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.share-info-panel li {
+  margin-bottom: 0.5rem;
+}
+
+.share-info-panel a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.share-info-panel a:hover {
+  text-decoration: underline;
+}
+
+.share-example {
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.share-example strong {
+  color: var(--text-secondary);
+}
+
+.share-example a {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Responsive for share buttons */
+@media (max-width: 768px) {
+  .share-buttons-container {
+    flex-direction: column;
+  }
+}
+
 /* Leave Waitlist Section */
 .leave-waitlist-section {
   margin-top: 3rem;
