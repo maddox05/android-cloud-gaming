@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { redeemInviteCode } from "./waitlist_functions";
 import { useAuthModal } from "../context/AuthModalContext";
-import { useUser } from "../context/UserContext";
+import { useUser } from "../context/useUser";
 import "./RedeemInvite.css";
 
 export default function RedeemInvite() {

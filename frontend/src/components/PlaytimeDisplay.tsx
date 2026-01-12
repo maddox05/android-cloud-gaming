@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../utils/supabase";
 import { getUserTimeSpentToday } from "../../../shared/functions";
 import { FREE_USER_MAX_TIME_MS } from "../../../shared/const";
-import { useUser } from "../context/UserContext";
+import { useUser } from "../context/useUser";
 
 interface PlaytimeDisplayProps {
   onUpgradeClick?: () => void;

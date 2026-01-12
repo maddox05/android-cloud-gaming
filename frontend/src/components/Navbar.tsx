@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { signOut } from "../utils/supabase";
 import { useAuthModal } from "../context/AuthModalContext";
-import { useUser } from "../context/UserContext";
+import { useUser } from "../context/useUser";
 import { Avatar } from "./Avatar";
 import { BurgerIcon, CloseIcon, DiscordIcon, GiftIcon } from "./Icons";
 import { MobileMenu } from "./MobileMenu";

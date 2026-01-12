@@ -51,13 +51,12 @@ class WebSocketAPI {
         throw new Error("Not authenticated");
       }
 
-      const url = `${config.SIGNAL_WS_URL}?role=client&token=${encodeURIComponent(
-        token
-      )}`;
+      const url = `${
+        config.SIGNAL_WS_URL
+      }?role=client&token=${encodeURIComponent(token)}`;
       console.log("Connecting to signal server");
 
       this.ws = new WebSocket(url);
-
       await this.waitForOpen();
 
       // Wait for AUTHENTICATED or ERROR message
@@ -97,8 +96,18 @@ class WebSocketAPI {
         return;
       }
 
-      this.ws.onopen = () => resolve();
+      const timeout = setTimeout(() => {
+        console.log("Server Timeout Hit");
+        this.notifyError(undefined, "Servers are down");
+        reject(new Error("Servers are down"));
+      }, 10000);
+
+      this.ws.onopen = () => {
+        clearTimeout(timeout);
+        resolve();
+      };
       this.ws.onerror = () => {
+        clearTimeout(timeout);
         this.notifyError(undefined, "Connection error");
         reject(new Error("Failed to connect to signal server"));
       };

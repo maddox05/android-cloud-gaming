@@ -10,7 +10,7 @@ import {
 } from "../utils/videoQuality";
 import { PlaytimeDisplay } from "./PlaytimeDisplay";
 import "./ProfilePanel.css";
-import { useUser } from "../context/UserContext";
+import { useUser } from "../context/useUser";
 
 interface ProfilePanelProps {
   isOpen: boolean;

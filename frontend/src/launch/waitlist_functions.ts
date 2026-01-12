@@ -1,3 +1,4 @@
+import axios from "axios";
 import { supabase, getCurrentUser, getAccessToken } from "../utils/supabase";
 import { config } from "../config";
 
@@ -54,24 +55,22 @@ export async function joinWaitlist(
   const apiUrl = config.SIGNAL_HTTP_URL;
 
   try {
-    const response = await fetch(`${apiUrl}/api/join-waitlist`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ referral_code: referralCode }),
-    });
+    const response = await axios.post(
+      `${apiUrl}/api/join-waitlist`,
+      { referral_code: referralCode },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      return { success: false, error: data.error || "Failed to join waitlist" };
-    }
-
-    return { success: true, referral_code: data.referral_code };
+    return { success: true, referral_code: response.data.referral_code };
   } catch (err) {
     console.error("Join waitlist error:", err);
+    if (axios.isAxiosError(err) && err.response?.data?.error) {
+      return { success: false, error: err.response.data.error };
+    }
     return { success: false, error: "Network error - please try again" };
   }
 }
@@ -237,27 +236,22 @@ export async function redeemInviteCode(
   const apiUrl = config.SIGNAL_HTTP_URL;
 
   try {
-    const response = await fetch(`${apiUrl}/api/redeem-invite`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ invite_code: inviteCode }),
-    });
+    const response = await axios.post(
+      `${apiUrl}/api/redeem-invite`,
+      { invite_code: inviteCode },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: data.error || "Failed to redeem invite code",
-      };
-    }
-
-    return { success: true, message: data.message };
+    return { success: true, message: response.data.message };
   } catch (err) {
     console.error("Redeem invite error:", err);
+    if (axios.isAxiosError(err) && err.response?.data?.error) {
+      return { success: false, error: err.response.data.error };
+    }
     return { success: false, error: "Network error - please try again" };
   }
 }

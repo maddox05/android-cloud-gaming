@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuthModal } from "../context/AuthModalContext";
-import { useUser } from "../context/UserContext";
+import { useUser } from "../context/useUser";
 import ComparisonTable from "./ComparisonTable";
 import "./Pricing.css";
 

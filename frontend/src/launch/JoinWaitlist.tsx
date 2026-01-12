@@ -7,7 +7,7 @@ import {
   getTotalWaitlistCount,
 } from "./waitlist_functions";
 import "./Waitlist.css";
-import { useUser } from "../context/UserContext";
+import { useUser } from "../context/useUser";
 
 export default function JoinWaitlist() {
   const navigate = useNavigate();

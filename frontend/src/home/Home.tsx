@@ -1,6 +1,6 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useAuthModal } from "../context/AuthModalContext";
-import { useUser } from "../context/UserContext";
+import { useUser } from "../context/useUser";
 import { showAlert } from "../services/alertService";
 import GameCard from "./GameCard";
 import { GitHubIcon } from "../components/Icons";

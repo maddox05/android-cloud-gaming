@@ -1,11 +1,11 @@
 import {
   createContext,
-  useContext,
   useState,
   useEffect,
   useMemo,
   type ReactNode,
 } from "react";
+import axios from "axios";
 import type { User } from "@supabase/supabase-js";
 import type { AccessType } from "../../../shared/types";
 import { getAccessToken, onAuthStateChange } from "../utils/supabase";
@@ -20,7 +20,7 @@ interface UserContextValue {
   refetchAccessType: () => Promise<void>;
 }
 
-const UserContext = createContext<UserContextValue | null>(null);
+export const UserContext = createContext<UserContextValue | null>(null);
 
 const { SIGNAL_HTTP_URL } = config;
 
@@ -30,15 +30,11 @@ let cachedAccessType: AccessType | undefined = undefined;
 
 async function fetchAccessType(token: string): Promise<AccessType | undefined> {
   try {
-    const response = await fetch(
-      `${SIGNAL_HTTP_URL}/userAccess?token=${encodeURIComponent(token)}`
+    const response = await axios.get(
+      `${SIGNAL_HTTP_URL}/userAccess?token=${encodeURIComponent(token)}`,
+      { timeout: 10000 }
     );
-    if (!response.ok) {
-      console.error("Failed to fetch access type:", response.status);
-      return undefined;
-    }
-    const data = await response.json();
-    return data.accessType as AccessType;
+    return response.data.accessType as AccessType;
   } catch (error) {
     console.error("Error fetching access type:", error);
     return undefined;
@@ -125,12 +121,4 @@ export function UserProvider({ children }: { children: ReactNode }) {
   return (
     <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>
   );
-}
-
-export function useUser() {
-  const context = useContext(UserContext);
-  if (!context) {
-    throw new Error("useUser must be used within a UserProvider");
-  }
-  return context;
 }
