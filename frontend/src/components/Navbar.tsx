@@ -4,7 +4,7 @@ import { signOut } from "../utils/supabase";
 import { useAuthModal } from "../context/AuthModalContext";
 import { useUser } from "../context/UserContext";
 import { Avatar } from "./Avatar";
-import { BurgerIcon, CloseIcon, DiscordIcon, GiftIcon } from "./Icons";
+import { BurgerIcon, CloseIcon, DiscordIcon, GiftIcon, GitHubIcon } from "./Icons";
 import { MobileMenu } from "./MobileMenu";
 import { ProfilePanel } from "./ProfilePanel";
 import "./Navbar.css";

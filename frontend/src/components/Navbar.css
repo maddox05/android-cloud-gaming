@@ -26,7 +26,7 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: #5865F2;
+  background: #5865f2;
   border: none;
   border-radius: 10px;
   color: #ffffff;
@@ -37,7 +37,7 @@
 }
 
 .discord-badge:hover {
-  background: #4752C4;
+  background: #4752c4;
   transform: translateY(-1px);
 }
 
@@ -152,7 +152,7 @@
 }
 
 /* Responsive - only essential changes */
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .header {
     padding: 0 16px;
   }

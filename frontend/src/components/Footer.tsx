@@ -5,6 +5,7 @@ import {
   TikTokIcon,
   InstagramIcon,
   MailIcon,
+  GitHubIcon,
 } from "./Icons";
 import "./Footer.css";
 
@@ -116,6 +117,15 @@ export default function Footer() {
             >
               <MailIcon size={16} />
               <span>contact@maddoxcloud.com</span>
+            </a>
+            <a
+              href="https://github.com/maddox05/android-cloud-gaming/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="footer-support-link"
+            >
+              <GitHubIcon size={16} />
+              <span>Report A Bug</span>
             </a>
           </div>
         </div>
