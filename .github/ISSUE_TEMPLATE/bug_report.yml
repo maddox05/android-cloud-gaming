@@ -6,7 +6,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to report a bug! Please fill out the information below to help us investigate.
+        **The more information you provide, the more likely your issue will get fixed!**
+
+        Only the description is required, but filling out more fields helps us debug faster.
 
   - type: checkboxes
     id: searched
@@ -44,7 +46,7 @@ body:
         - Sometimes
         - Rarely / Almost never
     validations:
-      required: true
+      required: false
 
   - type: dropdown
     id: connection-stage
@@ -59,7 +61,7 @@ body:
         - On the home page
         - Other (explain in description)
     validations:
-      required: true
+      required: false
 
   - type: input
     id: error-shown
@@ -78,7 +80,7 @@ body:
         - Free
         - Paid subscriber
     validations:
-      required: true
+      required: false
 
   - type: dropdown
     id: browser
@@ -93,7 +95,7 @@ body:
         - Brave
         - Other
     validations:
-      required: true
+      required: false
 
   - type: dropdown
     id: os
@@ -108,7 +110,7 @@ body:
         - ChromeOS
         - Other
     validations:
-      required: true
+      required: false
 
   - type: dropdown
     id: device-type
@@ -119,7 +121,7 @@ body:
         - Mobile Phone
         - Tablet
     validations:
-      required: true
+      required: false
 
   - type: dropdown
     id: nat-type
