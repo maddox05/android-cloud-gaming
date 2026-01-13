@@ -154,6 +154,12 @@ export function AlertPopup() {
             {alertData.link.label}
           </button>
         )}
+
+        {!alertData.link && alertData.redirectLabel && (
+          <button className="alert-cta" onClick={handleClose}>
+            {alertData.redirectLabel}
+          </button>
+        )}
       </div>
     </div>
   );

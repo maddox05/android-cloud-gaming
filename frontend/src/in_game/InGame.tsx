@@ -118,6 +118,7 @@ export default function InGame() {
             type: "warning",
             title: "Connection Timeout",
             message: "AFK? Not on my watch. Connection timed out.",
+            link: { href: "/", label: "Back to Home" },
             onCloseRedirect: "/",
           });
         } else if (code === ERROR_CODE.WORKER_CRASHED) {
@@ -186,6 +187,7 @@ export default function InGame() {
               type: "warning",
               title: "Queue Required",
               message: "You need to wait in the queue!",
+              link: { href: "/", label: "Back to Home" },
               onCloseRedirect: "/",
             });
             return;
