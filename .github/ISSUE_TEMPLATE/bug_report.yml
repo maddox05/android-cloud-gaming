@@ -1,0 +1,186 @@
+name: Bug Report
+description: Report a bug or issue with Cloud Gaming
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below to help us investigate.
+
+  - type: checkboxes
+    id: searched
+    attributes:
+      label: Pre-submission checklist
+      options:
+        - label: I have searched the existing issues and this bug has not been reported
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: Describe the bug, what you expected to happen, and the steps to reproduce it
+      placeholder: |
+        **What happened:**
+        Describe the issue...
+
+        **What I expected:**
+        What should have happened instead...
+
+        **Steps to reproduce:**
+        1. Go to...
+        2. Click on...
+        3. See error...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: How often does this occur?
+      options:
+        - Every time
+        - Sometimes
+        - Rarely / Almost never
+    validations:
+      required: true
+
+  - type: dropdown
+    id: connection-stage
+    attributes:
+      label: When does the issue occur?
+      options:
+        - During initial connection
+        - Mid-game
+        - When switching games
+        - Other (explain in description)
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & Version
+      description: e.g. Chrome 120, Firefox 121, Safari 17
+      placeholder: Chrome 120
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Android
+        - iOS
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: device-type
+    attributes:
+      label: Device Type
+      options:
+        - Desktop / Laptop
+        - Mobile Phone
+        - Tablet
+    validations:
+      required: true
+
+  - type: dropdown
+    id: nat-type
+    attributes:
+      label: NAT Type
+      description: |
+        Check your NAT type at: https://tomchen.github.io/symmetric-nat-test/
+      options:
+        - Normal / Full Cone NAT
+        - Symmetric NAT
+        - Not sure
+    validations:
+      required: false
+
+  - type: dropdown
+    id: network-type
+    attributes:
+      label: Network Type
+      options:
+        - Home WiFi
+        - School WiFi
+        - Work WiFi
+        - Mobile Data
+        - Other
+    validations:
+      required: false
+
+  - type: input
+    id: wifi-speed
+    attributes:
+      label: Internet Speed
+      description: |
+        Test at https://www.speedtest.net/ if needed. You can give Mbps or just say fast/slow/potato
+      placeholder: e.g. 100 Mbps, fast, slow, potato
+    validations:
+      required: false
+
+  - type: dropdown
+    id: vpn
+    attributes:
+      label: Are you using a VPN?
+      options:
+        - "No"
+        - "Yes"
+    validations:
+      required: false
+
+  - type: input
+    id: game
+    attributes:
+      label: Game (if applicable)
+      description: Which game were you playing?
+      placeholder: e.g. Game name
+    validations:
+      required: false
+
+  - type: dropdown
+    id: game-specific
+    attributes:
+      label: Does this happen in all games or just one?
+      options:
+        - All games
+        - Only this game
+        - Not applicable
+    validations:
+      required: false
+
+  - type: textarea
+    id: error-messages
+    attributes:
+      label: Error Messages
+      description: Any error popups or messages shown?
+      placeholder: Paste any error messages here...
+    validations:
+      required: false
+
+  - type: textarea
+    id: console-logs
+    attributes:
+      label: Console Logs
+      description: Paste browser console logs if possible (F12 > Console tab)
+      render: shell
+      placeholder: Paste console logs here if possible...
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / Video
+      description: Drag and drop any screenshots or screen recordings that show the issue
+    validations:
+      required: false
