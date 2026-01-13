@@ -51,19 +51,47 @@ body:
     attributes:
       label: When does the issue occur?
       options:
-        - During initial connection
-        - Mid-game
-        - When switching games
+        - During login / authentication
+        - In queue (waiting for server)
+        - Connecting to game (after queue)
+        - While playing
+        - When exiting / disconnecting
+        - On the home page
         - Other (explain in description)
     validations:
       required: true
 
   - type: input
+    id: error-shown
+    attributes:
+      label: What error message did you see? (if any)
+      description: Copy the exact error text if possible
+      placeholder: e.g. "No game servers available", "Connection Failed"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: user-type
+    attributes:
+      label: Account Type
+      options:
+        - Free
+        - Paid subscriber
+    validations:
+      required: true
+
+  - type: dropdown
     id: browser
     attributes:
-      label: Browser & Version
-      description: e.g. Chrome 120, Firefox 121, Safari 17
-      placeholder: Chrome 120
+      label: Browser
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Edge
+        - Opera
+        - Brave
+        - Other
     validations:
       required: true
 
@@ -77,6 +105,7 @@ body:
         - Linux
         - Android
         - iOS
+        - ChromeOS
         - Other
     validations:
       required: true
@@ -142,8 +171,8 @@ body:
     id: game
     attributes:
       label: Game (if applicable)
-      description: Which game were you playing?
-      placeholder: e.g. Game name
+      description: Which game were you playing? Leave blank if not applicable
+      placeholder: e.g. Clash Royale
     validations:
       required: false
 
@@ -155,6 +184,19 @@ body:
         - All games
         - Only this game
         - Not applicable
+    validations:
+      required: false
+
+  - type: dropdown
+    id: video-quality
+    attributes:
+      label: Video Quality Setting
+      description: Check your setting in the app (if you changed it)
+      options:
+        - Default / Don't know
+        - HD
+        - LD
+        - ULD
     validations:
       required: false
 
