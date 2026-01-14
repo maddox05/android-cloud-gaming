@@ -110,7 +110,8 @@ export default function InGame() {
           showAlert({
             type: "error",
             title: "Connection Failed",
-            message: "WebRTC connection failed. Please try another wifi network.",
+            message:
+              "WebRTC connection failed. Please try another wifi network.",
             onCloseRedirect: "/",
           });
         } else if (code === ERROR_CODE.CONNECTION_TIMEOUT) {
@@ -134,6 +135,7 @@ export default function InGame() {
             title: "Error",
             message: `${message}. Returning to home page.`,
             onCloseRedirect: "/",
+            link: { href: "/", label: "Home" },
           });
         }
         cleanup();
@@ -148,8 +150,12 @@ export default function InGame() {
           showAlert({
             type: "error",
             title: "Connection Error",
-            message: "Client (you) WebRTC connection failed. This is most likely a server issue.",
-            link: { href: "https://discord.gg/U4QYdzXEnr", label: "Get Help on Discord" },
+            message:
+              "Client (you) WebRTC connection failed. This is most likely a server issue.",
+            link: {
+              href: "https://discord.gg/U4QYdzXEnr",
+              label: "Get Help on Discord",
+            },
             onCloseRedirect: "/",
           });
         } else {
@@ -158,6 +164,7 @@ export default function InGame() {
             title: "Error",
             message: `${message}. Returning to home page.`,
             onCloseRedirect: "/",
+            link: { href: "/", label: "Home" },
           });
         }
         cleanup();
@@ -230,6 +237,7 @@ export default function InGame() {
             title: "Connection Failed",
             message: "Failed to connect to server. Returning to home page.",
             onCloseRedirect: "/",
+            link: { href: "/", label: "Home" },
           });
           cleanup();
           websocketAPI.close();
