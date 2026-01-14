@@ -193,6 +193,36 @@ async function checkSubscriptionByEmail(
 }
 
 /**
+ * Check if user has a password set (encrypted_password is not null)
+ * Used for account linking feature to detect if OAuth user has added password auth
+ * Requires SQL function: check_user_has_password(user_id uuid) in Supabase
+ */
+export async function checkUserHasPassword(userId: string): Promise<boolean> {
+  const client = getSupabase();
+
+  if (!client) {
+    console.error("Supabase not configured");
+    return false;
+  }
+
+  try {
+    const { data, error } = await client.rpc("check_user_has_password", {
+      user_id: userId,
+    });
+
+    if (error) {
+      console.error("Error checking password status:", error.message);
+      return false;
+    }
+
+    return data === true;
+  } catch (err) {
+    console.error("Password check error:", err);
+    return false;
+  }
+}
+
+/**
  * Check if user has active subscription
  * Flow:
  * 1. First check by checkout session (client_reference_id)

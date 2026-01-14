@@ -114,3 +114,91 @@ export function onAuthStateChange(
   } = supabase.auth.onAuthStateChange(callback);
   return () => subscription.unsubscribe();
 }
+
+// ============================================
+// Account Linking Utilities
+// ============================================
+
+/**
+ * Get list of providers linked to the user account
+ * Returns provider names from user.identities array
+ */
+export function getLinkedProviders(user: User | null): string[] {
+  if (!user?.identities) return [];
+  return user.identities.map((identity) => identity.provider);
+}
+
+/**
+ * Check if a specific provider is linked to the user account
+ */
+export function isProviderLinked(user: User | null, provider: string): boolean {
+  return getLinkedProviders(user).includes(provider);
+}
+
+/**
+ * Link Google OAuth identity to existing account
+ */
+export async function linkGoogleIdentity(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const { error } = await supabase.auth.linkIdentity({
+    provider: "google",
+    options: {
+      redirectTo: window.location.origin + window.location.pathname,
+    },
+  });
+
+  if (error) {
+    console.error("Link Google error:", error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Link Microsoft/Azure OAuth identity to existing account
+ */
+export async function linkAzureIdentity(): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const { error } = await supabase.auth.linkIdentity({
+    provider: "azure",
+    options: {
+      scopes: "email",
+      redirectTo: window.location.origin + window.location.pathname,
+    },
+  });
+
+  if (error) {
+    console.error("Link Azure error:", error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Add email/password authentication to existing OAuth account
+ * Uses updateUser to set a password for the account
+ */
+export async function addPasswordToAccount(
+  password: string
+): Promise<{ success: boolean; error?: string }> {
+  if (password.length < 6) {
+    return { success: false, error: "Password must be at least 6 characters" };
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: password,
+  });
+
+  if (error) {
+    console.error("Add password error:", error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}

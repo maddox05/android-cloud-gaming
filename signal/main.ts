@@ -5,7 +5,7 @@ import Client from "./Client.js";
 import Worker from "./Worker.js";
 import { getAllClients, getAllWorkers, getWorkerCount } from "./registry.js";
 import { processQueue, checkQueueTimeouts } from "./queue.js";
-import { verifyToken, getUserAccessType } from "./db/auth.js";
+import { verifyToken, getUserAccessType, checkUserHasPassword } from "./db/auth.js";
 import { redeemInvite } from "./invite_access.js";
 import { joinWaitlist } from "./waitlist_endpoints.js";
 import { ERROR_CODE, MSG } from "../shared/types.js";
@@ -56,6 +56,22 @@ app.get("/userAccess", async (req, res) => {
 
   const accessType = await getUserAccessType(user.id);
   return res.json({ accessType });
+});
+
+app.get("/hasPassword", async (req, res) => {
+  const token = req.query.token as string | undefined;
+
+  if (!token) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  const user = await verifyToken(token);
+  if (!user) {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+
+  const hasPassword = await checkUserHasPassword(user.id);
+  return res.json({ hasPassword });
 });
 
 // Middleware

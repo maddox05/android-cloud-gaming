@@ -5,12 +5,10 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import axios from "axios";
 import type { User } from "@supabase/supabase-js";
 import type { AccessType } from "../../../shared/types";
 import { getAccessToken, onAuthStateChange } from "../utils/supabase";
-import { config } from "../config";
-
+import { fetchAccessType } from "../utils/server_funcs";
 interface UserContextValue {
   user: User | null;
   accessType: AccessType | undefined; // access type is undefined on default and null if the user doesnt have access
@@ -20,26 +18,11 @@ interface UserContextValue {
   refetchAccessType: () => Promise<void>;
 }
 
-export const UserContext = createContext<UserContextValue | null>(null);
-
-const { SIGNAL_HTTP_URL } = config;
+export const UserContext = createContext<UserContextValue | null>(null); // todo vite issue with 2 exports in same file hot refresh no work
 
 // Module-level cache to prevent duplicate fetches (survives hot reload)
 let cachedUserId: string | null = null;
 let cachedAccessType: AccessType | undefined = undefined;
-
-async function fetchAccessType(token: string): Promise<AccessType | undefined> {
-  try {
-    const response = await axios.get(
-      `${SIGNAL_HTTP_URL}/userAccess?token=${encodeURIComponent(token)}`,
-      { timeout: 10000 }
-    );
-    return response.data.accessType as AccessType;
-  } catch (error) {
-    console.error("Error fetching access type:", error);
-    return undefined;
-  }
-}
 
 export function UserProvider({ children }: { children: ReactNode }) {
   // Initialize from cache if available (survives hot reload)

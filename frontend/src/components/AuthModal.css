@@ -203,6 +203,16 @@
   color: var(--text-muted);
 }
 
+/* Readonly input style for link-email mode */
+.auth-input-group.auth-input-readonly {
+  background: var(--bg-primary);
+  opacity: 0.7;
+}
+
+.auth-input-group.auth-input-readonly input {
+  color: var(--text-secondary);
+}
+
 /* Error/Success Messages */
 .auth-error {
   color: #ef4444;

@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react";
 
-type AuthMode = "login" | "signup";
+type AuthMode = "login" | "signup" | "link-google" | "link-azure" | "link-email";
 
 interface AuthModalContextValue {
   isAuthModalOpen: boolean;
@@ -9,6 +9,10 @@ interface AuthModalContextValue {
   startSignup: () => void;
   closeAuthModal: () => void;
   setAuthMode: (mode: AuthMode) => void;
+  startLinkGoogle: () => void;
+  startLinkAzure: () => void;
+  startLinkEmail: () => void;
+  isLinkMode: boolean;
 }
 
 const AuthModalContext = createContext<AuthModalContextValue | null>(null);
@@ -31,6 +35,23 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
     setIsAuthModalOpen(false);
   }, []);
 
+  const startLinkGoogle = useCallback(() => {
+    setAuthMode("link-google");
+    setIsAuthModalOpen(true);
+  }, []);
+
+  const startLinkAzure = useCallback(() => {
+    setAuthMode("link-azure");
+    setIsAuthModalOpen(true);
+  }, []);
+
+  const startLinkEmail = useCallback(() => {
+    setAuthMode("link-email");
+    setIsAuthModalOpen(true);
+  }, []);
+
+  const isLinkMode = useMemo(() => authMode.startsWith("link-"), [authMode]);
+
   return (
     <AuthModalContext.Provider
       value={{
@@ -40,6 +61,10 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
         startSignup,
         closeAuthModal,
         setAuthMode,
+        startLinkGoogle,
+        startLinkAzure,
+        startLinkEmail,
+        isLinkMode,
       }}
     >
       {children}

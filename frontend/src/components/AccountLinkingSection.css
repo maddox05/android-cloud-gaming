@@ -1,0 +1,73 @@
+/* Account Linking Section */
+.account-linking-section {
+  margin-bottom: 24px;
+}
+
+.linked-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.linked-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.linked-account-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.linked-account-info svg {
+  flex-shrink: 0;
+}
+
+.linked-account-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.linked-status {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.linked-status-loading {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  padding: 4px 10px;
+}
+
+.link-account-btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.link-account-btn:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.link-account-btn:active {
+  transform: scale(0.96);
+}

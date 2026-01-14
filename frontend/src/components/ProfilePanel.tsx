@@ -9,6 +9,7 @@ import {
   type VideoQuality,
 } from "../utils/videoQuality";
 import { PlaytimeDisplay } from "./PlaytimeDisplay";
+import { AccountLinkingSection } from "./AccountLinkingSection";
 import "./ProfilePanel.css";
 import { useUser } from "../context/useUser";
 
@@ -26,6 +27,7 @@ export function ProfilePanel({
   onSignOut,
 }: ProfilePanelProps) {
   const { user, accessType } = useUser();
+  console.log(accessType);
   const [videoQuality, setVideoQualityState] =
     useState<VideoQuality>(getVideoQuality);
 
@@ -63,6 +65,8 @@ export function ProfilePanel({
                 <span className="panel-user-email">{user?.email}</span>
               </div>
             </div>
+
+            <AccountLinkingSection />
 
             <div className="panel-setting">
               <span className="panel-setting-label">Stream Quality</span>
