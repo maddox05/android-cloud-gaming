@@ -12,41 +12,8 @@ services:
     tmpfs:
       - /data-diff:size=500m,mode=1777 # RAM-backed, auto-deleted on stop
     command:
-      # ===== REDROID SETTINGS =====
       - androidboot.use_redroid_overlayfs=1
       - androidboot.use_memfd=1
-
-      # ===== PRODUCT INFO =====
-      - ro.product.model=SM-S9010
-      - ro.product.manufacturer=samsung
-      - ro.product.brand=samsung
-      - ro.product.name=r9q
-      - ro.product.device=r9q
-      - ro.product.board=lahaina
-
-      # ===== BUILD INFO =====
-      - ro.build.product=r9q
-      - ro.build.description=r9qxxx-user 12 SP1A.210812.016.C1 S9010XXU1AVA1 release-keys
-      - ro.build.fingerprint=samsung/r9qxxx/r9q:12/SP1A.210812.016.C1/S9010XXU1AVA1:user/release-keys
-      - ro.build.id=SP1A.210812.016.C1
-      - ro.build.display.id=SP1A.210812.016.C1
-      - ro.build.version.release=12
-      - ro.build.version.sdk=31
-      - ro.build.version.security_patch=2022-01-01
-      - ro.build.type=user
-      - ro.build.tags=release-keys
-
-      # ===== HARDWARE =====
-      - ro.hardware=qcom
-      - ro.board.platform=lahaina
-      - ro.arch=arm64
-
-      # ===== BOOTLOADER =====
-      - ro.bootloader=S9010XXU1AVA1
-
-      # ===== GOOGLE CLIENT =====
-      - ro.com.google.clientidbase=android-samsung
-      - ro.com.google.gmsversion=12_202201
     networks:
       - internal # Gives container an IP that host-networked worker can reach
 
