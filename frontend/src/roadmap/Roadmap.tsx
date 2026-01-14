@@ -53,22 +53,6 @@ const SaveIcon = () => (
   </svg>
 );
 
-const UserIcon = () => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-);
-
 const GamepadIcon = () => (
   <svg
     width="24"
@@ -106,6 +90,36 @@ const ServerIcon = () => (
   </svg>
 );
 
+const ShieldIcon = () => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
+);
+
+const PlayStoreIcon = () => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polygon points="5 3 19 12 5 21 5 3" />
+  </svg>
+);
+
 interface RoadmapItem {
   id: string;
   title: string;
@@ -121,7 +135,7 @@ const roadmapData: RoadmapItem[] = [
   {
     id: "free-version",
     title: "Free Version Launch",
-    date: "January 2025",
+    date: "January 2026",
     season: "Winter 2025",
     description:
       "Introducing our free tier with core gaming features for everyone.",
@@ -137,7 +151,7 @@ const roadmapData: RoadmapItem[] = [
   {
     id: "byod-proxy",
     title: "BYOD & Proxy Links",
-    date: "January 2025",
+    date: "January 2026",
     season: "Winter 2025",
     description: "Play your favorite games anywhere, even on school networks.",
     features: [
@@ -150,46 +164,62 @@ const roadmapData: RoadmapItem[] = [
     status: "completed",
   },
   {
-    id: "save-data",
-    title: "Cloud Save System",
-    date: "Spring 2025",
-    season: "Spring 2025",
-    description: "Never lose your progress again with cloud-synced game saves.",
+    id: "security-kiosk",
+    title: "Security & Kiosk Mode",
+    date: "Early 2026",
+    season: "Early 2026",
+    description:
+      "Enhanced security features and a locked-down kiosk experience.",
     features: [
-      "Automatic game data backup",
-      "Cross-session persistence",
-      "Tutorial progress saved",
-      "Instant resume gameplay",
+      "Advanced security measures",
+      "Kiosk mode for focused gaming",
+      "Restricted system access",
+      "Safer gaming environment",
     ],
-    icon: <SaveIcon />,
-    status: "current",
-  },
-  {
-    id: "account-login",
-    title: "In-Game Account Login",
-    date: "Spring 2025",
-    season: "Spring 2025",
-    description: "Login to your game accounts and access all your content.",
-    features: [
-      "Google Play Games integration",
-      "Game-specific account sync",
-      "Access purchased content",
-      "Friend lists & social features",
-    ],
-    icon: <UserIcon />,
+    icon: <ShieldIcon />,
     status: "upcoming",
   },
   {
-    id: "roblox",
-    title: "Roblox Support",
-    date: "Spring 2025",
-    season: "Spring 2025",
-    description: "Full Roblox experience with advanced input mapping.",
+    id: "google-play",
+    title: "Google Play & Device Compatibility",
+    date: "Early 2026",
+    season: "Early 2026",
+    description: "Full Google Play integration with enhanced device support.",
+    features: [
+      "Google Play Games integration",
+      "Access purchased content",
+      "Enhanced device compatibility",
+      "Broader game support",
+    ],
+    icon: <PlayStoreIcon />,
+    status: "upcoming",
+  },
+  {
+    id: "cloud-saves",
+    title: "Cloud Saves",
+    date: "Early 2026",
+    season: "Early 2026",
+    description: "Pick up right where you left off every time you return.",
+    features: [
+      "Persistent game data",
+      "Same phone state on return",
+      "Automatic progress saving",
+      "Seamless session continuity",
+    ],
+    icon: <SaveIcon />,
+    status: "upcoming",
+  },
+  {
+    id: "keyboard-mouse",
+    title: "Keyboard & Mouse Support",
+    date: "Early 2026",
+    season: "Early 2026",
+    description: "Full keyboard and mouse controls for games like Roblox.",
     features: [
       "Complete keyboard mapping",
-      "Mobile-to-desktop controls",
-      "Full Roblox game library",
-      "Optimized performance",
+      "Mouse input support",
+      "Custom keybindings",
+      "Desktop-style controls",
     ],
     icon: <GamepadIcon />,
     status: "upcoming",
@@ -197,8 +227,8 @@ const roadmapData: RoadmapItem[] = [
   {
     id: "infrastructure",
     title: "Infrastructure 2.0",
-    date: "Summer 2025",
-    season: "Summer 2025",
+    date: "2026",
+    season: "2026",
     description: "Massive infrastructure overhaul for ultimate scalability.",
     features: [
       "Dynamic instance scaling",
