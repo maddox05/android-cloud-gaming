@@ -399,8 +399,8 @@ export default function Waitlist() {
               rel="noopener noreferrer"
             >
               Discord community
-            </a>
-            .
+            </a>{" "}
+            for support and random invite code drops that give you instant access!
           </p>
           <p>
             Have a code? <Link to="/redeem">Redeem it here</Link> to get instant
