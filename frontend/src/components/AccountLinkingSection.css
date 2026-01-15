@@ -3,10 +3,44 @@
   margin-bottom: 24px;
 }
 
+.account-linking-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 0;
+}
+
+.account-linking-header:hover .panel-setting-label {
+  color: var(--text-secondary);
+}
+
+.account-linking-chevron {
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.account-linking-chevron.expanded {
+  transform: rotate(180deg);
+}
+
 .linked-accounts-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, margin-top 0.3s ease;
+  margin-top: 0;
+}
+
+.linked-accounts-list.expanded {
+  max-height: 300px;
+  margin-top: 10px;
 }
 
 .linked-account-row {

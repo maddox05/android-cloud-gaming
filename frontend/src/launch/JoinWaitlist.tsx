@@ -259,8 +259,8 @@ export default function JoinWaitlist() {
 
         <div className="waitlist-info">
           <p>
-            Have a payment code? <a href="/pricing">Skip the waitlist</a> and
-            get immediate access. Questions? Join our{" "}
+            Want Access Now? <a href="/pricing">Skip the waitlist</a> and get
+            immediate access. Questions? Join our{" "}
             <a
               href="https://discord.gg/U4QYdzXEnr"
               target="_blank"

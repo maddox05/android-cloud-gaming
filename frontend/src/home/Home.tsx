@@ -161,7 +161,7 @@ export default function Home() {
         type: "warning",
         title: "Access Required",
         message: "Your account doesn't have access. Please join the waitlist or purchase the paid version!",
-        link: { href: "/pricing", label: "View Pricing" },
+        link: { href: "/waitlist", label: "Join Waitlist" },
       });
       return;
     }

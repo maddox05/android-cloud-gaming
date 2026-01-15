@@ -47,6 +47,7 @@ export default function Queue() {
             type: "error",
             title: "Subscription Error",
             message,
+            link: { href: "/", label: "Back to Home" },
           });
           handleExit();
           return;
@@ -55,6 +56,7 @@ export default function Queue() {
             type: "error",
             title: "Authentication Failed",
             message,
+            link: { href: "/", label: "Back to Home" },
           });
           handleExit();
           return;

@@ -149,17 +149,9 @@ export function AlertPopup() {
 
         <p className="alert-message">{alertData.message}</p>
 
-        {alertData.link && (
-          <button className="alert-cta" onClick={handleLinkClick}>
-            {alertData.link.label}
-          </button>
-        )}
-
-        {!alertData.link && alertData.redirectLabel && (
-          <button className="alert-cta" onClick={handleClose}>
-            {alertData.redirectLabel}
-          </button>
-        )}
+        <button className="alert-cta" onClick={handleLinkClick}>
+          {alertData.link.label}
+        </button>
       </div>
     </div>
   );

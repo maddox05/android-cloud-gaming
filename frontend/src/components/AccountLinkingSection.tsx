@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "../context/useUser";
 import { useAuthModal } from "../context/AuthModalContext";
-import { GoogleIcon, MicrosoftIcon, MailIcon } from "./Icons";
+import { GoogleIcon, MicrosoftIcon, MailIcon, ChevronIcon } from "./Icons";
 import { getLinkedProviders } from "../utils/supabase";
 import { checkHasPassword } from "../utils/server_funcs";
 import "./AccountLinkingSection.css";
@@ -10,6 +10,7 @@ export function AccountLinkingSection() {
   const { user } = useUser();
   const { startLinkGoogle, startLinkAzure, startLinkEmail } = useAuthModal();
   const [hasPassword, setHasPassword] = useState<boolean | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const linkedProviders = getLinkedProviders(user);
   const isGoogleLinked = linkedProviders.includes("google");
@@ -33,8 +34,17 @@ export function AccountLinkingSection() {
 
   return (
     <div className="account-linking-section">
-      <span className="panel-setting-label">Linked Accounts</span>
-      <div className="linked-accounts-list">
+      <button
+        className="account-linking-header"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <span className="panel-setting-label">Linked Accounts</span>
+        <ChevronIcon
+          size={16}
+          className={`account-linking-chevron ${isExpanded ? "expanded" : ""}`}
+        />
+      </button>
+      <div className={`linked-accounts-list ${isExpanded ? "expanded" : ""}`}>
         {/* Google */}
         <div className="linked-account-row">
           <div className="linked-account-info">

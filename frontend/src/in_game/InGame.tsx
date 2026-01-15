@@ -71,6 +71,7 @@ export default function InGame() {
         type: "info",
         title: "Exiting Game",
         message: reason,
+        link: { href: "/", label: "Back to Home" },
         onCloseRedirect: "/",
       });
     }
@@ -90,6 +91,7 @@ export default function InGame() {
         type: "error",
         title: "No Game Selected",
         message: "No game specified. Please select a game from the home page.",
+        link: { href: "/", label: "Back to Home" },
         onCloseRedirect: "/",
       });
     } else {
@@ -104,6 +106,7 @@ export default function InGame() {
             type: "error",
             title: "Server Unavailable",
             message: "No game servers available. Please try again later.",
+            link: { href: "/", label: "Back to Home" },
             onCloseRedirect: "/",
           });
         } else if (code === ERROR_CODE.WEBRTC_FAILED) {
@@ -112,6 +115,7 @@ export default function InGame() {
             title: "Connection Failed",
             message:
               "WebRTC connection failed. Please try another wifi network.",
+            link: { href: "/", label: "Back to Home" },
             onCloseRedirect: "/",
           });
         } else if (code === ERROR_CODE.CONNECTION_TIMEOUT) {
@@ -127,6 +131,7 @@ export default function InGame() {
             type: "error",
             title: "Server Crashed",
             message: `The game server crashed: ${message}`,
+            link: { href: "/", label: "Back to Home" },
             onCloseRedirect: "/",
           });
         } else {
