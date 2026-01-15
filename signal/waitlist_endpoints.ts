@@ -220,3 +220,81 @@ export async function joinWaitlist(
     };
   }
 }
+
+/**
+ * Take the first N users off the waitlist and generate invite codes for them
+ *
+ * TODO: Add admin authentication
+ *
+ * @param count - Number of users to process (capped at 100)
+ * @returns CSV string with email,invite_code
+ */
+export async function generateInvites(count: number): Promise<string> {
+  const processCount = Math.min(count, 100);
+
+  const supabase = getSupabase();
+  if (!supabase) {
+    throw new Error("Database not configured");
+  }
+
+  // Get the first N users from waitlist, ordered by time_joined (earliest first)
+  const { data: waitlistUsers, error: fetchError } = await supabase
+    .from("waitlist")
+    .select("user_id")
+    .order("time_joined", { ascending: true })
+    .limit(processCount);
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch waitlist: ${fetchError.message}`);
+  }
+
+  if (!waitlistUsers || waitlistUsers.length === 0) {
+    return "email,invite_code";
+  }
+
+  const rows: string[] = ["email,invite_code"];
+
+  for (const waitlistUser of waitlistUsers) {
+    const userId = waitlistUser.user_id;
+
+    // Get user email
+    const { data: userData } = await supabase.auth.admin.getUserById(userId);
+    const email = userData?.user?.email;
+    if (!email) {
+      console.error(`No email found for user ${userId}`);
+      continue;
+    }
+
+    // Insert into invite_codes table
+    const { data: inviteData, error: insertError } = await supabase
+      .from("invite_codes")
+      .insert({})
+      .select("invite_code")
+      .single();
+
+    if (insertError || !inviteData) {
+      console.error(`Failed to create invite for ${userId}:`, insertError);
+      continue;
+    }
+
+    const inviteCode = inviteData.invite_code;
+
+    // Remove from waitlist
+    const { error: deleteError } = await supabase
+      .from("waitlist")
+      .delete()
+      .eq("user_id", userId);
+
+    if (deleteError) {
+      console.error(`Failed to remove ${userId} from waitlist:`, deleteError);
+    }
+
+    rows.push(`${email},${inviteCode}`);
+    console.log(`Generated invite for ${email}: ${inviteCode}`);
+  }
+
+  return rows.join("\n");
+}
+
+// console.log(await generateInvites(21));
+// todo need nodemailer as TS is ass

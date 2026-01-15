@@ -10,6 +10,10 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 let supabase: SupabaseClient | null = null;
 
+if (!SUPABASE_SERVICE_KEY || !SUPABASE_URL) {
+  throw new Error("NO SUPABAS ENV");
+}
+
 /**
  * Get or initialize Supabase client
  * Returns null if environment variables are not configured
