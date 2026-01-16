@@ -181,7 +181,7 @@ export class H264Decoder {
 
     if (
       [100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134].includes(
-        profileIdc
+        profileIdc,
       )
     ) {
       const chromaFormat = readUE();
@@ -278,8 +278,9 @@ export class H264Decoder {
         showAlert({
           type: "warning",
           title: "Video Error",
-          message: "Video decoder error occurred, requesting video reset. You may have to reconnect.",
-          link: { href: "/", label: "Dismiss" },
+          message:
+            "Video decoder error occurred, requesting video reset. You may have to reconnect.",
+          link: { href: "", label: "Dismiss" },
         });
         this.requestVideoReset(); // fix issue Cannot call 'close' on a closed codec when decoder fails, to my left is an error this got, its now fixed, but I think if the decoder errors again, resetting may not fix it. not sure if anyone gets this pls write a issue
       },
@@ -320,7 +321,7 @@ export class H264Decoder {
     let frameData = nal;
     if (isKeyframe && this.sps && this.pps) {
       const combined = new Uint8Array(
-        this.sps.length + this.pps.length + nal.length
+        this.sps.length + this.pps.length + nal.length,
       );
       combined.set(this.sps, 0);
       combined.set(this.pps, this.sps.length);

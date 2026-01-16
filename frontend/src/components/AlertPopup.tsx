@@ -119,7 +119,7 @@ export function AlertPopup() {
       setAlertData(null);
       if (href.startsWith("http")) {
         window.open(href, "_blank", "noopener,noreferrer");
-      } else {
+      } else if (href) {
         navigate(href);
       }
     }
