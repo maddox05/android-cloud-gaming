@@ -160,7 +160,7 @@ export default function Home() {
       showAlert({
         type: "warning",
         title: "Access Required",
-        message: "Your account doesn't have access. Please join the waitlist or purchase the paid version!",
+        message: "Join the waitlist or buy access. Waitlist is early access only—full release won't need one.",
         link: { href: "/waitlist", label: "Join Waitlist" },
       });
       return;
