@@ -9,8 +9,7 @@ services:
     mem_reservation: 3g
     volumes:
       - redroid-base:/data-base # Shared base data partition
-    tmpfs:
-      - /data-diff:size=100m,mode=1777 # RAM-backed, auto-deleted on stop
+      - redroid-diff:/data-diff
     command:
       - androidboot.use_redroid_overlayfs=1
       - androidboot.use_memfd=1
@@ -34,8 +33,10 @@ services:
 
 volumes:
   redroid-base:
-    external: true
+    external: true # requires volume to even start docker container
     name: redroid-base # Shared base data partition (create once, use by all pods)
+  redroid-diff:
+    name: ${COMPOSE_PROJECT_NAME}-redroid-diff # actual name docker names the volume or actual volume name it should be
 
 networks:
   internal: # Per-pod network, gives redroid an IP the host-networked worker can reach
