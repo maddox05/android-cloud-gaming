@@ -47,6 +47,10 @@ let currentTurnServers: RTCIceServer[] | null = null;
 // User ID for game saves (received from signal server)
 let currentUserId: string | null = null;
 
+let isRestarting = false;
+
+let hasStarted = false;
+
 async function createPeerConnection(): Promise<PC> {
   // Merge STUN servers with any TURN servers we received
   const iceServers: RTCIceServer[] = [
@@ -230,8 +234,6 @@ function notifyCrashAndExit(reason: string): void {
   restart(1);
 }
 
-let isRestarting = false;
-
 async function restart(exitCode: number = 0) {
   console.log("Restarting...");
   if (isRestarting) {
@@ -245,9 +247,9 @@ async function restart(exitCode: number = 0) {
   );
 
   // Save game state before cleanup (if session was active)
-  if (sessionStarted && currentUserId) {
+  if (hasStarted && currentUserId) {
     try {
-      console.log("Saving game state before restart...");
+      console.log("Saving users game state before restart...");
       // Disconnect video/input first
       videoHandler.disconnect();
       inputHandler.disconnect();
@@ -334,6 +336,8 @@ async function initializeSession(
   await videoHandler.connect();
   console.log("Connecting to scrcpy control socket (second)...");
   await inputHandler.connect();
+
+  hasStarted = true;
 
   console.log("Session initialized!");
 }
@@ -437,7 +441,7 @@ worker-1   | }
           return;
         }
         if (peerConnection && msg.candidate) {
-          console.log("Adding remote ICE candidate...", msg.candidate);
+          console.log("Adding remote ICE candidate...");
           await peerConnection.addIceCandidate(msg.candidate);
           console.log("Added remote ICE candidate!");
         }
@@ -451,10 +455,9 @@ worker-1   | }
   });
 
   signalSocket.on("close", async () => {
-    console.log("Disconnected from signal server, restarting myself!");
-    // sleep 5 secs
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-    process.exit(0);
+    // this gets called AFTER client sends its disconnect so here worker should already be saving clients game, what if this gets messed up?
+    console.log("signalSocket on close!");
+    restart();
   });
 
   signalSocket.on("error", (err) => {

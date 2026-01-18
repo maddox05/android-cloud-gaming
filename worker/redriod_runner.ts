@@ -115,7 +115,7 @@ class RedroidRunner {
         adbConnected = true;
         break;
       } catch (err) {
-        console.log(`ADB connect attempt ${i + 1} failed, retrying...`, err);
+        console.log(`ADB connect attempt ${i + 1} failed, retrying...`);
         await this.sleep(1000);
       }
     }
@@ -136,7 +136,7 @@ class RedroidRunner {
           break;
         }
       } catch (err) {
-        console.log(`Boot check attempt ${i + 1} failed:`, err);
+        console.log(`Boot check attempt ${i + 1} failed:`);
       }
       await this.sleep(1000);
     }
@@ -151,7 +151,7 @@ class RedroidRunner {
     try {
       await this.execAsync(`adb -s ${this.adbTarget} shell pkill -f scrcpy`);
     } catch (err) {
-      console.log("No existing scrcpy process to kill (or pkill failed):", err);
+      console.log("No existing scrcpy process to kill (or pkill failed):");
     }
     await this.sleep(500);
 
@@ -160,7 +160,7 @@ class RedroidRunner {
     try {
       await this.execAsync(`adb -s ${this.adbTarget} forward --remove-all`);
     } catch (err) {
-      console.warn("Failed to remove old port forwards:", err);
+      console.warn("Failed to remove old port forwards:");
     }
 
     // Push scrcpy server
@@ -392,13 +392,14 @@ class RedroidRunner {
     try {
       await this.execAsync(`docker stop -t 0 ${containerName}`);
     } catch (e) {
-      console.warn("Failed to stop redroid container (may not exist):", e);
+      console.warn("Failed to stop redroid container:");
     }
+    await this.sleep(1000);
 
     try {
       await this.execAsync(`docker rm ${containerName}`);
     } catch (e) {
-      console.warn("Failed to remove redroid container (may not exist):", e);
+      console.warn("Failed to remove redroid container:");
     }
 
     this.running = false;
@@ -416,7 +417,7 @@ class RedroidRunner {
 
     try {
       await this.execAsync(
-        `docker compose -f /app/docker-compose.pod.yml -p ${POD_NAME} up -d redroid`
+        `docker compose -f /app/docker-compose.pod.yml -p ${POD_NAME} up -d redroid`,
       );
       // Note: running flag will be set in start() after ADB connects
     } catch (e) {
