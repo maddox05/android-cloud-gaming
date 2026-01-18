@@ -26,9 +26,13 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp:/tmp # For temporary game save tar files
+      - ./docker-compose.pod.yml:/app/docker-compose.pod.yml:ro
     environment:
       SIGNAL_URL: ${SIGNAL_URL}
       POD_NAME: ${COMPOSE_PROJECT_NAME}
+      # Redroid image config (needed for docker compose up inside worker)
+      REDROID_IMAGE: ${REDROID_IMAGE}
+      REDROID_TAG: ${REDROID_TAG}
       # R2 credentials for game saves
       CLOUDFLARE_R2_ACCESS_KEY_ID: ${CLOUDFLARE_R2_ACCESS_KEY_ID}
       CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${CLOUDFLARE_R2_SECRET_ACCESS_KEY}

@@ -56,7 +56,7 @@ async function createPeerConnection(): Promise<PC> {
   console.log(
     `[WebRTC] Using ICE servers: ${iceServers.length} (STUN: ${
       STUN_SERVERS.length
-    } + TURN: ${currentTurnServers?.length ?? 0})`
+    } + TURN: ${currentTurnServers?.length ?? 0})`,
   );
 
   const pc = new RTCPeerConnection({ iceServers });
@@ -75,7 +75,7 @@ async function createPeerConnection(): Promise<PC> {
       if (videoChannel && videoChannel.readyState === "open") {
         videoChunkCount++;
         console.log(
-          `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`
+          `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`,
         );
         // this used to be new Uint8Array(data) but thats a copy, it still works without a copy, so why copt it.
 
@@ -136,11 +136,11 @@ async function createPeerConnection(): Promise<PC> {
       console.log("  Signaling state:", pc.signalingState);
       console.log(
         "  Local description type:",
-        pc.localDescription?.type ?? "none"
+        pc.localDescription?.type ?? "none",
       );
       console.log(
         "  Remote description type:",
-        pc.remoteDescription?.type ?? "none"
+        pc.remoteDescription?.type ?? "none",
       );
 
       // Get connection stats for more insight
@@ -149,17 +149,17 @@ async function createPeerConnection(): Promise<PC> {
         stats.forEach((report) => {
           if (report.type === "candidate-pair" && report.state) {
             console.log(
-              `  Candidate pair: ${report.state}, local: ${report.localCandidateId}, remote: ${report.remoteCandidateId}`
+              `  Candidate pair: ${report.state}, local: ${report.localCandidateId}, remote: ${report.remoteCandidateId}`,
             );
           }
           if (report.type === "local-candidate") {
             console.log(
-              `  Local candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`
+              `  Local candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`,
             );
           }
           if (report.type === "remote-candidate") {
             console.log(
-              `  Remote candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`
+              `  Remote candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`,
             );
           }
         });
@@ -241,7 +241,7 @@ async function restart(exitCode: number = 0) {
   isRestarting = true;
 
   console.log(
-    ">>> Restarting worker - exiting for Docker to restart container..."
+    ">>> Restarting worker - exiting for Docker to restart container...",
   );
 
   // Save game state before cleanup (if session was active)
@@ -292,7 +292,10 @@ let sessionStarted = false;
  * Initialize the session - start redroid, connect video/input, create peer connection
  * Called when a client wants to connect (receives "start" message)
  */
-async function initializeSession(gameId: string, maxVideoSize: number): Promise<void> {
+async function initializeSession(
+  gameId: string,
+  maxVideoSize: number,
+): Promise<void> {
   if (sessionStarted) {
     console.log("Session already started");
     return;
@@ -320,7 +323,9 @@ async function initializeSession(gameId: string, maxVideoSize: number): Promise<
   await redroidRunner.startContainer();
 
   // Start Redroid with the game package (kiosk mode)
-  console.log(`Starting Redroid with game: ${gameId}, maxVideoSize: ${maxVideoSize}...`);
+  console.log(
+    `Starting Redroid with game: ${gameId}, maxVideoSize: ${maxVideoSize}...`,
+  );
   await redroidRunner.start(gameId, maxVideoSize);
 
   // Connect to scrcpy sockets in ORDER: video first, then control
@@ -346,7 +351,7 @@ async function connectToSignalServer() {
     };
     signalSocket!.send(JSON.stringify(register));
     console.log(
-      `Registered with games: ${GAMES_LIST.map((g) => g.id).join(", ")}`
+      `Registered with games: ${GAMES_LIST.map((g) => g.id).join(", ")}`,
     );
     console.log("Waiting for client to connect...");
   });
@@ -371,7 +376,7 @@ async function connectToSignalServer() {
         console.log(
           "Creating peer connection, offer, and initializing session...",
           workerStartMsg.turnInfo ? "(with TURN)" : "(no TURN)",
-          `userId: ${workerStartMsg.userId}`
+          `userId: ${workerStartMsg.userId}`,
         );
         try {
           // Store TURN servers before creating peer connection
@@ -392,7 +397,8 @@ async function connectToSignalServer() {
           signalSocket!.send(JSON.stringify(offerMsg));
 
           // Initialize the session with the game
-          const maxVideoSize = workerStartMsg.maxVideoSize ?? FREE_USER_MAX_VIDEO_SIZE;
+          const maxVideoSize =
+            workerStartMsg.maxVideoSize ?? FREE_USER_MAX_VIDEO_SIZE;
           await initializeSession(workerStartMsg.gameId, maxVideoSize);
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : String(err);
@@ -405,7 +411,7 @@ async function connectToSignalServer() {
         // Client sent answer
         if (peerConnection) {
           await peerConnection.setRemoteDescription(
-            new RTCSessionDescription({ type: "answer", sdp: msg.sdp })
+            new RTCSessionDescription({ type: "answer", sdp: msg.sdp }),
           );
           console.log("Remote description set");
         }

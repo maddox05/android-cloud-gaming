@@ -28,9 +28,12 @@ export async function clearDiffVolume(): Promise<void> {
   console.log(`Clearing diff volume: ${volumeName}`);
 
   // Use docker run with alpine to clear the volume contents
-  await execAsync(
-    `docker run --rm -v ${volumeName}:/data alpine sh -c "rm -rf /data/* /data/.[!.]* 2>/dev/null || true"`
-  );
+  try {
+    await execAsync(`docker volume rm ${volumeName}`);
+  } catch (err) {
+    console.warn(`Failed to remove volume ${volumeName}:`, err);
+  }
+  await execAsync(`docker volume create ${volumeName}`);
   console.log("Diff volume cleared");
 }
 
@@ -58,11 +61,10 @@ export async function extractToVolume(stream: Readable): Promise<void> {
 
     console.log("Game save extracted successfully");
   } finally {
-    // Cleanup temp file
     try {
       await unlink(tempFile);
-    } catch {
-      // Ignore cleanup errors
+    } catch (err) {
+      console.warn(`Failed to cleanup temp file ${tempFile}:`, err);
     }
   }
 }
@@ -95,11 +97,10 @@ export async function createVolumeSnapshot(): Promise<Buffer> {
     console.log("Volume snapshot created");
     return Buffer.concat(chunks);
   } finally {
-    // Cleanup temp file
     try {
       await unlink(tempFile);
-    } catch {
-      // Ignore cleanup errors
+    } catch (err) {
+      console.warn(`Failed to cleanup temp file ${tempFile}:`, err);
     }
   }
 }

@@ -1,5 +1,4 @@
 import net from "net";
-import { scrcpy_config } from "./config.js";
 import { InputMessage, MSG } from "../shared/types.js";
 import { redroidRunner } from "./redriod_runner.js";
 
@@ -33,16 +32,12 @@ class InputHandler {
     if (this.connected) return;
 
     return new Promise((resolve, reject) => {
-      this.socket = net.createConnection(
-        scrcpy_config.port,
-        "127.0.0.1",
-        () => {
-          console.log("Input/Control socket connected");
-          this.socket!.setNoDelay(true); // Disable Nagle's algorithm for lower latency
-          this.connected = true;
-          resolve();
-        }
-      );
+      this.socket = net.createConnection(6767, "127.0.0.1", () => {
+        console.log("Input/Control socket connected");
+        this.socket!.setNoDelay(true); // Disable Nagle's algorithm for lower latency
+        this.connected = true;
+        resolve();
+      });
 
       this.socket.on("error", (err) => {
         console.error("Input socket error:", err);
@@ -78,7 +73,7 @@ class InputHandler {
   private buildTouchMessage(
     action: number,
     xPercent: number,
-    yPercent: number
+    yPercent: number,
   ): Buffer {
     const buf = this.touchBuffer; // Reuse pre-allocated buffer
 
