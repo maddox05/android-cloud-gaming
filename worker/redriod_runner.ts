@@ -338,6 +338,63 @@ class RedroidRunner {
       console.error("Failed to restart redroid container:", e);
     }
   }
+
+  /**
+   * Stop the redroid container without restarting.
+   * Used to perform volume operations (save/restore) between stop and start.
+   * ASYNC to avoid blocking the event loop during WebRTC signaling.
+   */
+  async stopContainer(): Promise<void> {
+    const containerName = `${POD_NAME}-redroid-1`;
+    console.log(`Stopping redroid container: ${containerName}`);
+
+    // Stop video size polling
+    if (this.videoSizeInterval) {
+      clearInterval(this.videoSizeInterval);
+      this.videoSizeInterval = null;
+    }
+
+    // Kill scrcpy process if running
+    if (this.scrcpyProc) {
+      this.scrcpyProc.kill();
+      this.scrcpyProc = null;
+    }
+
+    try {
+      await this.execAsync(`docker stop ${containerName}`);
+      this.running = false;
+      this.videoWidth = 0;
+      this.videoHeight = 0;
+    } catch (e) {
+      console.error("Failed to stop redroid container:", e);
+      throw e;
+    }
+  }
+
+  /**
+   * Start the redroid container (after stop).
+   * Used after volume restore operations.
+   * ASYNC to avoid blocking the event loop during WebRTC signaling.
+   */
+  async startContainer(): Promise<void> {
+    const containerName = `${POD_NAME}-redroid-1`;
+    console.log(`Starting redroid container: ${containerName}`);
+
+    try {
+      await this.execAsync(`docker start ${containerName}`);
+      // Note: running flag will be set in start() after ADB connects
+    } catch (e) {
+      console.error("Failed to start redroid container:", e);
+      throw e;
+    }
+  }
+
+  /**
+   * Get the diff volume name for this pod
+   */
+  getDiffVolumeName(): string {
+    return `${POD_NAME}-redroid-diff`;
+  }
 }
 
 export const redroidRunner = RedroidRunner.getInstance();

@@ -1,4 +1,13 @@
 import type { Game } from "./types.js";
+
+// Game Saves - Phone image version
+// Increment this when creating a new base redroid image
+// This ensures save compatibility (saves from v1 won't load on v2 base)
+export const PHONE_IMAGE_VERSION = 1;
+
+// R2 paths for game saves
+export const R2_GAME_SAVES_PREFIX = "game_saves";
+
 export const STUN_SERVERS = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun.cloudflare.com:3478" },

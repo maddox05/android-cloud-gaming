@@ -3,6 +3,8 @@ import wrtc from "@roamhq/wrtc";
 import { redroidRunner } from "./redriod_runner.js";
 import { videoHandler } from "./video.js";
 import { inputHandler } from "./input.js";
+import { initializeWithGameSave, saveGameState } from "./game_save_manager.js";
+import { clearDiffVolume } from "./volume_manager.js";
 import type {
   InputMessage,
   SignalMessage,
@@ -41,6 +43,9 @@ let inputChannel: DataChannel | null = null;
 
 // TURN servers received from signal server
 let currentTurnServers: RTCIceServer[] | null = null;
+
+// User ID for game saves (received from signal server)
+let currentUserId: string | null = null;
 
 async function createPeerConnection(): Promise<PC> {
   // Merge STUN servers with any TURN servers we received
@@ -206,6 +211,7 @@ function webrtc_cleanup() {
     peerConnection = null;
   }
   currentTurnServers = null;
+  currentUserId = null;
 }
 
 function notifyCrashAndExit(reason: string): void {
@@ -238,6 +244,32 @@ async function restart(exitCode: number = 0) {
     ">>> Restarting worker - exiting for Docker to restart container..."
   );
 
+  // Save game state before cleanup (if session was active)
+  if (sessionStarted && currentUserId) {
+    try {
+      console.log("Saving game state before restart...");
+      // Disconnect video/input first
+      videoHandler.disconnect();
+      inputHandler.disconnect();
+
+      // Stop container to safely access volume
+      await redroidRunner.stopContainer();
+
+      // Save game state to R2
+      await saveGameState(currentUserId);
+
+      // Clear the volume after saving (tank it)
+      await clearDiffVolume();
+    } catch (err) {
+      console.error("Failed to save game state during restart:", err);
+      // Continue with restart anyway
+    }
+  } else {
+    // Disconnect from scrcpy
+    videoHandler.disconnect();
+    inputHandler.disconnect();
+  }
+
   // Cleanup WebRTC
   webrtc_cleanup();
 
@@ -247,10 +279,6 @@ async function restart(exitCode: number = 0) {
     signalSocket.close();
     signalSocket = null;
   }
-
-  // Disconnect from scrcpy
-  videoHandler.disconnect();
-  inputHandler.disconnect();
 
   // Exit - Docker restart policy will restart the container fresh
   console.log(">>> Calling process.exit(0) NOW");
@@ -272,6 +300,24 @@ async function initializeSession(gameId: string, maxVideoSize: number): Promise<
   sessionStarted = true;
 
   console.log("Client wants to connect, initializing session...");
+
+  // Game saves flow:
+  // 1. Stop container (clears any bad state from previous crash)
+  // 2. Clear volume (don't save - stale data from failed session)
+  // 3. Restore game save from R2 if exists
+  // 4. Start container
+  // 5. Continue with ADB/scrcpy setup
+
+  console.log("Preparing container for game saves...");
+  await redroidRunner.stopContainer();
+
+  // Restore game save if userId is set
+  if (currentUserId) {
+    await initializeWithGameSave(currentUserId);
+  }
+
+  // Start container with restored (or fresh) volume
+  await redroidRunner.startContainer();
 
   // Start Redroid with the game package (kiosk mode)
   console.log(`Starting Redroid with game: ${gameId}, maxVideoSize: ${maxVideoSize}...`);
@@ -324,11 +370,15 @@ async function connectToSignalServer() {
         const workerStartMsg = msg as WorkerStartMessage;
         console.log(
           "Creating peer connection, offer, and initializing session...",
-          workerStartMsg.turnInfo ? "(with TURN)" : "(no TURN)"
+          workerStartMsg.turnInfo ? "(with TURN)" : "(no TURN)",
+          `userId: ${workerStartMsg.userId}`
         );
         try {
           // Store TURN servers before creating peer connection
           currentTurnServers = workerStartMsg.turnInfo ?? null;
+
+          // Store user ID for game saves
+          currentUserId = workerStartMsg.userId;
 
           peerConnection = await createPeerConnection();
 
@@ -409,11 +459,9 @@ worker-1   | }
 async function main() {
   console.log("Starting Worker...");
 
-  // Restart redroid on worker startup to ensure fresh state
-  redroidRunner.restartContainer();
-
   // Only connect to signal server initially
   // Redroid/video/input will be started when a client connects
+  // Container will be stopped + volume cleared in initializeSession()
   console.log("Connecting to signal server...");
   await connectToSignalServer();
 

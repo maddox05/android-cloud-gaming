@@ -159,11 +159,16 @@ export default class Worker {
   }
 
   sendWorkerStart(gameId: string, maxVideoSize: number): void {
+    if (!this.client) {
+      console.error(`Worker ${this.id}: Cannot send WORKER_START - no client assigned`);
+      return;
+    }
     this.send({
       type: MSG.WORKER_START,
       gameId,
       turnInfo: this.turnInfo ?? undefined,
       maxVideoSize,
+      userId: this.client.userId,
     });
   }
 

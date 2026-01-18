@@ -25,9 +25,15 @@ services:
     stop_grace_period: 0s
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp:/tmp # For temporary game save tar files
     environment:
       SIGNAL_URL: ${SIGNAL_URL}
       POD_NAME: ${COMPOSE_PROJECT_NAME}
+      # R2 credentials for game saves
+      CLOUDFLARE_R2_ACCESS_KEY_ID: ${CLOUDFLARE_R2_ACCESS_KEY_ID}
+      CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${CLOUDFLARE_R2_SECRET_ACCESS_KEY}
+      CLOUDFLARE_R2_ENDPOINT: ${CLOUDFLARE_R2_ENDPOINT}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME}
     depends_on:
       - redroid
 

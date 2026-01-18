@@ -149,7 +149,7 @@ export default class Client {
     if (!appId) {
       this.sendError(
         ERROR_CODE.INVALID_REQUEST,
-        "No game specified in queue request"
+        "No game specified in queue request",
       );
       return;
     }
@@ -188,7 +188,7 @@ export default class Client {
     if (amIQueued(this)) {
       this.sendError(
         ERROR_CODE.ALREADY_IN_QUEUE,
-        "You are already in the queue"
+        "You are already in the queue",
       );
       return;
     }
@@ -203,7 +203,7 @@ export default class Client {
     this.sendQueueInfo();
 
     console.log(
-      `Client ${this.id} queued for game: ${appId} (maxVideoSize: ${this.maxVideoSize})`
+      `Client ${this.id} queued for game: ${appId} (maxVideoSize: ${this.maxVideoSize})`,
     );
   }
 
@@ -211,7 +211,7 @@ export default class Client {
     // Prevent double CLIENT_STARTED
     if (this.connectionState === "connected") {
       console.log(
-        `Client ${this.id} already started, ignoring duplicate CLIENT_STARTED`
+        `Client ${this.id} already started, ignoring duplicate CLIENT_STARTED`,
       );
       return;
     }
@@ -219,7 +219,7 @@ export default class Client {
     if (!this.worker) {
       this.sendError(
         ERROR_CODE.NO_WORKERS_AVAILABLE,
-        "No worker assigned. Please rejoin the queue."
+        "No worker assigned. Please rejoin the queue.",
       );
       this.disconnect("no_worker");
       return;
@@ -228,7 +228,7 @@ export default class Client {
     if (!this.game) {
       this.sendError(
         ERROR_CODE.INVALID_REQUEST,
-        "No game selected. Please rejoin the queue."
+        "No game selected. Please rejoin the queue.",
       );
       this.disconnect("no_game");
       return;
@@ -240,7 +240,7 @@ export default class Client {
     this.worker.sendWorkerStart(this.game, this.maxVideoSize);
 
     console.log(
-      `Client ${this.id} started connection with worker ${this.worker.id}`
+      `Client ${this.id} started connection with worker ${this.worker.id}`,
     );
   }
 
@@ -251,7 +251,7 @@ export default class Client {
   }
 
   private forwardIceCandidateToWorker(
-    candidate: RTCIceCandidateInit | null
+    candidate: RTCIceCandidateInit | null,
   ): void {
     if (this.worker) {
       this.worker.sendIceCandidate(candidate);
@@ -294,7 +294,7 @@ export default class Client {
     const total = getQueueLength();
     this.send({ type: MSG.QUEUE_INFO, position, total });
     console.log(
-      `Sending QUEUE_INFO to client ${this.id}: position ${position}/${total}`
+      `Sending QUEUE_INFO to client ${this.id}: position ${position}/${total}`,
     );
   }
 
@@ -401,7 +401,6 @@ export default class Client {
       const worker = this.worker;
       this.worker = null; // Clear reference first
       worker.client = null; // Clear bidirectional
-      worker.sendClientDisconnected();
       worker.disconnect("client_disconnected");
     }
 
