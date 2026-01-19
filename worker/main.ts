@@ -250,7 +250,7 @@ class Worker {
         inputHandler.disconnect();
 
         await redroidRunner.stopContainer();
-        await saveGameState(this.currentUserId);
+        // await saveGameState(this.currentUserId);
         await clearDiffVolume();
       } catch (err) {
         console.error("Failed to save game state during restart:", err);
@@ -282,7 +282,7 @@ class Worker {
     await redroidRunner.stopContainer();
 
     if (this.currentUserId) {
-      await initializeWithGameSave(this.currentUserId);
+      // await initializeWithGameSave(this.currentUserId);
     }
 
     await redroidRunner.startContainer();
@@ -293,9 +293,17 @@ class Worker {
     await redroidRunner.start(gameId, maxVideoSize);
 
     console.log("Connecting to scrcpy video socket (first)...");
-    await videoHandler.connect();
+    try {
+      await videoHandler.connect();
+    } catch (err) {
+      throw new Error(`Failed to connect to scrcpy video socket: ${err instanceof Error ? err.message : String(err)}`);
+    }
     console.log("Connecting to scrcpy control socket (second)...");
-    await inputHandler.connect();
+    try {
+      await inputHandler.connect();
+    } catch (err) {
+      throw new Error(`Failed to connect to scrcpy control socket: ${err instanceof Error ? err.message : String(err)}`);
+    }
 
     this.hasStarted = true;
 

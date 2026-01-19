@@ -17,10 +17,10 @@ export default function InGame() {
   const { appId } = useParams<{ appId: string }>();
 
   const [status, setStatus] = useState<ConnectionStatus>(
-    CONNECTION_STATUS.CONNECTING
+    CONNECTION_STATUS.CONNECTING,
   );
   const [loadingMessage, setLoadingMessage] = useState(
-    "Connecting to server..."
+    "Connecting to server...",
   );
 
   const decoderRef = useRef<H264Decoder | null>(null);
@@ -60,7 +60,7 @@ export default function InGame() {
     canvasRef.current = canvas;
     if (!decoderRef.current) {
       decoderRef.current = new H264Decoder(canvas, () =>
-        videoInputWebRTC.resetVideo()
+        videoInputWebRTC.resetVideo(),
       );
     }
   }, []);
@@ -97,7 +97,7 @@ export default function InGame() {
     } else {
       const handleSignalError = (
         code: ErrorCode | undefined,
-        message: string
+        message: string,
       ) => {
         setStatus(CONNECTION_STATUS.ERROR);
 
@@ -122,7 +122,7 @@ export default function InGame() {
           showAlert({
             type: "warning",
             title: "Connection Timeout",
-            message: "AFK? Not on my watch. Connection timed out.",
+            message: "Worker Failed to Connect In A Timely Manner.",
             link: { href: "/", label: "Back to Home" },
             onCloseRedirect: "/",
           });
@@ -215,7 +215,7 @@ export default function InGame() {
 
           if (canvasRef.current && !decoderRef.current) {
             decoderRef.current = new H264Decoder(canvasRef.current, () =>
-              videoInputWebRTC.resetVideo()
+              videoInputWebRTC.resetVideo(),
             );
           }
 
@@ -226,10 +226,13 @@ export default function InGame() {
           timeoutRef.current = setTimeout(() => {
             setStatus((currentStatus) => {
               if (currentStatus === CONNECTION_STATUS.CONNECTING) {
-                handleSignalError(
-                  ERROR_CODE.CONNECTION_TIMEOUT,
-                  "Connection timed out"
-                );
+                showAlert({
+                  type: "error",
+                  title: "Connection Timeout",
+                  message: "Worker didn't send data in time. Please try again.",
+                  link: { href: "/", label: "Back to Home" },
+                  onCloseRedirect: "/",
+                });
               }
               return currentStatus;
             });

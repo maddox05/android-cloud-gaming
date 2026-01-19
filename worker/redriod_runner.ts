@@ -1,9 +1,9 @@
 import { spawn, exec, execSync } from "child_process";
 import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/const.js";
 
-const POD_NAME = process.env.POD_NAME;
-if (!POD_NAME) {
-  console.error("POD_NAME environment variable is required");
+const WORKER_NAME = process.env.WORKER_NAME;
+if (!WORKER_NAME) {
+  console.error("WORKER_NAME environment variable is required");
   process.exit(1);
 }
 
@@ -28,10 +28,10 @@ class RedroidRunner {
 
   private getRedroidHost(): string {
     // With network_mode: host, we need to find the container's IP via Docker
-    const podName = process.env.POD_NAME;
-    if (podName) {
+    const workerName = process.env.WORKER_NAME;
+    if (workerName) {
       try {
-        const containerName = `${podName}-redroid-1`;
+        const containerName = `${workerName}-redroid-1`;
         const ip = execSync(
           `docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${containerName}`,
           { encoding: "utf-8" },
@@ -159,7 +159,10 @@ class RedroidRunner {
     }
     console.log("Device booted!");
 
-    await this.spoofWithMagisk();
+    await Promise.all([
+      this.spoofWithMagisk(),
+      this.setupKioskModeUsingFreeKiosk(packageName),
+    ]);
 
     // Kill any existing scrcpy processes (from previous worker runs)
     console.log("Killing any existing scrcpy processes...");
@@ -233,16 +236,13 @@ class RedroidRunner {
       console.log("scrcpy exited with code:", code),
     );
 
-    // Wait for scrcpy to be ready
-    await this.sleep(2000);
-
     this.running = true;
     console.log("RedroidRunner started successfully!");
     console.log(
       `scrcpy port: ${6767} (connect twice: video first, then control)`,
     );
 
-    await this.setupKioskModeUsingFreeKiosk(packageName);
+    await this.sleep(2000); // if this isnt here everything breaks. I think because input and video sockets connect and dont throw an error but fail to connect and instantly close
 
     // Start polling video size every 5 seconds
     this.startVideoSizePolling();
@@ -379,7 +379,7 @@ class RedroidRunner {
    * ASYNC to avoid blocking the event loop during WebRTC signaling.
    */
   async stopContainer(): Promise<void> {
-    const containerName = `${POD_NAME}-redroid-1`;
+    const containerName = `${WORKER_NAME}-redroid-1`;
     console.log(`Stopping redroid container: ${containerName}`);
 
     // Stop video size polling
@@ -418,11 +418,11 @@ class RedroidRunner {
    * ASYNC to avoid blocking the event loop during WebRTC signaling.
    */
   async startContainer(): Promise<void> {
-    console.log(`Recreating redroid container for project: ${POD_NAME}`);
+    console.log(`Recreating redroid container for project: ${WORKER_NAME}`);
 
     try {
       await this.execAsync(
-        `docker compose -f /app/docker-compose.pod.yml -p ${POD_NAME} up -d redroid`,
+        `docker compose -f /app/docker-compose.worker.yml -p ${WORKER_NAME} up -d redroid`,
       );
       // Note: running flag will be set in start() after ADB connects
     } catch (e) {
@@ -432,10 +432,10 @@ class RedroidRunner {
   }
 
   /**
-   * Get the diff volume name for this pod
+   * Get the diff volume name for this worker
    */
   getDiffVolumeName(): string {
-    return `${POD_NAME}-redroid-diff`;
+    return `${WORKER_NAME}-redroid-diff`;
   }
 }
 

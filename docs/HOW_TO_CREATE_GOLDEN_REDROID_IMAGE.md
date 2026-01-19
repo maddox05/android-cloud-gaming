@@ -1,6 +1,6 @@
 # How to Create a Golden Redroid Image
 
-A golden image is a pre-configured Redroid instance with apps and settings already installed. Each pod starts fresh from this base state using the overlay filesystem.
+A golden image is a pre-configured Redroid instance with apps and settings already installed. Each worker starts fresh from this base state using the overlay filesystem.
 
 ## Prerequisites
 

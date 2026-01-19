@@ -26,10 +26,10 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp:/tmp # For temporary game save tar files
-      - ./docker-compose.pod.yml:/app/docker-compose.pod.yml:ro
+      - ./docker-compose.worker.yml:/app/docker-compose.worker.yml:ro
     environment:
       SIGNAL_URL: ${SIGNAL_URL}
-      POD_NAME: ${COMPOSE_PROJECT_NAME}
+      WORKER_NAME: ${COMPOSE_PROJECT_NAME}
       # Redroid image config (needed for docker compose up inside worker)
       REDROID_IMAGE: ${REDROID_IMAGE}
       REDROID_TAG: ${REDROID_TAG}
@@ -46,9 +46,9 @@ services:
 volumes:
   redroid-base:
     external: true # requires volume to even start docker container
-    name: redroid-base # Shared base data partition (create once, use by all pods)
+    name: redroid-base # Shared base data partition (create once, use by all workers)
   redroid-diff:
     name: ${COMPOSE_PROJECT_NAME}-redroid-diff # actual name docker names the volume or actual volume name it should be
 
 networks:
-  internal: # Per-pod network, gives redroid an IP the host-networked worker can reach
+  internal: # Per-worker network, gives redroid an IP the host-networked worker can reach

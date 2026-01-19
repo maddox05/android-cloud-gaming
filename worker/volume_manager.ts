@@ -5,7 +5,7 @@ import { createWriteStream, createReadStream } from "fs";
 import { unlink } from "fs/promises";
 import { redroidRunner } from "./redriod_runner.js";
 
-const POD_NAME = process.env.POD_NAME!;
+const WORKER_NAME = process.env.WORKER_NAME!;
 
 /**
  * Promise wrapper for exec (non-blocking)
@@ -43,7 +43,7 @@ export async function clearDiffVolume(): Promise<void> {
  */
 export async function extractToVolume(stream: Readable): Promise<void> {
   const volumeName = redroidRunner.getDiffVolumeName();
-  const tempFile = `/tmp/game_save_${POD_NAME}.tar.gz`;
+  const tempFile = `/tmp/game_save_${WORKER_NAME}.tar.gz`;
 
   console.log(`Extracting save to volume: ${volumeName}`);
 
@@ -76,14 +76,14 @@ export async function extractToVolume(stream: Readable): Promise<void> {
  */
 export async function createVolumeSnapshot(): Promise<Buffer> {
   const volumeName = redroidRunner.getDiffVolumeName();
-  const tempFile = `/tmp/game_save_${POD_NAME}_out.tar.gz`;
+  const tempFile = `/tmp/game_save_${WORKER_NAME}_out.tar.gz`;
 
   console.log(`Creating snapshot of volume: ${volumeName}`);
 
   try {
     // Create tarball using docker + alpine
     await execAsync(
-      `docker run --rm -v ${volumeName}:/data -v /tmp:/backup alpine sh -c "cd /data && tar czf /backup/game_save_${POD_NAME}_out.tar.gz ."`
+      `docker run --rm -v ${volumeName}:/data -v /tmp:/backup alpine sh -c "cd /data && tar czf /backup/game_save_${WORKER_NAME}_out.tar.gz ."`
     );
 
     // Read the tarball into a buffer

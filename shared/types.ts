@@ -1,5 +1,5 @@
 // Shared types for Android Cloud Gaming
-// Used by: signal server, pod server, frontend
+// Used by: signal server, worker server, frontend
 
 // ============================================
 // User Access Types
@@ -84,13 +84,13 @@ export interface WorkerStartMessage {
   userId: string; // User ID for game save lookup
 }
 
-/** Pod sends SDP offer to client */
+/** Worker sends SDP offer to client */
 export interface OfferMessage {
   type: typeof MSG.OFFER;
   sdp: string;
 }
 
-/** Client sends SDP answer to pod */
+/** Client sends SDP answer to worker */
 export interface AnswerMessage {
   type: typeof MSG.ANSWER;
   sdp: string;
@@ -242,7 +242,7 @@ export type InputMessageType = InputMessage["type"];
 // WebSocket Connection Roles
 // ============================================
 
-export type ConnectionRole = "pod" | "client";
+export type ConnectionRole = "worker" | "client";
 
 // ============================================
 // Type Guards

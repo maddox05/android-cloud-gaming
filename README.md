@@ -80,10 +80,10 @@ See `docs/HOW_TO_CREATE_GOLDEN_REDROID_IMAGE.md` for creating a pre-configured A
 docker compose -f docker-compose.signal.yml up --build
 ```
 
-### Start a Worker Pod
+### Start a Worker
 
 ```bash
-docker compose -p pod0 -f docker-compose.pod.yml up --build
+docker compose -p worker0 -f docker-compose.worker.yml up --build
 ```
 
 ### Start the Frontend (Development)
