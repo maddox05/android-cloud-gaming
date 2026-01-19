@@ -159,10 +159,8 @@ class RedroidRunner {
     }
     console.log("Device booted!");
 
-    await Promise.all([
-      this.spoofWithMagisk(),
-      this.setupKioskModeUsingFreeKiosk(packageName),
-    ]);
+    await this.spoofWithMagisk();
+    await this.setupKioskModeUsingFreeKiosk(packageName);
 
     // Kill any existing scrcpy processes (from previous worker runs)
     console.log("Killing any existing scrcpy processes...");
