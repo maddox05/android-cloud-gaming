@@ -358,7 +358,7 @@ export class H264Decoder {
     this.configured = false;
     this.videoWidth = 0;
     this.videoHeight = 0;
-    this.lastResetTime = 0;
+    // this.lastResetTime = 0; do not reset this
   }
 
   getVideoDimensions(): { width: number; height: number } {
