@@ -3,7 +3,6 @@ import { useAuthModal } from "../context/AuthModalContext";
 import { useUser } from "../context/useUser";
 import { showAlert } from "../services/alertService";
 import GameCard from "./GameCard";
-import { GitHubIcon } from "../components/Icons";
 import "./Home.css";
 import { GAMES_LIST } from "../../../shared/const";
 
@@ -209,20 +208,22 @@ export default function Home() {
 
       {/* CTA Section */}
       <section className="cta-section">
-        <Link to="/pricing" className="cta-button">
-          Buy Now
-        </Link>
-        <a
-          href="https://github.com/maddox05/android-cloud-gaming"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="open-source-link"
-        >
-          <span className="github-icon-circle">
-            <GitHubIcon size={20} />
-          </span>
-          <span>Open Source</span>
-        </a>
+        <div className="cta-waitlist">
+          <Link to="/waitlist" className="cta-button">
+            Join Waitlist
+          </Link>
+          <div className="cta-social-proof">
+            <div className="avatar-stack">
+              <img className="avatar" src="https://i.pinimg.com/474x/2d/b7/0f/2db70fd9f6ad7c8e2b0b1374eafbee9f.jpg" alt="" />
+              <img className="avatar" src="https://wallpapers.com/images/featured/sad-anime-pfp-hcci6syk8c832hcm.jpg" alt="" />
+              <img className="avatar" src="https://s3-alpha.figma.com/hub/file/2944732189/b47472b8-4e17-477e-a0a8-d5fcbed6a374-cover.png" alt="" />
+              <img className="avatar" src="https://api.dicebear.com/9.x/lorelei/svg?seed=gamer1" alt="" />
+            </div>
+            <span className="social-proof-text">
+              Join <strong>1,500+</strong> others
+            </span>
+          </div>
+        </div>
       </section>
     </main>
   );

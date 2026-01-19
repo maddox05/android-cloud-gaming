@@ -133,9 +133,19 @@ export default function Footer() {
 
       {/* Copyright Bar */}
       <div className="footer-bottom">
-        <p className="footer-copyright">
+        <span className="footer-copyright">
           &copy; {currentYear} MaddoxCloud. All rights reserved.
-        </p>
+        </span>
+        <span className="footer-divider">|</span>
+        <a
+          href="https://github.com/maddox05/android-cloud-gaming"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="footer-opensource"
+        >
+          <GitHubIcon size={16} />
+          <span>Open Source</span>
+        </a>
       </div>
     </footer>
   );

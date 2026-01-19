@@ -120,6 +120,48 @@
   transform: translateY(0);
 }
 
+.cta-waitlist {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cta-social-proof {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar-stack {
+  display: flex;
+  align-items: center;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  border: 2px solid var(--bg-primary);
+  margin-left: -10px;
+  object-fit: cover;
+}
+
+.avatar:first-child {
+  margin-left: 0;
+}
+
+.social-proof-text {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.social-proof-text strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
 .open-source-link {
   display: flex;
   align-items: center;

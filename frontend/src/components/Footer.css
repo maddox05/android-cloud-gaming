@@ -137,12 +137,34 @@
 .footer-bottom {
   border-top: 1px solid var(--border);
   padding: 20px 24px;
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
 }
 
 .footer-copyright {
   font-size: 0.8125rem;
   color: var(--text-muted);
+}
+
+.footer-divider {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.footer-opensource {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-opensource:hover {
+  color: var(--text-primary);
 }
 
 /* ========================= */
@@ -199,5 +221,11 @@
 
   .footer-bottom {
     padding: 16px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .footer-divider {
+    display: none;
   }
 }
