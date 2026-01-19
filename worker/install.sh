@@ -110,9 +110,9 @@ if [ "$MODULES_LOADED" = false ]; then
     echo ""
 fi
 
-# Pull Redroid Docker image
-echo "Pulling Redroid Docker image: ${REDROID_IMAGE}:${REDROID_TAG}"
-sudo docker pull "${REDROID_IMAGE}:${REDROID_TAG}"
+# # Pull Redroid Docker image
+# echo "Pulling Redroid Docker image: ${REDROID_IMAGE}:${REDROID_TAG}"
+# sudo docker pull "${REDROID_IMAGE}:${REDROID_TAG}"
 
 # Set up redroid-base volume from golden image
 echo "Setting up redroid-base volume..."

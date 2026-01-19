@@ -22,7 +22,7 @@ docker volume create redroid-base
 Using the [redroid-script](https://github.com/ayasa520/redroid-script) tool:
 
 ```bash
-python redroid.py -a 12.0.0_64only -lg -m
+python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python redroid.py -a 12.0.0_64only -lg -m
 ```
 
 This creates a custom Redroid image with Google Play Services (LiteGapps) and Magisk for root access.
