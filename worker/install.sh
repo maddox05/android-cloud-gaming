@@ -135,7 +135,7 @@ if [ ! -f "$GOLDEN_IMAGE" ]; then
     # Install AWS CLI if not present
     if ! command -v aws &> /dev/null; then
         echo "Installing AWS CLI..."
-        sudo apt-get install -y awscli
+        snap install awscli --classic
     fi
 
     echo "Downloading golden image from R2 (s3://$R2_BUCKET_NAME/$R2_GOLDEN_IMAGE_KEY)..."
