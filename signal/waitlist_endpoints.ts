@@ -389,4 +389,4 @@ export async function generateInvites(count: number): Promise<{
   return { processed, errors };
 }
 
-// generateInvites(50);
+// generateInvites(50); // tsx --env-file=./.env ./signal/waitlist_endpoints.ts
