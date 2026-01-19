@@ -18,7 +18,7 @@ interface UserContextValue {
   refetchAccessType: () => Promise<void>;
 }
 
-export const UserContext = createContext<UserContextValue | null>(null); // todo vite issue with 2 exports in same file hot refresh no work
+export const UserContext = createContext<UserContextValue | null>(null); // TODO vite issue with 2 exports in same file hot refresh no work
 
 // Module-level cache to prevent duplicate fetches (survives hot reload)
 let cachedUserId: string | null = null;
@@ -28,7 +28,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Initialize from cache if available (survives hot reload)
   const [user, setUser] = useState<User | null>(null);
   const [accessType, setAccessType] = useState<AccessType | undefined>(
-    cachedAccessType
+    cachedAccessType,
   );
   const [isLoading, setIsLoading] = useState(true);
 
@@ -61,7 +61,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (cachedUserId === newUser.id && cachedAccessType !== undefined) {
         console.log(
           "[UserContext] Using cached access type for user:",
-          newUser.id
+          newUser.id,
         );
         setAccessType(cachedAccessType);
         setIsLoading(false);
@@ -98,7 +98,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       isFree: accessType === "free",
       refetchAccessType,
     }),
-    [user, accessType, isLoading]
+    [user, accessType, isLoading],
   );
 
   return (

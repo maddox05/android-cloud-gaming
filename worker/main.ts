@@ -239,10 +239,6 @@ class Worker {
     }
     this.isRestarting = true;
 
-    console.log(
-      ">>> Restarting worker - exiting for Docker to restart container...",
-    );
-
     if (this.hasStarted && this.currentUserId) {
       try {
         console.log("Saving users game state before restart...");
@@ -296,13 +292,17 @@ class Worker {
     try {
       await videoHandler.connect();
     } catch (err) {
-      throw new Error(`Failed to connect to scrcpy video socket: ${err instanceof Error ? err.message : String(err)}`);
+      throw new Error(
+        `Failed to connect to scrcpy video socket: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
     console.log("Connecting to scrcpy control socket (second)...");
     try {
       await inputHandler.connect();
     } catch (err) {
-      throw new Error(`Failed to connect to scrcpy control socket: ${err instanceof Error ? err.message : String(err)}`);
+      throw new Error(
+        `Failed to connect to scrcpy control socket: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
 
     this.hasStarted = true;

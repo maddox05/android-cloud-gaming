@@ -110,7 +110,6 @@ class RedroidRunner {
     }
 
     this.maxVideoSize = maxSize;
-    const s = REDROID_SCRCPY_SERVER_SETTINGS;
 
     this.host = this.getRedroidHost();
     this.port = 5555;
@@ -159,10 +158,85 @@ class RedroidRunner {
     }
     console.log("Device booted!");
 
-    await this.sleep(1000);
+    await this.spoofWithMagisk(); //help
 
-    await this.spoofWithMagisk();
-    await this.setupKioskModeUsingFreeKiosk(packageName);
+    // Run FreeKiosk setup and scrcpy setup in parallel
+    await Promise.all([
+      this.setupKioskModeUsingFreeKiosk(packageName),
+      this.setupScrcpy(), // this needs to wait a few secs so its sockets can open but kiosk takes longer, so we dont need to wait
+      // todo somehow check if scrcpy video and input sockets are readyß
+    ]); // scrcpy wont send video until redriodRunner.start() finishes so this is fine!
+
+    this.running = true;
+
+    console.log("RedroidRunner started successfully!");
+
+    // Start polling video size every 5 seconds
+    this.startVideoSizePolling();
+  }
+
+  /**
+   * Start polling video size every 5 seconds
+   */
+  private startVideoSizePolling(): void {
+    // Get initial size immediately
+    this.updateVideoSize();
+
+    // Then poll every 5 seconds
+    this.videoSizeInterval = setInterval(() => {
+      this.updateVideoSize();
+    }, 3000);
+  }
+
+  /**
+   * Update the video width/height from the device
+   */
+  private async updateVideoSize(): Promise<void> {
+    const size = await this.getVideoSize();
+    if (size) {
+      this.videoWidth = size.width;
+      this.videoHeight = size.height;
+    }
+  }
+
+  /**
+   * Setup kiosk mode using FreeKiosk app.
+   * Locks the device to the specified app with auto-relaunch on crash.
+   * Requires FreeKiosk to be installed on the device.
+   */
+  private async setupKioskModeUsingFreeKiosk(
+    packageName: string,
+  ): Promise<void> {
+    console.log(`Setting up kiosk mode for ${packageName} using FreeKiosk...`);
+
+    // Configure FreeKiosk - exact format from docs Cloud Gaming example
+    console.log(`Configuring FreeKiosk to lock to ${packageName}...`);
+    const kioskCmd = `adb -s ${this.adbTarget} shell am start -n com.freekiosk/.MainActivity --es lock_package "${packageName}" --es pin "${FREE_KIOSK_PIN}" --es auto_relaunch "true" --ez auto_start true`;
+
+    console.log("Running:", kioskCmd);
+    const configResult = await this.execAsync(kioskCmd);
+    console.log("Config result:", configResult);
+
+    // Wait for FreeKiosk to save config
+    await this.sleep(10000);
+
+    // Launch FreeKiosk to activate the lock
+    console.log("Launching FreeKiosk to activate lock...");
+    const launchResult = await this.execAsync(
+      `adb -s ${this.adbTarget} shell am start -n com.freekiosk/.MainActivity`,
+    );
+    console.log("Launch result:", launchResult);
+
+    await this.sleep(2000);
+    console.log("Kiosk mode setup complete!");
+  }
+
+  /**
+   * Setup scrcpy server for video streaming.
+   * Kills existing processes, pushes server, and starts streaming.
+   */
+  private async setupScrcpy(): Promise<void> {
+    const s = REDROID_SCRCPY_SERVER_SETTINGS;
 
     // Kill any existing scrcpy processes (from previous worker runs)
     console.log("Killing any existing scrcpy processes...");
@@ -218,9 +292,13 @@ class RedroidRunner {
       // `video=${s.video}`,
     ].join(" ");
 
-    this.scrcpyProc = spawn("adb", ["-s", this.adbTarget, "shell", scrcpyCmd], {
-      stdio: "pipe",
-    });
+    this.scrcpyProc = spawn(
+      "adb",
+      ["-s", this.adbTarget!, "shell", scrcpyCmd],
+      {
+        stdio: "pipe",
+      },
+    );
 
     this.scrcpyProc.stdout?.on("data", (data) => {
       console.log("scrcpy:", data.toString().trim());
@@ -236,72 +314,7 @@ class RedroidRunner {
       console.log("scrcpy exited with code:", code),
     );
 
-    this.running = true;
-    console.log("RedroidRunner started successfully!");
-    console.log(
-      `scrcpy port: ${6767} (connect twice: video first, then control)`,
-    );
-
-    await this.sleep(2000); // if this isnt here everything breaks. I think because input and video sockets connect and dont throw an error but fail to connect and instantly close
-
-    // Start polling video size every 5 seconds
-    this.startVideoSizePolling();
-  }
-
-  /**
-   * Start polling video size every 5 seconds
-   */
-  private startVideoSizePolling(): void {
-    // Get initial size immediately
-    this.updateVideoSize();
-
-    // Then poll every 5 seconds
-    this.videoSizeInterval = setInterval(() => {
-      this.updateVideoSize();
-    }, 5000);
-  }
-
-  /**
-   * Update the video width/height from the device
-   */
-  private async updateVideoSize(): Promise<void> {
-    const size = await this.getVideoSize();
-    if (size) {
-      this.videoWidth = size.width;
-      this.videoHeight = size.height;
-    }
-  }
-
-  /**
-   * Setup kiosk mode using FreeKiosk app.
-   * Locks the device to the specified app with auto-relaunch on crash.
-   * Requires FreeKiosk to be installed on the device.
-   */
-  private async setupKioskModeUsingFreeKiosk(
-    packageName: string,
-  ): Promise<void> {
-    console.log(`Setting up kiosk mode for ${packageName} using FreeKiosk...`);
-
-    // Configure FreeKiosk - exact format from docs Cloud Gaming example
-    console.log(`Configuring FreeKiosk to lock to ${packageName}...`);
-    const kioskCmd = `adb -s ${this.adbTarget} shell am start -n com.freekiosk/.MainActivity --es lock_package "${packageName}" --es pin "${FREE_KIOSK_PIN}" --es auto_relaunch "true" --ez auto_start true`;
-
-    console.log("Running:", kioskCmd);
-    const configResult = await this.execAsync(kioskCmd);
-    console.log("Config result:", configResult);
-
-    // Wait for FreeKiosk to save config
-    await this.sleep(10000);
-
-    // Launch FreeKiosk to activate the lock
-    console.log("Launching FreeKiosk to activate lock...");
-    const launchResult = await this.execAsync(
-      `adb -s ${this.adbTarget} shell am start -n com.freekiosk/.MainActivity`,
-    );
-    console.log("Launch result:", launchResult);
-
-    await this.sleep(2000);
-    console.log("Kiosk mode setup complete!");
+    console.log("Scrcpy setup complete!");
   }
 
   /**
