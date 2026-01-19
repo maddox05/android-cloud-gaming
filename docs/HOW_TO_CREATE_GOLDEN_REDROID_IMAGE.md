@@ -10,6 +10,12 @@ A golden image is a pre-configured redroid instance with apps and settings alrea
 docker volume create redroid-base
 ```
 
+### 2. Use Redriod Script to install LiteGapps and Magisk
+
+https://github.com/ayasa520/redroid-script
+
+python redroid.py -a 12.0.0_64only -lg -m
+
 ### 2. Start a temporary redroid container
 
 ```bash
@@ -17,7 +23,7 @@ docker run -d --name redroid-setup \
   --privileged \
   -p 5555:5555 \
   -v redroid-base:/data \
-  redroid/redroid:12.0.0_64only-latest \
+  redroid/redroid:12.0.0_64only_litegapps_magisk \
   androidboot.redroid_width=720 \
   androidboot.redroid_height=1280 \
 ```
@@ -30,8 +36,15 @@ Use scrcpy or adb to connect and install apps:
 # Connect via adb
 adb connect localhost:5555
 
+go here and follow these steps
+https://www.google.com/android/uncertified
+
+wait 5-10 mins
+
+launch magisk and enable the root user setting and restart using docker restart
+
 # Install apps
-adb install your-app.apk
+install using google play or any apks u need
 ```
 
 -- note anything you download with apkpure even after uninstall will leave residue files.

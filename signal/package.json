@@ -11,6 +11,7 @@
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "express-ws": "^5.0.2",
+    "nodemailer": "^7.0.12",
     "ws": "^8.18.0"
   },
   "devDependencies": {

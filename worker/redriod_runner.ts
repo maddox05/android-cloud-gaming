@@ -146,6 +146,8 @@ class RedroidRunner {
     }
     console.log("Device booted!");
 
+    await this.spoofWithMagisk();
+
     // Kill any existing scrcpy processes (from previous worker runs)
     console.log("Killing any existing scrcpy processes...");
     try {
@@ -228,8 +230,7 @@ class RedroidRunner {
       `scrcpy port: ${6767} (connect twice: video first, then control)`,
     );
 
-    // Setup kiosk mode AFTER scrcpy is running
-    await this.setupKioskMode(packageName);
+    await this.setupKioskModeUsingFreeKiosk(packageName);
 
     // Start polling video size every 5 seconds
     this.startVideoSizePolling();
@@ -260,43 +261,82 @@ class RedroidRunner {
   }
 
   /**
-   * Setup kiosk mode - launch game in fullscreen immersive mode
+   * Setup kiosk mode using FreeKiosk app.
+   * Locks the device to the specified app with auto-relaunch on crash.
+   * Requires FreeKiosk to be installed on the device.
    */
-  private async setupKioskMode(packageName: string): Promise<void> {
-    console.log(`Setting up kiosk mode for ${packageName}...`);
+  private async setupKioskModeUsingFreeKiosk(
+    packageName: string,
+  ): Promise<void> {
+    console.log(`Setting up kiosk mode for ${packageName} using FreeKiosk...`);
 
-    // Hide nav bar and status bar with immersive mode
-    await this.execAsyncSafe(
-      `adb -s ${this.adbTarget} shell settings put global policy_control immersive.full=*`,
+    // Try to set Device Owner (will fail if already set, which is fine)
+    console.log("Attempting to set Device Owner...");
+    const deviceOwnerResult = await this.execAsyncSafe(
+      `adb -s ${this.adbTarget} shell dpm set-device-owner com.freekiosk/.DeviceAdminReceiver`,
     );
-
-    // Get the launcher activity for this package
-    console.log(`Finding launcher activity for ${packageName}...`);
-    const activityResult = await this.execAsyncSafe(
-      `adb -s ${this.adbTarget} shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${packageName}`,
-    );
-    console.log(`Activity resolve: ${activityResult.stdout}`);
-
-    // Parse the activity (last line of output like "com.package/com.package.Activity")
-    const lines = activityResult.stdout.split("\n").filter((l) => l.trim());
-    const activity = lines[lines.length - 1]?.trim();
-
-    if (activity && activity.includes("/")) {
-      console.log(`Launching with am start: ${activity}`);
-      const result = await this.execAsyncSafe(
-        `adb -s ${this.adbTarget} shell am start -n ${activity}`,
-      );
-      console.log(`Launch result: ${result.stdout}`);
-      if (result.stderr) console.log(`Launch stderr: ${result.stderr}`);
+    if (deviceOwnerResult.code === 0) {
+      console.log("Device Owner set successfully");
     } else {
-      // Fallback to monkey
-      console.log(`Fallback: launching with monkey...`);
-      await this.execAsyncSafe(
-        `adb -s ${this.adbTarget} shell monkey -p ${packageName} --pct-syskeys 0 -c android.intent.category.LAUNCHER 1`,
+      console.log(
+        "Device Owner already set or failed (continuing anyway):",
+        deviceOwnerResult.stderr,
       );
     }
 
+    // Wait for device owner to take effect
+    await this.sleep(1000);
+
+    // Configure FreeKiosk to lock to the game app
+    console.log(`Configuring FreeKiosk to lock to ${packageName}...`);
+    const kioskCmd = [
+      `adb -s ${this.adbTarget} shell am start -n com.freekiosk/.MainActivity`,
+      `--es lock_package "${packageName}"`,
+      `--es pin "1234"`,
+      `--es auto_relaunch "true"`,
+      `--es auto_launch "true"`,
+      `--ez auto_start true`,
+      `--ez kiosk_enabled true`,
+    ].join(" ");
+
+    const kioskResult = await this.execAsyncSafe(kioskCmd);
+    if (kioskResult.code === 0) {
+      console.log("FreeKiosk configured successfully:", kioskResult.stdout);
+    } else {
+      console.warn(
+        "FreeKiosk configuration may have failed:",
+        kioskResult.stderr,
+      );
+    }
+
+    // Wait for FreeKiosk to start and launch the app
+    await this.sleep(2000);
+
     console.log("Kiosk mode setup complete!");
+  }
+
+  /**
+   * Spoof device properties using Magisk's resetprop to appear as a Samsung Galaxy S21 FE.
+   * Requires root access (su) and Magisk installed on the device.
+   */
+  private async spoofWithMagisk(): Promise<void> {
+    if (!this.adbTarget) {
+      throw new Error("ADB target not set - call start() first");
+    }
+
+    console.log("Spoofing device properties with Magisk...");
+
+    const spoofCmd = `su 0 sh -c 'resetprop ro.product.model SM-S9010 && resetprop ro.product.manufacturer samsung && resetprop ro.product.brand samsung && resetprop ro.product.name r9q && resetprop ro.product.device r9q && resetprop ro.product.board lahaina && resetprop ro.build.fingerprint samsung/r9qxxx/r9q:12/SP1A.210812.016.C1/S9010XXU1AVA1:user/release-keys && resetprop ro.build.id SP1A.210812.016.C1 && resetprop ro.build.display.id SP1A.210812.016.C1 && resetprop ro.build.version.release 12 && resetprop ro.build.version.sdk 31 && resetprop ro.build.version.security_patch 2022-01-01 && resetprop ro.build.type user && resetprop ro.build.tags release-keys && resetprop ro.bootloader S9010XXU1AVA1 && resetprop ro.hardware qcom && resetprop ro.board.platform lahaina && resetprop ro.boot.hardware qcom && resetprop ro.product.first_api_level 31 && resetprop ro.vendor.product.model SM-S9010 && resetprop ro.vendor.product.manufacturer samsung && resetprop ro.vendor.product.brand samsung && resetprop ro.system.product.model SM-S9010 && resetprop ro.system.product.manufacturer samsung && resetprop ro.system.product.brand samsung && resetprop ro.odm.product.model SM-S9010 && resetprop ro.odm.product.manufacturer samsung && resetprop ro.odm.product.brand samsung && resetprop ro.boot.verifiedbootstate green && resetprop ro.boot.flash.locked 1 && resetprop ro.boot.vbmeta.device_state locked && resetprop ro.secure 1 && resetprop ro.debuggable 0 && resetprop ro.adb.secure 1 && resetprop ro.boot.selinux enforcing && resetprop ro.build.selinux 1 && resetprop ro.kernel.qemu 0 && resetprop ro.kernel.qemu.gles 0 && resetprop ro.hardware.virtual_device 0 && resetprop ro.boot.qemu 0 && resetprop ro.bootmode unknown && resetprop gsm.version.baseband S9010XXU1AVA1 && resetprop ro.baseband S9010XXU1AVA1 && resetprop ro.serialno R5CT12345678 && resetprop ro.boot.serialno R5CT12345678 && resetprop persist.sys.dalvik.vm.lib.2 libart.so && resetprop dalvik.vm.isa.arm64.variant cortex-a76 && resetprop ro.product.cpu.abi arm64-v8a && resetprop ro.product.cpu.abilist arm64-v8a,armeabi-v7a,armeabi && resetprop ro.product.cpu.abilist64 arm64-v8a && resetprop ro.zygote zygote64_32 && resetprop ro.bionic.cpu_variant cortex-a76 && resetprop ro.soc.manufacturer Qualcomm && resetprop ro.soc.model SM8350 && settings put global device_name Galaxy_S21_FE && echo FULL_SPOOF_DONE'`;
+
+    const result = await this.execAsyncSafe(
+      `adb -s ${this.adbTarget} shell "${spoofCmd}"`,
+    );
+
+    if (result.stdout.includes("FULL_SPOOF_DONE")) {
+      console.log("Device spoofing complete!");
+    } else {
+      console.warn("Spoofing may have failed:", result.stdout, result.stderr);
+    }
   }
 
   /**
@@ -342,30 +382,6 @@ class RedroidRunner {
       console.warn("Failed to get video size:", err);
     }
     return null;
-  }
-
-  /**
-   * Restart the redroid container via Docker.
-   * Used to get a fresh state when worker restarts.
-   */
-  restartContainer(): void {
-    const containerName = `${POD_NAME}-redroid-1`;
-    console.log(`Restarting redroid container: ${containerName}`);
-
-    // Stop video size polling
-    if (this.videoSizeInterval) {
-      clearInterval(this.videoSizeInterval);
-      this.videoSizeInterval = null;
-    }
-
-    try {
-      execSync(`docker restart ${containerName}`, { stdio: "inherit" });
-      this.running = false; // Reset state since container is fresh
-      this.videoWidth = 0;
-      this.videoHeight = 0;
-    } catch (e) {
-      console.error("Failed to restart redroid container:", e);
-    }
   }
 
   /**

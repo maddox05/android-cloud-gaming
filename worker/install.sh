@@ -8,14 +8,12 @@ set -e  # Exit on error
 
 # Load environment variables from .env file if it exists
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$SCRIPT_DIR/../../.env"
+ENV_FILE="$SCRIPT_DIR/../.env"
 if [ -f "$ENV_FILE" ]; then
     source "$ENV_FILE"
 fi
 
-# Redroid image configuration (can be overridden via .env)
-REDROID_IMAGE="${REDROID_IMAGE:-redroid/redroid}"
-REDROID_TAG="${REDROID_TAG:-12.0.0_64only-latest}"
+
 
 echo "Starting Android Cloud Gaming Server Setup..."
 
