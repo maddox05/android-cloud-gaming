@@ -1,4 +1,4 @@
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuthModal } from "../context/AuthModalContext";
 import { useUser } from "../context/useUser";
 import { showAlert } from "../services/alertService";
@@ -146,26 +146,25 @@ const FeatureIcon = ({ type }: { type: string }) => {
 };
 
 export default function Home() {
-  const navigate = useNavigate();
   const { startLogin } = useAuthModal();
   const { user, accessType } = useUser();
 
-  const handlePlay = (appId: string) => {
+  const canPlay = (): boolean => {
     if (!user) {
       startLogin();
-      return;
+      return false;
     }
     if (accessType === null) {
-      // access type is undefined on default and null if the user doesnt have access
       showAlert({
         type: "warning",
         title: "Access Required",
-        message: "Join the waitlist or buy access. Waitlist is early access only—full release won't need one.",
+        message:
+          "Join the waitlist or buy access. Waitlist is early access only—full release won't need one.",
         link: { href: "/waitlist", label: "Join Waitlist" },
       });
-      return;
+      return false;
     }
-    navigate(`/queue/${encodeURIComponent(appId)}`);
+    return true;
   };
 
   return (
@@ -181,7 +180,7 @@ export default function Home() {
               name={game.name}
               description={game.description}
               thumbnail={game.thumbnail}
-              onPlay={handlePlay}
+              canPlay={canPlay}
             />
           ))}
         </div>
