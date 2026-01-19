@@ -291,7 +291,7 @@ class RedroidRunner {
     console.log("Config result:", configResult);
 
     // Wait for FreeKiosk to save config
-    await this.sleep(2000);
+    await this.sleep(10000);
 
     // Launch FreeKiosk to activate the lock
     console.log("Launching FreeKiosk to activate lock...");
