@@ -5,6 +5,68 @@
 
 import { verifyToken } from "./db/auth.js";
 import { getSupabase } from "./db/supabase.js";
+import nodemailer from "nodemailer";
+
+// ============================================================================
+// Email Configuration
+// ============================================================================
+
+const emailTransporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: process.env.SMTP_SECURE === "true",
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+function buildInviteEmail(inviteCode: string): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = "🎉 You're In! Your MaddoxCloud Invite Code Is Here 🎉";
+
+  const text = `You've officially unlocked MaddoxCloud Early Access.
+
+Code: ${inviteCode}
+
+This is early early access, so we'd love your feedback.
+Found a bug? Got ideas?
+👉 Report it here: https://github.com/maddox05/android-cloud-gaming/issues or drop it in the Discord.
+
+You can also trade or give away this code, anyone can use it!
+
+This is a community-built project, meaning the more you help, the better it gets 🚀
+If you're enjoying it, share your ref code with friends and get them involved too.
+
+Peace,
+– Maddox (https://maddox.page/)`;
+
+  const html = `
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <p>You've officially unlocked <strong>MaddoxCloud Early Access</strong>.</p>
+
+  <p style="font-size: 18px; background: #f0f0f0; padding: 15px; border-radius: 8px; text-align: center;">
+    <strong>Code:</strong> <code style="font-size: 16px; color: #333;">${inviteCode}</code>
+  </p>
+
+  <p>This is early early access, so we'd love your feedback.<br>
+  Found a bug? Got ideas?<br>
+  👉 Report it <a href="https://github.com/maddox05/android-cloud-gaming/issues">here</a> or drop it in the Discord.</p>
+
+  <p>You can also trade or give away this code, anyone can use it!</p>
+
+  <p>This is a community-built project, meaning the more you help, the better it gets 🚀<br>
+  If you're enjoying it, share your ref code with friends and get them involved too.</p>
+
+  <p>Peace,<br>
+  – <a href="https://maddox.page/">Maddox</a></p>
+</div>`;
+
+  return { subject, html, text };
+}
 
 // ============================================================================
 // Configuration
@@ -64,7 +126,7 @@ export interface AdminResult {
  */
 export async function joinWaitlist(
   token: string,
-  referralCode?: string
+  referralCode?: string,
 ): Promise<JoinWaitlistResult> {
   try {
     // Verify the token and get user info
@@ -129,7 +191,7 @@ export async function joinWaitlist(
     if (referrerId && WAITLIST_CONFIG.NEW_USER_BONUS_HOURS > 0) {
       timeJoined = new Date(
         timeJoined.getTime() -
-          WAITLIST_CONFIG.NEW_USER_BONUS_HOURS * 60 * 60 * 1000
+          WAITLIST_CONFIG.NEW_USER_BONUS_HOURS * 60 * 60 * 1000,
       );
     }
 
@@ -180,7 +242,7 @@ export async function joinWaitlist(
         const currentTime = new Date(referrerEntry.time_joined);
         const newTime = new Date(
           currentTime.getTime() -
-            WAITLIST_CONFIG.REFERRER_REWARD_HOURS * 60 * 60 * 1000
+            WAITLIST_CONFIG.REFERRER_REWARD_HOURS * 60 * 60 * 1000,
         );
 
         const { error: updateError } = await supabase
@@ -193,14 +255,14 @@ export async function joinWaitlist(
           // Don't fail the join, just log the error
         } else {
           console.log(
-            `Rewarded referrer ${referrerId} with ${WAITLIST_CONFIG.REFERRER_REWARD_HOURS} hour(s) boost`
+            `Rewarded referrer ${referrerId} with ${WAITLIST_CONFIG.REFERRER_REWARD_HOURS} hour(s) boost`,
           );
         }
       }
     }
 
     console.log(
-      `User ${user.id} joined waitlist with referral code ${newReferralCode}`
+      `User ${user.id} joined waitlist with referral code ${newReferralCode}`,
     );
     return {
       status: 200,
@@ -222,14 +284,15 @@ export async function joinWaitlist(
 }
 
 /**
- * Take the first N users off the waitlist and generate invite codes for them
- *
- * TODO: Add admin authentication
+ * Take the first N users off the waitlist, generate invite codes, and email them
  *
  * @param count - Number of users to process (capped at 100)
- * @returns CSV string with email,invite_code
+ * @returns Object with processed users and any errors
  */
-export async function generateInvites(count: number): Promise<string> {
+export async function generateInvites(count: number): Promise<{
+  processed: Array<{ user_id: string; email: string; invite_code: string }>;
+  errors: Array<{ user_id: string; error: string }>;
+}> {
   const processCount = Math.min(count, 100);
 
   const supabase = getSupabase();
@@ -243,16 +306,23 @@ export async function generateInvites(count: number): Promise<string> {
     .select("user_id")
     .order("time_joined", { ascending: true })
     .limit(processCount);
+  // const waitlistUsers = [{ user_id: "01b0b7b6-b660-43a5-b84d-1d5bda9d7aa6" }];
+  // const fetchError = null;
 
   if (fetchError) {
     throw new Error(`Failed to fetch waitlist: ${fetchError.message}`);
   }
 
   if (!waitlistUsers || waitlistUsers.length === 0) {
-    return "email,invite_code";
+    return { processed: [], errors: [] };
   }
 
-  const rows: string[] = ["email,invite_code"];
+  const processed: Array<{
+    user_id: string;
+    email: string;
+    invite_code: string;
+  }> = [];
+  const errors: Array<{ user_id: string; error: string }> = [];
 
   for (const waitlistUser of waitlistUsers) {
     const userId = waitlistUser.user_id;
@@ -261,7 +331,7 @@ export async function generateInvites(count: number): Promise<string> {
     const { data: userData } = await supabase.auth.admin.getUserById(userId);
     const email = userData?.user?.email;
     if (!email) {
-      console.error(`No email found for user ${userId}`);
+      errors.push({ user_id: userId, error: "No email found" });
       continue;
     }
 
@@ -273,13 +343,36 @@ export async function generateInvites(count: number): Promise<string> {
       .single();
 
     if (insertError || !inviteData) {
-      console.error(`Failed to create invite for ${userId}:`, insertError);
+      errors.push({
+        user_id: userId,
+        error: `Failed to create invite: ${insertError?.message}`,
+      });
       continue;
     }
 
     const inviteCode = inviteData.invite_code;
 
-    // Remove from waitlist
+    // Send email
+    const emailContent = buildInviteEmail(inviteCode);
+    try {
+      await emailTransporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: email,
+        subject: emailContent.subject,
+        text: emailContent.text,
+        html: emailContent.html,
+      });
+      console.log(`Sent invite email to ${email} with code ${inviteCode}`);
+    } catch (emailError) {
+      console.error(`Failed to send email to ${email}:`, emailError);
+      errors.push({
+        user_id: userId,
+        error: `Failed to send email: ${emailError}`,
+      });
+      continue;
+    }
+
+    // Remove from waitlist only after successful email
     const { error: deleteError } = await supabase
       .from("waitlist")
       .delete()
@@ -289,12 +382,11 @@ export async function generateInvites(count: number): Promise<string> {
       console.error(`Failed to remove ${userId} from waitlist:`, deleteError);
     }
 
-    rows.push(`${email},${inviteCode}`);
-    console.log(`Generated invite for ${email}: ${inviteCode}`);
+    processed.push({ user_id: userId, email, invite_code: inviteCode });
+    console.log(`Generated and emailed invite for ${email}: ${inviteCode}`);
   }
 
-  return rows.join("\n");
+  return { processed, errors };
 }
 
-// console.log(await generateInvites(21));
-// todo need nodemailer as TS is ass
+// generateInvites(50);

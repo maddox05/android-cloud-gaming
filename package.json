@@ -1,6 +1,11 @@
 {
   "dependencies": {
+    "@types/nodemailer": "^7.0.5",
     "docker": "^1.0.0",
+    "nodemailer": "^7.0.12",
     "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }
