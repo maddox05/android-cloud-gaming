@@ -159,7 +159,7 @@ export default function Home() {
         type: "warning",
         title: "Access Required",
         message:
-          "Join the waitlist or buy access. Waitlist is early access only—full release won't need one.",
+          "Join the waitlist for early access, or buy access now. Full release is coming soon.",
         link: { href: "/waitlist", label: "Join Waitlist" },
       });
       return false;

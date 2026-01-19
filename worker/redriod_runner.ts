@@ -159,6 +159,8 @@ class RedroidRunner {
     }
     console.log("Device booted!");
 
+    await this.sleep(1000);
+
     await this.spoofWithMagisk();
     await this.setupKioskModeUsingFreeKiosk(packageName);
 

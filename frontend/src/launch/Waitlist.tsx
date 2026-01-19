@@ -48,12 +48,13 @@ const SHARE_PLATFORMS = {
     buttonClass: "share-button-reddit",
     panelClass: "share-info-reddit",
     title: "Share on Reddit",
-    bonus: "Reddit posts stay searchable forever - passive referrals for months!",
+    bonus:
+      "Reddit posts stay searchable forever - passive referrals for months!",
     description: "This is a two-step strategy that works really well:",
     steps: [
       {
         label: "Step 1:",
-        text: 'Create a post in subreddits like r/school, r/highschool, etc. asking how to play games like Roblox or Clash Royale at school',
+        text: "Create a post in subreddits like r/school, r/highschool, etc. asking how to play games like Roblox or Clash Royale at school",
         links: [
           { text: "r/school", url: "https://reddit.com/r/school" },
           { text: "r/highschool", url: "https://reddit.com/r/highschool" },
@@ -184,6 +185,7 @@ export default function Waitlist() {
   const [totalCount, setTotalCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [showReferralSection, setShowReferralSection] = useState(false);
   const [showTikTokInfo, setShowTikTokInfo] = useState(false);
   const [showRedditInfo, setShowRedditInfo] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -304,8 +306,21 @@ export default function Waitlist() {
           <div className="waitlist-icon">🎮</div>
           <h1 className="waitlist-title">Your Waitlist Position</h1>
           <p className="waitlist-subtitle">
-            You're on the list! We'll notify you when it's your turn.
+            You're on the list! We'll email you a <strong>invite code</strong>{" "}
+            when it's your turn.
           </p>
+          <Link to="/redeem" className="redeem-hint-card">
+            <span className="redeem-hint-icon">🎟️</span>
+            <span className="redeem-hint-text">
+              <span className="redeem-hint-title">
+                Got an invite code from the waitlist or a friend?
+              </span>
+              <span className="redeem-hint-subtitle">
+                Redeem it to skip the waitlist
+              </span>
+            </span>
+            <span className="redeem-hint-arrow">→</span>
+          </Link>
         </header>
 
         <div className="waitlist-position-card">
@@ -330,7 +345,10 @@ export default function Waitlist() {
             <div className="meta-item">
               <div className="meta-value">
                 {formatTimeJumped(
-                  calculateTimeJumped(position.created_at, position.time_joined)
+                  calculateTimeJumped(
+                    position.created_at,
+                    position.time_joined,
+                  ),
                 ) || "0 hours"}
               </div>
               <div className="meta-label">Time jumped from referrals</div>
@@ -338,53 +356,71 @@ export default function Waitlist() {
           </div>
         </div>
 
-        {/* Referral Code Section */}
+        {/* Referral Code Section - Collapsible */}
         {position.referral_code && (
-          <div className="referral-code-card">
-            <div className="referral-code-header">
+          <div
+            className={`referral-code-card ${showReferralSection ? "expanded" : ""}`}
+          >
+            <button
+              className="referral-code-header"
+              onClick={() => setShowReferralSection(!showReferralSection)}
+            >
               <span className="referral-code-icon">🎁</span>
               <h3>Your Referral Code</h3>
-            </div>
-            <p className="referral-code-description">
-              Share this code with friends! When they join using your code,
-              you'll move up in the queue.
-            </p>
-            <div className="referral-code-display">
-              <span className="referral-code-value">
-                {position.referral_code}
+              <span
+                className={`referral-chevron ${showReferralSection ? "open" : ""}`}
+              >
+                ▼
               </span>
-              <button className="referral-code-copy" onClick={handleCopyCode}>
-                {copiedCode ? "Copied!" : "Copy"}
-              </button>
-            </div>
-            <button
-              className="waitlist-button waitlist-button-secondary"
-              onClick={handleCopyReferralLink}
-              style={{ marginTop: "1rem" }}
-            >
-              📋 Copy Referral Link
             </button>
 
-            {/* Share Buttons */}
-            <div className="share-buttons-container">
-              <button
-                className={`share-button ${SHARE_PLATFORMS.tiktok.buttonClass}`}
-                onClick={() => setShowTikTokInfo(!showTikTokInfo)}
-              >
-                <TikTokIcon />
-                {SHARE_PLATFORMS.tiktok.buttonLabel}
-              </button>
-              <button
-                className={`share-button ${SHARE_PLATFORMS.reddit.buttonClass}`}
-                onClick={() => setShowRedditInfo(!showRedditInfo)}
-              >
-                <RedditIcon />
-                {SHARE_PLATFORMS.reddit.buttonLabel}
-              </button>
-            </div>
+            {showReferralSection && (
+              <div className="referral-code-content">
+                <p className="referral-code-description">
+                  Share this code with friends! When they join using your code,
+                  you'll move up in the queue.
+                </p>
+                <div className="referral-code-display">
+                  <span className="referral-code-value">
+                    {position.referral_code}
+                  </span>
+                  <button
+                    className="referral-code-copy"
+                    onClick={handleCopyCode}
+                  >
+                    {copiedCode ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+                <button
+                  className="waitlist-button waitlist-button-secondary"
+                  onClick={handleCopyReferralLink}
+                  style={{ marginTop: "1rem" }}
+                >
+                  📋 Copy Referral Link
+                </button>
 
-            {showTikTokInfo && <ShareInfoPanel platform="tiktok" />}
-            {showRedditInfo && <ShareInfoPanel platform="reddit" />}
+                {/* Share Buttons */}
+                <div className="share-buttons-container">
+                  <button
+                    className={`share-button ${SHARE_PLATFORMS.tiktok.buttonClass}`}
+                    onClick={() => setShowTikTokInfo(!showTikTokInfo)}
+                  >
+                    <TikTokIcon />
+                    {SHARE_PLATFORMS.tiktok.buttonLabel}
+                  </button>
+                  <button
+                    className={`share-button ${SHARE_PLATFORMS.reddit.buttonClass}`}
+                    onClick={() => setShowRedditInfo(!showRedditInfo)}
+                  >
+                    <RedditIcon />
+                    {SHARE_PLATFORMS.reddit.buttonLabel}
+                  </button>
+                </div>
+
+                {showTikTokInfo && <ShareInfoPanel platform="tiktok" />}
+                {showRedditInfo && <ShareInfoPanel platform="reddit" />}
+              </div>
+            )}
           </div>
         )}
 
@@ -392,7 +428,7 @@ export default function Waitlist() {
           <p>
             Want faster access? Check out our{" "}
             <Link to="/pricing">pricing plans</Link> to skip the waitlist.
-            Questions? Join our{" "}
+            <br></br>Questions? Join our{" "}
             <a
               href="https://discord.gg/U4QYdzXEnr"
               target="_blank"
@@ -400,11 +436,8 @@ export default function Waitlist() {
             >
               Discord community
             </a>{" "}
-            for support and random invite code drops that give you instant access!
-          </p>
-          <p>
-            Have a code? <Link to="/redeem">Redeem it here</Link> to get instant
-            access.
+            for support and random invite code drops that give you instant
+            access!
           </p>
         </div>
 

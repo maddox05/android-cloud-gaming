@@ -28,9 +28,13 @@ function buildInviteEmail(inviteCode: string): {
 } {
   const subject = "🎉 You're In! Your MaddoxCloud Invite Code Is Here 🎉";
 
+  const redeemUrl = `https://maddoxcloud.com/redeem/${inviteCode}`;
+
   const text = `You've officially unlocked MaddoxCloud Early Access.
 
-Code: ${inviteCode}
+👉 Click here to redeem: ${redeemUrl}
+
+Or use code: ${inviteCode}
 
 This is early early access, so we'd love your feedback.
 Found a bug? Got ideas?
@@ -48,8 +52,14 @@ Peace,
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
   <p>You've officially unlocked <strong>MaddoxCloud Early Access</strong>.</p>
 
-  <p style="font-size: 18px; background: #f0f0f0; padding: 15px; border-radius: 8px; text-align: center;">
-    <strong>Code:</strong> <code style="font-size: 16px; color: #333;">${inviteCode}</code>
+  <p style="text-align: center; margin: 24px 0;">
+    <a href="${redeemUrl}" style="display: inline-block; background: linear-gradient(135deg, #f97316 0%, #dc6c12 100%); color: white; font-size: 18px; font-weight: bold; padding: 16px 32px; border-radius: 8px; text-decoration: none;">
+      🎉 Click to Redeem Your Code
+    </a>
+  </p>
+
+  <p style="font-size: 14px; background: #f0f0f0; padding: 12px; border-radius: 8px; text-align: center;">
+    Or use code: <code style="font-size: 14px; color: #333;">${inviteCode}</code>
   </p>
 
   <p>This is early early access, so we'd love your feedback.<br>

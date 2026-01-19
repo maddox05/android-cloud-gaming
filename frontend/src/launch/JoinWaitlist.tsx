@@ -27,7 +27,6 @@ export default function JoinWaitlist() {
   // Referral code - pre-filled from query param (?ref=CODE)
   const initialReferralCode = searchParams.get("ref") || "";
   const [referralCode, setReferralCode] = useState(initialReferralCode);
-  const [showNoReferralConfirm, setShowNoReferralConfirm] = useState(false);
 
   useEffect(() => {
     async function checkUserStatus() {
@@ -60,19 +59,12 @@ export default function JoinWaitlist() {
     checkUserStatus();
   }, [user.accessType, supabaseUserId, navigate]);
 
-  const handleJoinWaitlist = async (skipReferralCheck = false) => {
+  const handleJoinWaitlist = async () => {
     if (!supabaseUserId) {
       startLogin();
       return;
     }
 
-    // If no referral code and we haven't confirmed, show the popup
-    if (!referralCode.trim() && !skipReferralCheck) {
-      setShowNoReferralConfirm(true);
-      return;
-    }
-
-    setShowNoReferralConfirm(false);
     setIsJoining(true);
     setError(null);
 
@@ -214,33 +206,6 @@ export default function JoinWaitlist() {
                 "Join Waitlist"
               )}
             </button>
-
-            {/* No Referral Code Confirmation Popup */}
-            {showNoReferralConfirm && (
-              <div className="referral-confirm-overlay">
-                <div className="referral-confirm-modal">
-                  <h3>No Referral Code?</h3>
-                  <p>
-                    Using a referral code helps your friend move up in the
-                    queue. Are you sure you want to continue without one?
-                  </p>
-                  <div className="referral-confirm-buttons">
-                    <button
-                      className="waitlist-button waitlist-button-secondary"
-                      onClick={() => setShowNoReferralConfirm(false)}
-                    >
-                      Add Code
-                    </button>
-                    <button
-                      className="waitlist-button waitlist-button-primary"
-                      onClick={() => handleJoinWaitlist(true)}
-                    >
-                      Continue without Code
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {totalCount > 0 && (
               <p
