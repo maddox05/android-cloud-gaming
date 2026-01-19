@@ -411,6 +411,8 @@ class Worker {
     console.log("Starting Worker...");
 
     console.log("Connecting to signal server...");
+    await redroidRunner.stopContainer();
+
     await this.connectToSignalServer();
 
     console.log("Worker ready and waiting for client!");
