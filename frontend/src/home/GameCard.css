@@ -1,5 +1,8 @@
 /* Game Card */
 .game-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
   background: var(--bg-surface);
   border-radius: var(--radius-lg);
   overflow: hidden;

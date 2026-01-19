@@ -81,6 +81,7 @@ export interface WorkerStartMessage {
   gameId: string;
   turnInfo?: TurnInfo;
   maxVideoSize?: number;
+  userId: string; // User ID for game save lookup
 }
 
 /** Pod sends SDP offer to client */

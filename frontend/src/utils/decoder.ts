@@ -337,8 +337,8 @@ export class H264Decoder {
       });
       this.decoder.decode(chunk);
       this.timestamp += 33333; // ~30fps in microseconds
-    } catch {
-      // Skip invalid chunks silently
+    } catch (err) {
+      console.warn("Failed to decode video chunk:", err);
     }
   }
 
@@ -346,7 +346,9 @@ export class H264Decoder {
     if (this.decoder) {
       try {
         this.decoder.close();
-      } catch {}
+      } catch (err) {
+        console.warn("Failed to close decoder:", err);
+      }
       this.decoder = null;
     }
     this.buffer = new Uint8Array(0);

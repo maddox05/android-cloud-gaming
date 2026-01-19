@@ -3,6 +3,8 @@ import wrtc from "@roamhq/wrtc";
 import { redroidRunner } from "./redriod_runner.js";
 import { videoHandler } from "./video.js";
 import { inputHandler } from "./input.js";
+import { initializeWithGameSave, saveGameState } from "./game_save_manager.js";
+import { clearDiffVolume } from "./volume_manager.js";
 import type {
   InputMessage,
   SignalMessage,
@@ -22,8 +24,9 @@ const { RTCPeerConnection, RTCSessionDescription } = wrtc;
 
 if (!process.env.SIGNAL_URL) {
   console.error("SIGNAL_URL environment variable is required");
-  process.exit(1); // this will just keep looping a restart, so dont let this happen ahha
+  process.exit(1);
 }
+
 const SIGNAL_SERVER_URL = `${
   process.env.SIGNAL_URL.includes("localhost") ||
   process.env.SIGNAL_URL.includes("signal")
@@ -35,405 +38,408 @@ console.log(`Signal server URL: ${SIGNAL_SERVER_URL}`);
 type PC = InstanceType<typeof RTCPeerConnection>;
 type DataChannel = ReturnType<PC["createDataChannel"]>;
 
-let peerConnection: PC | null = null;
-let videoChannel: DataChannel | null = null;
-let inputChannel: DataChannel | null = null;
+class Worker {
+  private static instance: Worker | null = null;
 
-// TURN servers received from signal server
-let currentTurnServers: RTCIceServer[] | null = null;
+  private peerConnection: PC | null = null;
+  private videoChannel: DataChannel | null = null;
+  private inputChannel: DataChannel | null = null;
+  private currentTurnServers: RTCIceServer[] | null = null;
+  private currentUserId: string | null = null;
+  private isRestarting = false;
+  private hasStarted = false;
+  private signalSocket: WebSocket | null = null;
 
-async function createPeerConnection(): Promise<PC> {
-  // Merge STUN servers with any TURN servers we received
-  const iceServers: RTCIceServer[] = [
-    ...STUN_SERVERS,
-    ...(currentTurnServers ?? []),
-  ];
-  console.log(
-    `[WebRTC] Using ICE servers: ${iceServers.length} (STUN: ${
-      STUN_SERVERS.length
-    } + TURN: ${currentTurnServers?.length ?? 0})`
-  );
+  private constructor() {}
 
-  const pc = new RTCPeerConnection({ iceServers });
+  static getInstance(): Worker {
+    if (!Worker.instance) {
+      Worker.instance = new Worker();
+    }
+    return Worker.instance;
+  }
 
-  // Create data channel for video (sending H.264)
-  videoChannel = pc.createDataChannel("video", {
-    ordered: false,
-    maxRetransmits: 0,
-  });
+  private async createPeerConnection(): Promise<PC> {
+    const iceServers: RTCIceServer[] = [
+      ...STUN_SERVERS,
+      ...(this.currentTurnServers ?? []),
+    ];
+    console.log(
+      `[WebRTC] Using ICE servers: ${iceServers.length} (STUN: ${
+        STUN_SERVERS.length
+      } + TURN: ${this.currentTurnServers?.length ?? 0})`,
+    );
 
-  videoChannel.onopen = () => {
-    console.log("Video channel open");
-    // Start piping video data
-    let videoChunkCount = 0;
-    videoHandler.setCallback((data) => {
-      if (videoChannel && videoChannel.readyState === "open") {
-        videoChunkCount++;
+    const pc = new RTCPeerConnection({ iceServers });
+
+    this.videoChannel = pc.createDataChannel("video", {
+      ordered: false,
+      maxRetransmits: 0,
+    });
+
+    this.videoChannel.onopen = () => {
+      console.log("Video channel open");
+      let videoChunkCount = 0;
+      videoHandler.setCallback((data) => {
+        if (this.videoChannel && this.videoChannel.readyState === "open") {
+          videoChunkCount++;
+          console.log(
+            `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`,
+          );
+          /* @ts-ignore */
+          this.videoChannel.send(data);
+        }
+      });
+    };
+
+    this.inputChannel = pc.createDataChannel("input", {
+      ordered: false,
+      maxRetransmits: 0,
+    });
+
+    this.inputChannel.onopen = () => {
+      console.log("Input channel open");
+    };
+
+    this.inputChannel.onmessage = (event) => {
+      try {
+        const msg: InputMessage = JSON.parse(event.data);
+        inputHandler.sendInput(msg as InputMessage);
+      } catch (e) {
+        console.error("Invalid input message:", e);
+      }
+    };
+
+    pc.onicecandidate = (event) => {
+      if (
+        event.candidate &&
+        event.candidate.candidate &&
+        this.signalSocket &&
+        this.signalSocket.readyState === WebSocket.OPEN
+      ) {
+        const iceMsg: IceCandidateMessage = {
+          type: MSG.ICE_CANDIDATE,
+          candidate: event.candidate.toJSON(),
+        };
+        this.signalSocket.send(JSON.stringify(iceMsg));
+      }
+    };
+
+    pc.onconnectionstatechange = async () => {
+      console.log("[WebRTC] Connection state:", pc.connectionState);
+      if (
+        pc.connectionState === "disconnected" ||
+        pc.connectionState === "failed"
+      ) {
+        console.log("[WebRTC] Connection failed/disconnected - diagnostics:");
+        console.log("  ICE connection state:", pc.iceConnectionState);
+        console.log("  ICE gathering state:", pc.iceGatheringState);
+        console.log("  Signaling state:", pc.signalingState);
         console.log(
-          `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`
+          "  Local description type:",
+          pc.localDescription?.type ?? "none",
         );
-        // this used to be new Uint8Array(data) but thats a copy, it still works without a copy, so why copt it.
+        console.log(
+          "  Remote description type:",
+          pc.remoteDescription?.type ?? "none",
+        );
 
-        /* @ts-ignore */
-        videoChannel.send(data);
+        try {
+          const stats = await pc.getStats();
+          stats.forEach((report) => {
+            if (report.type === "candidate-pair" && report.state) {
+              console.log(
+                `  Candidate pair: ${report.state}, local: ${report.localCandidateId}, remote: ${report.remoteCandidateId}`,
+              );
+            }
+            if (report.type === "local-candidate") {
+              console.log(
+                `  Local candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`,
+              );
+            }
+            if (report.type === "remote-candidate") {
+              console.log(
+                `  Remote candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`,
+              );
+            }
+          });
+        } catch (e) {
+          console.log("  Could not get stats:", e);
+        }
+
+        if (
+          this.signalSocket &&
+          this.signalSocket.readyState === WebSocket.OPEN
+        ) {
+          const errorMsg: ErrorMessage = {
+            type: MSG.ERROR,
+            code: ERROR_CODE.WEBRTC_FAILED,
+            message: `WebRTC connection ${pc.connectionState}: ICE ${pc.iceConnectionState}`,
+          };
+          this.signalSocket.send(JSON.stringify(errorMsg));
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        this.restart();
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log("[WebRTC] ICE connection state:", pc.iceConnectionState);
+    };
+
+    pc.onicegatheringstatechange = () => {
+      console.log("[WebRTC] ICE gathering state:", pc.iceGatheringState);
+    };
+
+    pc.onsignalingstatechange = () => {
+      console.log("[WebRTC] Signaling state:", pc.signalingState);
+    };
+
+    return pc;
+  }
+
+  private webrtcCleanup(): void {
+    if (this.videoChannel) {
+      this.videoChannel.close();
+      this.videoChannel = null;
+    }
+    if (this.inputChannel) {
+      this.inputChannel.close();
+      this.inputChannel = null;
+    }
+    if (this.peerConnection) {
+      this.peerConnection.close();
+      this.peerConnection = null;
+    }
+    this.currentTurnServers = null;
+    this.currentUserId = null;
+  }
+
+  private notifyCrashAndExit(reason: string): void {
+    console.error(`Worker crashed: ${reason}`);
+
+    if (this.signalSocket && this.signalSocket.readyState === WebSocket.OPEN) {
+      const errorMsg: ErrorMessage = {
+        type: MSG.ERROR,
+        code: ERROR_CODE.WORKER_CRASHED,
+        message: "Rip",
+      };
+      this.signalSocket.send(JSON.stringify(errorMsg));
+    }
+
+    this.restart(1);
+  }
+
+  private async restart(exitCode: number = 0): Promise<void> {
+    console.log("Restarting...");
+    if (this.isRestarting) {
+      console.log(">>> Already restarting, skipping");
+      return;
+    }
+    this.isRestarting = true;
+
+    console.log(
+      ">>> Restarting worker - exiting for Docker to restart container...",
+    );
+
+    if (this.hasStarted && this.currentUserId) {
+      try {
+        console.log("Saving users game state before restart...");
+        videoHandler.disconnect();
+        inputHandler.disconnect();
+
+        await redroidRunner.stopContainer();
+        await saveGameState(this.currentUserId);
+        await clearDiffVolume();
+      } catch (err) {
+        console.error("Failed to save game state during restart:", err);
+      }
+    } else {
+      videoHandler.disconnect();
+      inputHandler.disconnect();
+    }
+
+    this.webrtcCleanup();
+
+    if (this.signalSocket) {
+      this.signalSocket.removeAllListeners();
+      this.signalSocket.close();
+      this.signalSocket = null;
+    }
+
+    console.log(`>>> Calling process.exit(${exitCode}) NOW`);
+    process.exit(exitCode);
+  }
+
+  private async initializeSession(
+    gameId: string,
+    maxVideoSize: number,
+  ): Promise<void> {
+    console.log("Client wants to connect, initializing session...");
+
+    console.log("Preparing container for game saves...");
+    await redroidRunner.stopContainer();
+
+    if (this.currentUserId) {
+      await initializeWithGameSave(this.currentUserId);
+    }
+
+    await redroidRunner.startContainer();
+
+    console.log(
+      `Starting Redroid with game: ${gameId}, maxVideoSize: ${maxVideoSize}...`,
+    );
+    await redroidRunner.start(gameId, maxVideoSize);
+
+    console.log("Connecting to scrcpy video socket (first)...");
+    await videoHandler.connect();
+    console.log("Connecting to scrcpy control socket (second)...");
+    await inputHandler.connect();
+
+    this.hasStarted = true;
+
+    console.log("Session initialized!");
+  }
+
+  private async connectToSignalServer(): Promise<void> {
+    this.signalSocket = new WebSocket(SIGNAL_SERVER_URL);
+
+    this.signalSocket.on("open", () => {
+      console.log("Connected to signal server");
+
+      const register: RegisterMessage = {
+        type: MSG.REGISTER,
+        games: GAMES_LIST.map((g) => g.id),
+      };
+      this.signalSocket!.send(JSON.stringify(register));
+      console.log(
+        `Registered with games: ${GAMES_LIST.map((g) => g.id).join(", ")}`,
+      );
+      console.log("Waiting for client to connect...");
+    });
+
+    this.signalSocket.on("message", async (data) => {
+      const msg: SignalMessage = JSON.parse(data.toString());
+      if (msg.type !== MSG.PING) {
+        console.log("Signal message:", msg.type);
+      }
+
+      switch (msg.type) {
+        case MSG.PING: {
+          const pong: PongMessage = { type: MSG.PONG };
+          this.signalSocket!.send(JSON.stringify(pong));
+          break;
+        }
+
+        case MSG.WORKER_START: {
+          const workerStartMsg = msg as WorkerStartMessage;
+          console.log(
+            "Creating peer connection, offer, and initializing session...",
+            workerStartMsg.turnInfo ? "(with TURN)" : "(no TURN)",
+            `userId: ${workerStartMsg.userId}`,
+          );
+          try {
+            this.currentTurnServers = workerStartMsg.turnInfo ?? null;
+            this.currentUserId = workerStartMsg.userId;
+
+            this.peerConnection = await this.createPeerConnection();
+
+            const offer = await this.peerConnection!.createOffer();
+            await this.peerConnection!.setLocalDescription(offer);
+
+            const offerMsg: OfferMessage = {
+              type: MSG.OFFER,
+              sdp: offer.sdp!,
+            };
+            this.signalSocket!.send(JSON.stringify(offerMsg));
+
+            const maxVideoSize =
+              workerStartMsg.maxVideoSize ?? FREE_USER_MAX_VIDEO_SIZE;
+            await this.initializeSession(workerStartMsg.gameId, maxVideoSize);
+          } catch (err) {
+            const errorMessage =
+              err instanceof Error ? err.message : String(err);
+            this.notifyCrashAndExit(`Failed to start worker: ${errorMessage}`);
+          }
+          break;
+        }
+
+        case MSG.ANSWER:
+          if (this.peerConnection) {
+            await this.peerConnection.setRemoteDescription(
+              new RTCSessionDescription({ type: "answer", sdp: msg.sdp }),
+            );
+            console.log("Remote description set");
+          }
+          break;
+
+        case MSG.ICE_CANDIDATE:
+          if (
+            !msg.candidate ||
+            typeof msg.candidate !== "object" ||
+            typeof msg.candidate.candidate !== "string" ||
+            msg.candidate.candidate.length === 0
+          ) {
+            return;
+          }
+          if (this.peerConnection && msg.candidate) {
+            console.log("Adding remote ICE candidate...");
+            await this.peerConnection.addIceCandidate(msg.candidate);
+            console.log("Added remote ICE candidate!");
+          }
+          break;
+
+        case MSG.SHUTDOWN:
+          console.log(`Shutdown requested: ${msg.reason}`);
+          this.restart();
+          break;
       }
     });
-  };
 
-  // Create data channel for input (receiving)
-  // Using unordered + maxRetransmits:0 for lowest latency
-  // Trade-off: events may drop or arrive out of order
-  inputChannel = pc.createDataChannel("input", {
-    ordered: false,
-    maxRetransmits: 0,
-  });
+    this.signalSocket.on("close", async () => {
+      console.log("signalSocket on close!");
+      this.restart();
+    });
 
-  inputChannel.onopen = () => {
-    console.log("Input channel open");
-  };
-
-  inputChannel.onmessage = (event) => {
-    try {
-      const msg: InputMessage = JSON.parse(event.data); // TODO validate is actual input msg
-
-      inputHandler.sendInput(msg as InputMessage);
-    } catch (e) {
-      console.error("Invalid input message:", e);
-    }
-  };
-
-  pc.onicecandidate = (event) => {
-    if (
-      event.candidate &&
-      event.candidate.candidate &&
-      signalSocket &&
-      signalSocket.readyState === WebSocket.OPEN
-    ) {
-      const iceMsg: IceCandidateMessage = {
-        type: MSG.ICE_CANDIDATE,
-        candidate: event.candidate.toJSON(),
-      };
-
-      signalSocket.send(JSON.stringify(iceMsg));
-    }
-  };
-
-  pc.onconnectionstatechange = async () => {
-    console.log("[WebRTC] Connection state:", pc.connectionState);
-    if (
-      pc.connectionState === "disconnected" ||
-      pc.connectionState === "failed"
-    ) {
-      // Log detailed diagnostics before restarting
-      console.log("[WebRTC] Connection failed/disconnected - diagnostics:");
-      console.log("  ICE connection state:", pc.iceConnectionState);
-      console.log("  ICE gathering state:", pc.iceGatheringState);
-      console.log("  Signaling state:", pc.signalingState);
-      console.log(
-        "  Local description type:",
-        pc.localDescription?.type ?? "none"
-      );
-      console.log(
-        "  Remote description type:",
-        pc.remoteDescription?.type ?? "none"
-      );
-
-      // Get connection stats for more insight
-      try {
-        const stats = await pc.getStats();
-        stats.forEach((report) => {
-          if (report.type === "candidate-pair" && report.state) {
-            console.log(
-              `  Candidate pair: ${report.state}, local: ${report.localCandidateId}, remote: ${report.remoteCandidateId}`
-            );
-          }
-          if (report.type === "local-candidate") {
-            console.log(
-              `  Local candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`
-            );
-          }
-          if (report.type === "remote-candidate") {
-            console.log(
-              `  Remote candidate: ${report.candidateType} ${report.protocol} ${report.address}:${report.port}`
-            );
-          }
-        });
-      } catch (e) {
-        console.log("  Could not get stats:", e);
-      }
-
-      // Send error to signal server so client can be notified
-      if (signalSocket && signalSocket.readyState === WebSocket.OPEN) {
-        const errorMsg: ErrorMessage = {
-          type: MSG.ERROR,
-          code: ERROR_CODE.WEBRTC_FAILED,
-          message: `WebRTC connection ${pc.connectionState}: ICE ${pc.iceConnectionState}`,
-        };
-        signalSocket.send(JSON.stringify(errorMsg));
-      }
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      restart();
-    }
-  };
-
-  pc.oniceconnectionstatechange = () => {
-    console.log("[WebRTC] ICE connection state:", pc.iceConnectionState);
-  };
-
-  pc.onicegatheringstatechange = () => {
-    console.log("[WebRTC] ICE gathering state:", pc.iceGatheringState);
-  };
-
-  pc.onsignalingstatechange = () => {
-    console.log("[WebRTC] Signaling state:", pc.signalingState);
-  };
-
-  return pc;
-}
-
-function webrtc_cleanup() {
-  if (videoChannel) {
-    videoChannel.close();
-    videoChannel = null;
-  }
-  if (inputChannel) {
-    inputChannel.close();
-    inputChannel = null;
-  }
-  if (peerConnection) {
-    peerConnection.close();
-    peerConnection = null;
-  }
-  currentTurnServers = null;
-}
-
-function notifyCrashAndExit(reason: string): void {
-  console.error(`Worker crashed: ${reason}`);
-
-  // Notify signal server of crash so it can inform the client
-  if (signalSocket && signalSocket.readyState === WebSocket.OPEN) {
-    const errorMsg: ErrorMessage = {
-      type: MSG.ERROR,
-      code: ERROR_CODE.WORKER_CRASHED,
-      message: "Rip", // todo add back reason, ommited for now for security
-    };
-    signalSocket.send(JSON.stringify(errorMsg));
+    this.signalSocket.on("error", (err) => {
+      console.error("Signal socket error:", err);
+    });
   }
 
-  restart(1);
-}
+  async start(): Promise<void> {
+    console.log("Starting Worker...");
 
-let isRestarting = false;
+    console.log("Connecting to signal server...");
+    await this.connectToSignalServer();
 
-async function restart(exitCode: number = 0) {
-  console.log("Restarting...");
-  if (isRestarting) {
-    console.log(">>> Already restarting, skipping");
-    return;
-  }
-  isRestarting = true;
-
-  console.log(
-    ">>> Restarting worker - exiting for Docker to restart container..."
-  );
-
-  // Cleanup WebRTC
-  webrtc_cleanup();
-
-  // Close signal socket
-  if (signalSocket) {
-    signalSocket.removeAllListeners();
-    signalSocket.close();
-    signalSocket = null;
+    console.log("Worker ready and waiting for client!");
+    this.isRestarting = false;
   }
 
-  // Disconnect from scrcpy
-  videoHandler.disconnect();
-  inputHandler.disconnect();
-
-  // Exit - Docker restart policy will restart the container fresh
-  console.log(">>> Calling process.exit(0) NOW");
-  process.exit(exitCode);
-}
-
-let signalSocket: WebSocket | null = null;
-let sessionStarted = false;
-
-/**
- * Initialize the session - start redroid, connect video/input, create peer connection
- * Called when a client wants to connect (receives "start" message)
- */
-async function initializeSession(gameId: string, maxVideoSize: number): Promise<void> {
-  if (sessionStarted) {
-    console.log("Session already started");
-    return;
+  handleUncaughtException(err: Error): void {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    this.notifyCrashAndExit(`Uncaught exception: ${errorMessage}`);
   }
-  sessionStarted = true;
 
-  console.log("Client wants to connect, initializing session...");
-
-  // Start Redroid with the game package (kiosk mode)
-  console.log(`Starting Redroid with game: ${gameId}, maxVideoSize: ${maxVideoSize}...`);
-  await redroidRunner.start(gameId, maxVideoSize);
-
-  // Connect to scrcpy sockets in ORDER: video first, then control
-  // scrcpy uses a single abstract socket - connections are served in order
-  console.log("Connecting to scrcpy video socket (first)...");
-  await videoHandler.connect();
-  console.log("Connecting to scrcpy control socket (second)...");
-  await inputHandler.connect();
-
-  console.log("Session initialized!");
+  handleUnhandledRejection(reason: unknown): void {
+    const errorMessage =
+      reason instanceof Error ? reason.message : String(reason);
+    this.notifyCrashAndExit(`Unhandled rejection: ${errorMessage}`);
+  }
 }
 
-async function connectToSignalServer() {
-  signalSocket = new WebSocket(SIGNAL_SERVER_URL);
+const worker = Worker.getInstance();
 
-  signalSocket.on("open", () => {
-    console.log("Connected to signal server");
-
-    // Register with signal server
-    const register: RegisterMessage = {
-      type: MSG.REGISTER,
-      games: GAMES_LIST.map((g) => g.id),
-    };
-    signalSocket!.send(JSON.stringify(register));
-    console.log(
-      `Registered with games: ${GAMES_LIST.map((g) => g.id).join(", ")}`
-    );
-    console.log("Waiting for client to connect...");
-  });
-
-  signalSocket.on("message", async (data) => {
-    const msg: SignalMessage = JSON.parse(data.toString());
-    if (msg.type !== MSG.PING) {
-      console.log("Signal message:", msg.type);
-    }
-
-    switch (msg.type) {
-      case MSG.PING: {
-        // Respond with pong
-        const pong: PongMessage = { type: MSG.PONG };
-        signalSocket!.send(JSON.stringify(pong));
-        break;
-      }
-
-      case MSG.WORKER_START: {
-        // Signal server tells us to start - create peer connection and initialize session
-        const workerStartMsg = msg as WorkerStartMessage;
-        console.log(
-          "Creating peer connection, offer, and initializing session...",
-          workerStartMsg.turnInfo ? "(with TURN)" : "(no TURN)"
-        );
-        try {
-          // Store TURN servers before creating peer connection
-          currentTurnServers = workerStartMsg.turnInfo ?? null;
-
-          peerConnection = await createPeerConnection();
-
-          const offer = await peerConnection!.createOffer();
-          await peerConnection!.setLocalDescription(offer);
-
-          const offerMsg: OfferMessage = {
-            type: MSG.OFFER,
-            sdp: offer.sdp!,
-          };
-          signalSocket!.send(JSON.stringify(offerMsg));
-
-          // Initialize the session with the game
-          const maxVideoSize = workerStartMsg.maxVideoSize ?? FREE_USER_MAX_VIDEO_SIZE;
-          await initializeSession(workerStartMsg.gameId, maxVideoSize);
-        } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : String(err);
-          notifyCrashAndExit(`Failed to start worker: ${errorMessage}`);
-        }
-        break;
-      }
-
-      case MSG.ANSWER:
-        // Client sent answer
-        if (peerConnection) {
-          await peerConnection.setRemoteDescription(
-            new RTCSessionDescription({ type: "answer", sdp: msg.sdp })
-          );
-          console.log("Remote description set");
-        }
-        break;
-
-      case MSG.ICE_CANDIDATE:
-        /**
-                   * some candidates send null candidates differently this one sends a fucking empty string (Firefox)
-           * Adding remote ICE candidate... {
-worker-1   |   candidate: '',
-worker-1   |   sdpMLineIndex: 0,
-worker-1   |   sdpMid: '0',
-worker-1   |   usernameFragment: '33135709'
-worker-1   | }
-           */
-        if (
-          !msg.candidate ||
-          typeof msg.candidate !== "object" ||
-          typeof msg.candidate.candidate !== "string" ||
-          msg.candidate.candidate.length === 0
-        ) {
-          // end-of-candidates or malformed → ignore
-          return;
-        }
-        if (peerConnection && msg.candidate) {
-          console.log("Adding remote ICE candidate...", msg.candidate);
-          await peerConnection.addIceCandidate(msg.candidate);
-          console.log("Added remote ICE candidate!");
-        }
-        break;
-
-      case MSG.SHUTDOWN:
-        console.log(`Shutdown requested: ${msg.reason}`);
-        restart();
-        break;
-    }
-  });
-
-  signalSocket.on("close", async () => {
-    console.log("Disconnected from signal server, restarting myself!");
-    // sleep 5 secs
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-    process.exit(0);
-  });
-
-  signalSocket.on("error", (err) => {
-    console.error("Signal socket error:", err);
-  });
-}
-
-async function main() {
-  console.log("Starting Worker...");
-
-  // Restart redroid on worker startup to ensure fresh state
-  redroidRunner.restartContainer();
-
-  // Only connect to signal server initially
-  // Redroid/video/input will be started when a client connects
-  console.log("Connecting to signal server...");
-  await connectToSignalServer();
-
-  console.log("Worker ready and waiting for client!");
-  isRestarting = false;
-}
-
-// Catch unhandled errors from event callbacks (like onmessage)
 process.on("uncaughtException", (err) => {
-  const errorMessage = err instanceof Error ? err.message : String(err);
-  notifyCrashAndExit(`Uncaught exception: ${errorMessage}`);
+  worker.handleUncaughtException(err);
 });
 
 process.on("unhandledRejection", (reason) => {
-  const errorMessage =
-    reason instanceof Error ? reason.message : String(reason);
-  notifyCrashAndExit(`Unhandled rejection: ${errorMessage}`);
+  worker.handleUnhandledRejection(reason);
 });
 
-main().catch((err) => {
+worker.start().catch((err) => {
   const errorMessage = err instanceof Error ? err.message : String(err);
-  notifyCrashAndExit(errorMessage);
+  worker.handleUncaughtException(new Error(errorMessage));
 });

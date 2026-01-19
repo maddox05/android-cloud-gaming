@@ -1,8 +1,5 @@
 import { spawn, exec, execSync } from "child_process";
-import { redroid_config, scrcpy_config } from "./config.js";
 import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/const.js";
-import { error } from "console";
-import { errorMonitor } from "events";
 
 const POD_NAME = process.env.POD_NAME;
 if (!POD_NAME) {
@@ -14,16 +11,37 @@ class RedroidRunner {
   private static instance: RedroidRunner;
   private running = false;
   private scrcpyProc: ReturnType<typeof spawn> | null = null;
-  private adbTarget: string;
+  private adbTarget: string | null = null;
+  private host: string | null = null;
+  private port: number | null = null;
   private maxVideoSize: number | null;
   private videoSizeInterval: ReturnType<typeof setInterval> | null = null;
 
   public videoWidth: number = 0;
   public videoHeight: number = 0;
 
-  private constructor() {
-    const { host, port } = redroid_config;
-    this.adbTarget = `${host}:${port}`;
+  private getRedroidHost(): string {
+    // With network_mode: host, we need to find the container's IP via Docker
+    const podName = process.env.POD_NAME;
+    if (podName) {
+      try {
+        const containerName = `${podName}-redroid-1`;
+        const ip = execSync(
+          `docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${containerName}`,
+          { encoding: "utf-8" },
+        ).trim();
+        if (ip) {
+          console.log(`Resolved redroid container IP: ${ip}`);
+          return ip;
+        }
+      } catch (e) {
+        console.warn(
+          "Failed to get redroid container IP, falling back to localhost",
+        );
+      }
+    }
+
+    return "localhost";
   }
 
   static getInstance(): RedroidRunner {
@@ -39,7 +57,7 @@ class RedroidRunner {
 
   private execAsync(cmd: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      exec(cmd, (error, stdout, stderr) => {
+      exec(cmd, (error, stdout, _stderr) => {
         if (error) reject(error);
         else resolve(stdout.trim());
       });
@@ -51,7 +69,7 @@ class RedroidRunner {
    * Useful for commands that print to stderr but still succeed
    */
   private execAsyncSafe(
-    cmd: string
+    cmd: string,
   ): Promise<{ stdout: string; stderr: string; code: number }> {
     return new Promise((resolve) => {
       exec(cmd, (error, stdout, stderr) => {
@@ -81,15 +99,22 @@ class RedroidRunner {
     this.maxVideoSize = maxSize;
     const s = REDROID_SCRCPY_SERVER_SETTINGS;
 
+    this.host = this.getRedroidHost();
+    this.port = 5555;
+    this.adbTarget = `${this.host}:${this.port}`;
+
     // Connect adb (retry a few times in case redroid isn't ready yet)
     console.log(`Connecting ADB to ${this.adbTarget}...`);
     let adbConnected = false;
     for (let i = 0; i < 10; i++) {
       try {
-        await this.execAsync(`adb connect ${this.adbTarget}`);
+        const response = await this.execAsync(`adb connect ${this.adbTarget}`);
+        if (!response.includes("connected")) {
+          throw new Error("Failed to connect ADB");
+        }
         adbConnected = true;
         break;
-      } catch {
+      } catch (err) {
         console.log(`ADB connect attempt ${i + 1} failed, retrying...`);
         await this.sleep(1000);
       }
@@ -104,13 +129,15 @@ class RedroidRunner {
     for (let i = 0; i < 30; i++) {
       try {
         const result = await this.execAsync(
-          `adb -s ${this.adbTarget} shell getprop sys.boot_completed`
+          `adb -s ${this.adbTarget} shell getprop sys.boot_completed`,
         );
         if (result === "1") {
           booted = true;
           break;
         }
-      } catch {}
+      } catch (err) {
+        console.log(`Boot check attempt ${i + 1} failed:`);
+      }
       await this.sleep(1000);
     }
 
@@ -123,8 +150,8 @@ class RedroidRunner {
     console.log("Killing any existing scrcpy processes...");
     try {
       await this.execAsync(`adb -s ${this.adbTarget} shell pkill -f scrcpy`);
-    } catch {
-      // Ignore error if no process found
+    } catch (err) {
+      console.log("No existing scrcpy process to kill (or pkill failed):");
     }
     await this.sleep(500);
 
@@ -132,14 +159,14 @@ class RedroidRunner {
     console.log("Removing old port forwards...");
     try {
       await this.execAsync(`adb -s ${this.adbTarget} forward --remove-all`);
-    } catch {
-      // Ignore error
+    } catch (err) {
+      console.warn("Failed to remove old port forwards:");
     }
 
     // Push scrcpy server
     console.log("Pushing scrcpy server...");
     await this.execAsync(
-      `adb -s ${this.adbTarget} push ./assets/scrcpy/scrcpy-server /data/local/tmp/scrcpy-server.jar`
+      `adb -s ${this.adbTarget} push ./assets/scrcpy/scrcpy-server /data/local/tmp/scrcpy-server.jar`,
     );
 
     // Get scrcpy version
@@ -151,7 +178,7 @@ class RedroidRunner {
     // Setup port forward for scrcpy abstract socket
     console.log("Setting up port forward...");
     await this.execAsync(
-      `adb -s ${this.adbTarget} forward tcp:${scrcpy_config.port} localabstract:scrcpy`
+      `adb -s ${this.adbTarget} forward tcp:${6767} localabstract:scrcpy`,
     );
 
     // Start scrcpy server
@@ -189,7 +216,7 @@ class RedroidRunner {
 
     this.scrcpyProc.on("error", (err) => console.error("scrcpy error:", err));
     this.scrcpyProc.on("exit", (code) =>
-      console.log("scrcpy exited with code:", code)
+      console.log("scrcpy exited with code:", code),
     );
 
     // Wait for scrcpy to be ready
@@ -198,7 +225,7 @@ class RedroidRunner {
     this.running = true;
     console.log("RedroidRunner started successfully!");
     console.log(
-      `scrcpy port: ${scrcpy_config.port} (connect twice: video first, then control)`
+      `scrcpy port: ${6767} (connect twice: video first, then control)`,
     );
 
     // Setup kiosk mode AFTER scrcpy is running
@@ -240,13 +267,13 @@ class RedroidRunner {
 
     // Hide nav bar and status bar with immersive mode
     await this.execAsyncSafe(
-      `adb -s ${this.adbTarget} shell settings put global policy_control immersive.full=*`
+      `adb -s ${this.adbTarget} shell settings put global policy_control immersive.full=*`,
     );
 
     // Get the launcher activity for this package
     console.log(`Finding launcher activity for ${packageName}...`);
     const activityResult = await this.execAsyncSafe(
-      `adb -s ${this.adbTarget} shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${packageName}`
+      `adb -s ${this.adbTarget} shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER ${packageName}`,
     );
     console.log(`Activity resolve: ${activityResult.stdout}`);
 
@@ -257,7 +284,7 @@ class RedroidRunner {
     if (activity && activity.includes("/")) {
       console.log(`Launching with am start: ${activity}`);
       const result = await this.execAsyncSafe(
-        `adb -s ${this.adbTarget} shell am start -n ${activity}`
+        `adb -s ${this.adbTarget} shell am start -n ${activity}`,
       );
       console.log(`Launch result: ${result.stdout}`);
       if (result.stderr) console.log(`Launch stderr: ${result.stderr}`);
@@ -265,7 +292,7 @@ class RedroidRunner {
       // Fallback to monkey
       console.log(`Fallback: launching with monkey...`);
       await this.execAsyncSafe(
-        `adb -s ${this.adbTarget} shell monkey -p ${packageName} --pct-syskeys 0 -c android.intent.category.LAUNCHER 1`
+        `adb -s ${this.adbTarget} shell monkey -p ${packageName} --pct-syskeys 0 -c android.intent.category.LAUNCHER 1`,
       );
     }
 
@@ -282,7 +309,7 @@ class RedroidRunner {
     }
     try {
       const result = await this.execAsync(
-        `adb -s ${this.adbTarget} shell wm size`
+        `adb -s ${this.adbTarget} shell wm size`,
       );
       const match = result.match(/(\d+)x(\d+)/);
       if (match) {
@@ -291,10 +318,10 @@ class RedroidRunner {
 
         // Check display rotation and swap if landscape (rotation 1 or 3)
         const rotationResult = await this.execAsyncSafe(
-          `adb -s ${this.adbTarget} shell dumpsys window | grep -E 'mCurrentRotation|rotation='`
+          `adb -s ${this.adbTarget} shell dumpsys window | grep -E 'mCurrentRotation|rotation='`,
         );
         const rotationMatch = rotationResult.stdout.match(
-          /(?:mCurrentRotation|rotation)=(\d)/
+          /(?:mCurrentRotation|rotation)=(\d)/,
         );
         const rotation = rotationMatch ? parseInt(rotationMatch[1]) : 0;
         if (rotation === 1 || rotation === 3) {
@@ -311,7 +338,9 @@ class RedroidRunner {
         }
         return { width, height };
       }
-    } catch {}
+    } catch (err) {
+      console.warn("Failed to get video size:", err);
+    }
     return null;
   }
 
@@ -337,6 +366,71 @@ class RedroidRunner {
     } catch (e) {
       console.error("Failed to restart redroid container:", e);
     }
+  }
+
+  /**
+   * Stop the redroid container without restarting.
+   * Used to perform volume operations (save/restore) between stop and start.
+   * ASYNC to avoid blocking the event loop during WebRTC signaling.
+   */
+  async stopContainer(): Promise<void> {
+    const containerName = `${POD_NAME}-redroid-1`;
+    console.log(`Stopping redroid container: ${containerName}`);
+
+    // Stop video size polling
+    if (this.videoSizeInterval) {
+      clearInterval(this.videoSizeInterval);
+      this.videoSizeInterval = null;
+    }
+
+    // Kill scrcpy process if running
+    if (this.scrcpyProc) {
+      this.scrcpyProc.kill();
+      this.scrcpyProc = null;
+    }
+
+    try {
+      await this.execAsync(`docker stop -t 0 ${containerName}`);
+    } catch (e) {
+      console.warn("Failed to stop redroid container:");
+    }
+    await this.sleep(1000);
+
+    try {
+      await this.execAsync(`docker rm ${containerName}`);
+    } catch (e) {
+      console.warn("Failed to remove redroid container:");
+    }
+
+    this.running = false;
+    this.videoWidth = 0;
+    this.videoHeight = 0;
+  }
+
+  /**
+   * Recreate the redroid container (after removal).
+   * Uses docker compose to recreate with proper config.
+   * ASYNC to avoid blocking the event loop during WebRTC signaling.
+   */
+  async startContainer(): Promise<void> {
+    console.log(`Recreating redroid container for project: ${POD_NAME}`);
+
+    try {
+      await this.execAsync(
+        `docker compose -f /app/docker-compose.pod.yml -p ${POD_NAME} up -d redroid`,
+      );
+      // Note: running flag will be set in start() after ADB connects
+    } catch (e) {
+      console.error("Failed to recreate redroid container:", e);
+      throw e;
+    }
+  }
+
+  /**
+   * Get the diff volume name for this pod
+   */
+  getDiffVolumeName(): string {
+    return `${POD_NAME}-redroid-diff`;
   }
 }
 

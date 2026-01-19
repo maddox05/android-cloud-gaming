@@ -1,5 +1,4 @@
 import net from "net";
-import { scrcpy_config } from "./config.js";
 
 class VideoHandler {
   private static instance: VideoHandler;
@@ -39,16 +38,12 @@ class VideoHandler {
     if (this.connected) return;
 
     return new Promise((resolve, reject) => {
-      this.socket = net.createConnection(
-        scrcpy_config.port,
-        "127.0.0.1",
-        () => {
-          console.log("Video socket connected (first connection)");
-          this.socket!.setNoDelay(true); // Disable Nagle's algorithm for lower latency
-          this.connected = true;
-          resolve();
-        }
-      );
+      this.socket = net.createConnection(6767, "127.0.0.1", () => {
+        console.log("Video socket connected (first connection)");
+        this.socket!.setNoDelay(true); // Disable Nagle's algorithm for lower latency
+        this.connected = true;
+        resolve();
+      });
 
       this.socket.on("data", (data) => {
         if (this.onDataCallback) {

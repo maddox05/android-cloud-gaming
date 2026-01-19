@@ -24,11 +24,11 @@ class WebSocketAPI {
 
   private onOfferCallbacks: ((sdp: string) => void)[] = [];
   private onIceCandidateCallbacks: ((
-    candidate: RTCIceCandidateInit
+    candidate: RTCIceCandidateInit,
   ) => void)[] = [];
   private onErrorCallbacks: ((
     code: ErrorCode | undefined,
-    message: string
+    message: string,
   ) => void)[] = [];
   private onQueueInfoCallbacks: ((info: QueueInfo) => void)[] = [];
   private onQueueReadyCallbacks: ((turnInfo?: TurnInfo) => void)[] = [];
@@ -42,7 +42,7 @@ class WebSocketAPI {
         this.ws.readyState === WebSocket.CONNECTING)
     ) {
       console.log("Already connected/connecting, skipping");
-      return;
+      throw new Error("Double Signal Server connect");
     }
 
     try {
@@ -160,7 +160,7 @@ class WebSocketAPI {
         console.log(
           "Calling",
           this.onQueueInfoCallbacks.length,
-          "queue info callbacks"
+          "queue info callbacks",
         );
         this.onQueueInfoCallbacks.forEach((cb) => cb(info));
         break;
@@ -170,7 +170,7 @@ class WebSocketAPI {
         const queueReadyMsg = msg as QueueReadyMessage;
         console.log(
           "Queue ready - worker assigned",
-          queueReadyMsg.turnInfo ? "(with TURN)" : "(no TURN)"
+          queueReadyMsg.turnInfo ? "(with TURN)" : "(no TURN)",
         );
         this.onQueueReadyCallbacks.forEach((cb) => cb(queueReadyMsg.turnInfo));
         break;
@@ -200,29 +200,29 @@ class WebSocketAPI {
     this.onOfferCallbacks.push(callback);
     return () => {
       this.onOfferCallbacks = this.onOfferCallbacks.filter(
-        (cb) => cb !== callback
+        (cb) => cb !== callback,
       );
     };
   }
 
   onIceCandidate(
-    callback: (candidate: RTCIceCandidateInit) => void
+    callback: (candidate: RTCIceCandidateInit) => void,
   ): Unsubscribe {
     this.onIceCandidateCallbacks.push(callback);
     return () => {
       this.onIceCandidateCallbacks = this.onIceCandidateCallbacks.filter(
-        (cb) => cb !== callback
+        (cb) => cb !== callback,
       );
     };
   }
 
   onError(
-    callback: (code: ErrorCode | undefined, message: string) => void
+    callback: (code: ErrorCode | undefined, message: string) => void,
   ): Unsubscribe {
     this.onErrorCallbacks.push(callback);
     return () => {
       this.onErrorCallbacks = this.onErrorCallbacks.filter(
-        (cb) => cb !== callback
+        (cb) => cb !== callback,
       );
     };
   }
@@ -231,7 +231,7 @@ class WebSocketAPI {
     this.onQueueInfoCallbacks.push(callback);
     return () => {
       this.onQueueInfoCallbacks = this.onQueueInfoCallbacks.filter(
-        (cb) => cb !== callback
+        (cb) => cb !== callback,
       );
     };
   }
@@ -240,7 +240,7 @@ class WebSocketAPI {
     this.onQueueReadyCallbacks.push(callback);
     return () => {
       this.onQueueReadyCallbacks = this.onQueueReadyCallbacks.filter(
-        (cb) => cb !== callback
+        (cb) => cb !== callback,
       );
     };
   }
@@ -249,7 +249,7 @@ class WebSocketAPI {
     this.onShutdownCallbacks.push(callback);
     return () => {
       this.onShutdownCallbacks = this.onShutdownCallbacks.filter(
-        (cb) => cb !== callback
+        (cb) => cb !== callback,
       );
     };
   }

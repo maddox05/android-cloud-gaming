@@ -114,12 +114,31 @@ sudo docker pull "${REDROID_IMAGE}:${REDROID_TAG}"
 echo "Setting up redroid-base volume..."
 GOLDEN_IMAGE="$SCRIPT_DIR/redroid-base.tar.gz"
 
-# Download golden image if not present locally
-GOLDEN_IMAGE_URL="${GOLDEN_IMAGE_URL:-https://pub-f7ede192a4e14fcf9bdb7f7126d9f2b4.r2.dev/redroid-bases/redroid-base.tar.gz}"
+# Download golden image from R2 using credentials
+R2_GOLDEN_IMAGE_KEY="${R2_GOLDEN_IMAGE_KEY:-redroid-bases/redroid-base.tar.gz}"
 
-if [ ! -f "$GOLDEN_IMAGE" ] && [ -n "$GOLDEN_IMAGE_URL" ]; then
-    echo "Downloading golden image from $GOLDEN_IMAGE_URL..."
-    wget -O "$GOLDEN_IMAGE" "$GOLDEN_IMAGE_URL"
+if [ ! -f "$GOLDEN_IMAGE" ]; then
+    # Validate required R2 env vars
+    if [ -z "$CLOUDFLARE_R2_ACCESS_KEY_ID" ] || [ -z "$CLOUDFLARE_R2_SECRET_ACCESS_KEY" ] || [ -z "$CLOUDFLARE_R2_ENDPOINT" ] || [ -z "$R2_BUCKET_NAME" ]; then
+        echo "ERROR: Missing R2 credentials. Please set the following in .env:"
+        echo "  CLOUDFLARE_R2_ACCESS_KEY_ID"
+        echo "  CLOUDFLARE_R2_SECRET_ACCESS_KEY"
+        echo "  CLOUDFLARE_R2_ENDPOINT"
+        echo "  R2_BUCKET_NAME"
+        exit 1
+    fi
+
+    # Install AWS CLI if not present
+    if ! command -v aws &> /dev/null; then
+        echo "Installing AWS CLI..."
+        sudo apt-get install -y awscli
+    fi
+
+    echo "Downloading golden image from R2 (s3://$R2_BUCKET_NAME/$R2_GOLDEN_IMAGE_KEY)..."
+    AWS_ACCESS_KEY_ID="$CLOUDFLARE_R2_ACCESS_KEY_ID" \
+    AWS_SECRET_ACCESS_KEY="$CLOUDFLARE_R2_SECRET_ACCESS_KEY" \
+    aws s3 cp "s3://$R2_BUCKET_NAME/$R2_GOLDEN_IMAGE_KEY" "$GOLDEN_IMAGE" \
+        --endpoint-url "$CLOUDFLARE_R2_ENDPOINT"
 fi
 
 if [ -f "$GOLDEN_IMAGE" ]; then

@@ -128,7 +128,7 @@ export default class Worker {
   }
 
   private forwardIceCandidateToClient(
-    candidate: RTCIceCandidateInit | null
+    candidate: RTCIceCandidateInit | null,
   ): void {
     if (this.client) {
       this.client.sendIceCandidate(candidate);
@@ -139,7 +139,7 @@ export default class Worker {
     if (this.client) {
       this.client.sendError(msg.code!, msg.message);
       console.log(
-        `Forwarded error to client ${this.client.id}: ${msg.code} - ${msg.message}`
+        `Forwarded error to client ${this.client.id}: ${msg.code} - ${msg.message}`,
       );
     }
   }
@@ -159,11 +159,16 @@ export default class Worker {
   }
 
   sendWorkerStart(gameId: string, maxVideoSize: number): void {
+    if (!this.client) {
+      console.error(`Worker ${this.id}: Cannot send WORKER_START - no client assigned`);
+      return;
+    }
     this.send({
       type: MSG.WORKER_START,
       gameId,
       turnInfo: this.turnInfo ?? undefined,
       maxVideoSize,
+      userId: this.client.userId,
     });
   }
 
@@ -173,10 +178,6 @@ export default class Worker {
 
   sendIceCandidate(candidate: RTCIceCandidateInit | null): void {
     this.send({ type: MSG.ICE_CANDIDATE, candidate });
-  }
-
-  sendClientDisconnected(): void {
-    this.send({ type: MSG.SHUTDOWN, reason: "client_disconnected" });
   }
 
   sendShutdown(reason: string): void {
@@ -217,6 +218,7 @@ export default class Worker {
     removeWorkerWs(this.ws);
 
     // Send shutdown and close
+
     this.sendShutdown(reason);
     this.ws.close();
 
@@ -228,7 +230,6 @@ export default class Worker {
     if (this.isDisconnected) return;
 
     this.client = null;
-    this.sendClientDisconnected();
     this.disconnect("client_requeued");
   }
 
@@ -237,7 +238,6 @@ export default class Worker {
     if (this.isDisconnected) return;
 
     this.client = null;
-    this.sendClientDisconnected();
     this.disconnect("client_disconnected");
   }
 }
