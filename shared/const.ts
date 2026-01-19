@@ -1,9 +1,9 @@
 import type { Game } from "./types.js";
 
-// Game Saves - Phone image version
+// Game Saves - Redroid base image version
 // Increment this when creating a new base redroid image
 // This ensures save compatibility (saves from v1 won't load on v2 base)
-export const PHONE_IMAGE_VERSION = 1;
+export const REDROID_BASE_IMAGE_VERSION = 2;
 
 // R2 paths for game saves
 export const R2_GAME_SAVES_PREFIX = "game_saves";
@@ -68,5 +68,19 @@ export const GAMES_LIST: Game[] = [
     description: "Make Anything, Enjoy Anything",
     thumbnail:
       "https://yt3.googleusercontent.com/xTxr7gmbkxiPKjrmN5ut0Kn8UcHpkkgyTv-_EeDPphcQusrWyKfSZw13EKCYXQyYdeoC3ON1zQ=s900-c-k-c0x00ffffff-no-rj",
+  },
+  {
+    id: "com.tocaboca.tocalifeworld",
+    name: "Toca Boca World",
+    description: "Build your own world and stories",
+    thumbnail:
+      "https://play-lh.googleusercontent.com/AL4EeC-ElUtlJN2wZnQrDyC_8UpFYtvpK7AbJNJIQe0vYe8tucm6Qi20JJQlhCLHqw",
+  },
+  {
+    id: "com.innersloth.spacemafia",
+    name: "Among Us",
+    description: "Find the impostor among your crew",
+    thumbnail:
+      "https://play-lh.googleusercontent.com/8ddL1kuoNUB5vUvgDVjYY3_6HwQcrg1K2fd_R8soD-e2QYj8fT9cfhfh3G0hnSruLKec",
   },
 ];

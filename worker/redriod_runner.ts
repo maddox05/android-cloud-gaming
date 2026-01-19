@@ -7,6 +7,12 @@ if (!POD_NAME) {
   process.exit(1);
 }
 
+const FREE_KIOSK_PIN = process.env.FREE_KIOSK_PIN;
+if (!FREE_KIOSK_PIN) {
+  console.error("FREE_KIOSK_PIN environment variable is required");
+  process.exit(1);
+}
+
 class RedroidRunner {
   private static instance: RedroidRunner;
   private running = false;
@@ -55,11 +61,18 @@ class RedroidRunner {
     return this.running;
   }
 
-  private execAsync(cmd: string): Promise<string> {
+  private execAsync(
+    cmd: string,
+  ): Promise<{ stdout: string; stderr: string; code: number }> {
     return new Promise((resolve, reject) => {
-      exec(cmd, (error, stdout, _stderr) => {
-        if (error) reject(error);
-        else resolve(stdout.trim());
+      exec(cmd, (error, stdout, stderr) => {
+        const result = {
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
+          code: error ? (error as any).code || 1 : 0,
+        };
+        if (error) reject(Object.assign(error, result));
+        else resolve(result);
       });
     });
   }
@@ -109,7 +122,7 @@ class RedroidRunner {
     for (let i = 0; i < 10; i++) {
       try {
         const response = await this.execAsync(`adb connect ${this.adbTarget}`);
-        if (!response.includes("connected")) {
+        if (!response.stdout.includes("connected")) {
           throw new Error("Failed to connect ADB");
         }
         adbConnected = true;
@@ -131,7 +144,7 @@ class RedroidRunner {
         const result = await this.execAsync(
           `adb -s ${this.adbTarget} shell getprop sys.boot_completed`,
         );
-        if (result === "1") {
+        if (result.stdout === "1") {
           booted = true;
           break;
         }
@@ -172,9 +185,8 @@ class RedroidRunner {
     );
 
     // Get scrcpy version
-    const scrcpyVersion = (
-      await this.execAsync("cat ./assets/scrcpy/version")
-    ).trim();
+    const scrcpyVersion = (await this.execAsync("cat ./assets/scrcpy/version"))
+      .stdout;
     console.log(`Using scrcpy version: ${scrcpyVersion}`);
 
     // Setup port forward for scrcpy abstract socket
@@ -270,48 +282,25 @@ class RedroidRunner {
   ): Promise<void> {
     console.log(`Setting up kiosk mode for ${packageName} using FreeKiosk...`);
 
-    // Try to set Device Owner (will fail if already set, which is fine)
-    console.log("Attempting to set Device Owner...");
-    const deviceOwnerResult = await this.execAsyncSafe(
-      `adb -s ${this.adbTarget} shell dpm set-device-owner com.freekiosk/.DeviceAdminReceiver`,
-    );
-    if (deviceOwnerResult.code === 0) {
-      console.log("Device Owner set successfully");
-    } else {
-      console.log(
-        "Device Owner already set or failed (continuing anyway):",
-        deviceOwnerResult.stderr,
-      );
-    }
-
-    // Wait for device owner to take effect
-    await this.sleep(1000);
-
-    // Configure FreeKiosk to lock to the game app
+    // Configure FreeKiosk - exact format from docs Cloud Gaming example
     console.log(`Configuring FreeKiosk to lock to ${packageName}...`);
-    const kioskCmd = [
-      `adb -s ${this.adbTarget} shell am start -n com.freekiosk/.MainActivity`,
-      `--es lock_package "${packageName}"`,
-      `--es pin "1234"`,
-      `--es auto_relaunch "true"`,
-      `--es auto_launch "true"`,
-      `--ez auto_start true`,
-      `--ez kiosk_enabled true`,
-    ].join(" ");
+    const kioskCmd = `adb -s ${this.adbTarget} shell am start -n com.freekiosk/.MainActivity --es lock_package "${packageName}" --es pin "${FREE_KIOSK_PIN}" --es auto_relaunch "true" --ez auto_start true`;
 
-    const kioskResult = await this.execAsyncSafe(kioskCmd);
-    if (kioskResult.code === 0) {
-      console.log("FreeKiosk configured successfully:", kioskResult.stdout);
-    } else {
-      console.warn(
-        "FreeKiosk configuration may have failed:",
-        kioskResult.stderr,
-      );
-    }
+    console.log("Running:", kioskCmd);
+    const configResult = await this.execAsync(kioskCmd);
+    console.log("Config result:", configResult);
 
-    // Wait for FreeKiosk to start and launch the app
+    // Wait for FreeKiosk to save config
     await this.sleep(2000);
 
+    // Launch FreeKiosk to activate the lock
+    console.log("Launching FreeKiosk to activate lock...");
+    const launchResult = await this.execAsync(
+      `adb -s ${this.adbTarget} shell am start -n com.freekiosk/.MainActivity`,
+    );
+    console.log("Launch result:", launchResult);
+
+    await this.sleep(2000);
     console.log("Kiosk mode setup complete!");
   }
 
@@ -351,7 +340,7 @@ class RedroidRunner {
       const result = await this.execAsync(
         `adb -s ${this.adbTarget} shell wm size`,
       );
-      const match = result.match(/(\d+)x(\d+)/);
+      const match = result.stdout.match(/(\d+)x(\d+)/);
       if (match) {
         let width = parseInt(match[1]);
         let height = parseInt(match[2]);

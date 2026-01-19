@@ -13,7 +13,13 @@ if [ -f "$ENV_FILE" ]; then
     source "$ENV_FILE"
 fi
 
-
+# Prompt for redroid base image version
+read -p "Enter the REDROID_BASE_IMAGE_VERSION to install: " REDROID_BASE_IMAGE_VERSION
+if [ -z "$REDROID_BASE_IMAGE_VERSION" ]; then
+    echo "ERROR: REDROID_BASE_IMAGE_VERSION is required"
+    exit 1
+fi
+echo "Using REDROID_BASE_IMAGE_VERSION: $REDROID_BASE_IMAGE_VERSION"
 
 echo "Starting Android Cloud Gaming Server Setup..."
 
@@ -110,10 +116,10 @@ sudo docker pull "${REDROID_IMAGE}:${REDROID_TAG}"
 
 # Set up redroid-base volume from golden image
 echo "Setting up redroid-base volume..."
-GOLDEN_IMAGE="$SCRIPT_DIR/redroid-base.tar.gz"
+GOLDEN_IMAGE="$SCRIPT_DIR/redroid-base_${REDROID_BASE_IMAGE_VERSION}.tar.gz"
 
 # Download golden image from R2 using credentials
-R2_GOLDEN_IMAGE_KEY="${R2_GOLDEN_IMAGE_KEY:-redroid-bases/redroid-base.tar.gz}"
+R2_GOLDEN_IMAGE_KEY="redroid-bases/redroid-base_${REDROID_BASE_IMAGE_VERSION}.tar.gz"
 
 if [ ! -f "$GOLDEN_IMAGE" ]; then
     # Validate required R2 env vars
@@ -152,7 +158,7 @@ if [ -f "$GOLDEN_IMAGE" ]; then
 
     # Import the golden image into the volume
     echo "Importing golden image into redroid-base volume (this may take a while)..."
-    sudo docker run --rm -v redroid-base:/data -v "$SCRIPT_DIR":/backup alpine sh -c "cd /data && tar xzf /backup/redroid-base.tar.gz"
+    sudo docker run --rm -v redroid-base:/data -v "$SCRIPT_DIR":/backup alpine sh -c "cd /data && tar xzf /backup/redroid-base_${REDROID_BASE_IMAGE_VERSION}.tar.gz"
     echo "✓ Golden image imported successfully"
 else
     echo "⚠ Golden image not found at $GOLDEN_IMAGE"

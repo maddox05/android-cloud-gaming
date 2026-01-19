@@ -6,7 +6,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { Readable } from "stream";
 import {
-  PHONE_IMAGE_VERSION,
+  REDROID_BASE_IMAGE_VERSION,
   R2_GAME_SAVES_PREFIX,
 } from "../shared/const.js";
 
@@ -40,7 +40,7 @@ const s3Client = new S3Client({
  * Generate the R2 key for a user's game save
  */
 export function getGameSaveKey(userId: string): string {
-  return `${R2_GAME_SAVES_PREFIX}/${userId}_${PHONE_IMAGE_VERSION}.tar.gz`;
+  return `${R2_GAME_SAVES_PREFIX}/${userId}_${REDROID_BASE_IMAGE_VERSION}.tar.gz`;
 }
 
 /**

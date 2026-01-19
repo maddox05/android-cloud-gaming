@@ -1,22 +1,33 @@
 # How to Create a Golden Redroid Image
 
-A golden image is a pre-configured redroid instance with apps and settings already installed.
+A golden image is a pre-configured Redroid instance with apps and settings already installed. Each pod starts fresh from this base state using the overlay filesystem.
+
+## Prerequisites
+
+- Docker installed
+- ADB installed
+- AWS CLI configured (for R2 upload)
+- [redroid-script](https://github.com/ayasa520/redroid-script) cloned
 
 ## Steps
 
-### 1. Create the base volume (if not exists)
+### 1. Create the base volume
 
 ```bash
 docker volume create redroid-base
 ```
 
-### 2. Use Redriod Script to install LiteGapps and Magisk
+### 2. Build Redroid image with LiteGapps and Magisk
 
-https://github.com/ayasa520/redroid-script
+Using the [redroid-script](https://github.com/ayasa520/redroid-script) tool:
 
+```bash
 python redroid.py -a 12.0.0_64only -lg -m
+```
 
-### 2. Start a temporary redroid container
+This creates a custom Redroid image with Google Play Services (LiteGapps) and Magisk for root access.
+
+### 3. Start a temporary Redroid container
 
 ```bash
 docker run -d --name redroid-setup \
@@ -25,49 +36,68 @@ docker run -d --name redroid-setup \
   -v redroid-base:/data \
   redroid/redroid:12.0.0_64only_litegapps_magisk \
   androidboot.redroid_width=720 \
-  androidboot.redroid_height=1280 \
+  androidboot.redroid_height=1280
 ```
 
-### 3. Connect and configure
+### 4. Connect and configure
 
-Use scrcpy or adb to connect and install apps:
+Connect via ADB:
 
 ```bash
-# Connect via adb
 adb connect localhost:5555
-
-go here and follow these steps
-https://www.google.com/android/uncertified
-
-wait 5-10 mins
-
-launch magisk and enable the root user setting and restart using docker restart
-
-# Install apps
-install using google play or any apks u need
 ```
 
--- note anything you download with apkpure even after uninstall will leave residue files.
+Use `scrcpy` to view and interact with the device:
 
-### 4. Stop the container
+```bash
+scrcpy -s localhost:5555
+```
+
+#### 4.1 Register device for Google Play certification
+
+1. Go to https://www.google.com/android/uncertified
+2. Follow the registration steps
+3. Wait 5-10 minutes for certification to propagate
+4. Log into Google Play to verify it works
+
+#### 4.2 Configure Magisk
+
+1. Launch Magisk app
+2. Enable the Superuser setting
+3. Restart the container:
+   ```bash
+   docker restart redroid-setup
+   ```
+
+#### 4.3 Configure kiosk mode
+
+Set the Free Kiosk pin to match the `KIOSK_PIN` environment variable.
+
+#### 4.4 Install apps
+
+Install apps using Google Play or APK files as needed.
+
+### 5. Stop and remove the setup container
 
 ```bash
 docker stop redroid-setup
 docker rm redroid-setup
 ```
 
-The `redroid-base` volume now contains your golden state and will be used by all pods via the overlay filesystem.
+The `redroid-base` volume now contains your golden state.
 
-### 5. Export to tar.gz (optional)
+### 6. Export to tar.gz
+
+Replace `{VERSION}` with your version number (e.g., `1`, `2`, etc.):
 
 ```bash
 docker run --rm -v redroid-base:/data -v $(pwd):/backup alpine \
-  tar -czvf /backup/redroid-base.tar.gz -C /data .
+  tar -czvf /backup/redroid-base_{VERSION}.tar.gz -C /data .
 ```
 
-### 6. Upload to Cloudflare R2 via S3 CLI
+### 7. Upload to Cloudflare R2
 
-First, configure AWS CLI with your Cloudflare R2 credentials:
+Configure AWS CLI with R2 credentials:
 
 ```bash
 aws configure set aws_access_key_id <YOUR_R2_ACCESS_KEY_ID>
@@ -75,25 +105,25 @@ aws configure set aws_secret_access_key <YOUR_R2_SECRET_ACCESS_KEY>
 aws configure set default.region auto
 ```
 
-Upload the tar.gz to your R2 bucket:
+Upload the archive (use the same `{VERSION}` as the export):
 
 ```bash
-aws s3 cp redroid-base.tar.gz s3://android-cloud-gaming/redroid-bases/redroid-base.tar.gz \
+aws s3 cp redroid-base_{VERSION}.tar.gz s3://android-cloud-gaming/redroid-bases/redroid-base_{VERSION}.tar.gz \
   --endpoint-url https://7b692eb05e5322beaef098debe10e8ae.r2.cloudflarestorage.com
 ```
 
-To make the file publicly accessible, ensure your bucket has public access enabled in the Cloudflare dashboard, or use a custom domain linked to your R2 bucket.
+### 8. Deploy to target machines
 
-### 7. Download and Import via install.sh
-
-On the target machine, delete the old tar.gz and volume, and run the worker install script.
+On each target machine, delete any existing volume and run the install script. The script will prompt for the `REDROID_BASE_IMAGE_VERSION` to download:
 
 ```bash
 ./worker/install.sh
+# Enter the REDROID_BASE_IMAGE_VERSION when prompted
 ```
 
-## Notes
+## Important Notes
 
-- The overlay filesystem (`androidboot.use_redroid_overlayfs=1`) ensures changes during runtime are stored in tmpfs and discarded on restart
-- Each pod starts fresh from the golden base state
-- To update the golden image, repeat this process with a new base volume
+- **Overlay filesystem**: The `androidboot.use_redroid_overlayfs=1` flag ensures runtime changes are stored in tmpfs and discarded on restart
+- **APKPure residue**: Apps installed via APKPure may leave residual files even after uninstall
+- **Version conflicts**: When testing overlay filesystem, set `REDROID_BASE_IMAGE_VERSION` in `shared/const.ts` to a high number to avoid conflicts with old save data. On prod, make sure the correct value is set to match the base image version.
+- **Updating the image**: To update the golden image, repeat this entire process with a fresh base volume

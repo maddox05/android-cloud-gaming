@@ -33,6 +33,8 @@ services:
       # Redroid image config (needed for docker compose up inside worker)
       REDROID_IMAGE: ${REDROID_IMAGE}
       REDROID_TAG: ${REDROID_TAG}
+      # FreeKiosk PIN
+      FREE_KIOSK_PIN: ${FREE_KIOSK_PIN}
       # R2 credentials for game saves
       CLOUDFLARE_R2_ACCESS_KEY_ID: ${CLOUDFLARE_R2_ACCESS_KEY_ID}
       CLOUDFLARE_R2_SECRET_ACCESS_KEY: ${CLOUDFLARE_R2_SECRET_ACCESS_KEY}
