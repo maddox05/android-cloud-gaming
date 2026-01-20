@@ -8,7 +8,7 @@ import { initializeWithGameSave, saveGameState } from "./game_save_manager.js";
 import { clearDiffVolume } from "./volume_manager.js";
 import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/const.js";
 
-const ENABLE_GAME_SAVES = 1;
+const ENABLE_GAME_SAVES = 0;
 
 // Create scrcpy server and register handlers (video first, then input)
 const scrcpyServer = new ScrcpyServer(
