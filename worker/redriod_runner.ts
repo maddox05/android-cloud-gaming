@@ -158,16 +158,13 @@ class RedroidRunner {
     }
     console.log("Device booted!");
 
-    await this.spoofWithMagisk(); //help
-
-    // Run FreeKiosk setup and scrcpy setup in parallel
+    // Run FreeKiosk setup, magisk spoof,  and scrcpy setup in parallel
 
     await Promise.all([
+      this.spoofWithMagisk(),
       this.setupKioskModeUsingFreeKiosk(packageName),
-      // this needs to wait a few secs so its sockets can open but kiosk takes longer, so we dont need to wait
-      // todo somehow check if scrcpy video and input sockets are readyß
-    ]); // scrcpy wont send video until redriodRunner.start() finishes so this is fine!
-    await this.setupScrcpy();
+      this.setupScrcpy(),
+    ]);
     this.running = true;
 
     console.log("RedroidRunner started successfully!");

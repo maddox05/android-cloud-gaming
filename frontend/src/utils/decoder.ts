@@ -14,7 +14,7 @@ export class H264Decoder {
   private videoHeight: number = 0;
   private resetVideo: (() => void) | null = null;
   private lastResetTime: number = 0;
-  private readonly RESET_COOLDOWN_MS = 10000; // 10 seconds
+  private readonly RESET_COOLDOWN_MS = 5000; // 5 seconds
 
   onDimensionsChanged: ((width: number, height: number) => void) | null = null;
 
