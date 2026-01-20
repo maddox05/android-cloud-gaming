@@ -79,6 +79,9 @@ export default function Footer() {
             <Link to="/about" className="footer-link">
               About
             </Link>
+            <Link to="/blog" className="footer-link">
+              Blog
+            </Link>
           </nav>
         </div>
 

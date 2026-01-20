@@ -17,6 +17,7 @@ const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const CopyrightPolicy = lazy(() => import("./pages/CopyrightPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const Blog = lazy(() => import("./pages/Blog"));
 const JoinWaitlist = lazy(() => import("./launch/JoinWaitlist"));
 const Waitlist = lazy(() => import("./launch/Waitlist"));
 const RedeemInvite = lazy(() => import("./launch/RedeemInvite"));
@@ -34,6 +35,8 @@ function AppLayout() {
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/roadmap" element={<Roadmap />} />
           <Route path="/about" element={<About />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/*" element={<Blog />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/copyright-policy" element={<CopyrightPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
