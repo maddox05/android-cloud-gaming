@@ -267,7 +267,7 @@ class RedroidRunner {
     // Setup port reverse for scrcpy abstract socket
     console.log("Setting up port reverse...");
     await this.execAsync(
-      `adb -s ${this.adbTarget} reverse localabstract:scrcpy tcp:6767`,
+      `adb -s ${this.adbTarget} reverse localabstract:scrcpy tcp:${REDROID_SCRCPY_SERVER_SETTINGS.tunnelPort}`,
     );
 
     // Start scrcpy server

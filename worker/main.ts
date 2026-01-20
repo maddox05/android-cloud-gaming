@@ -6,9 +6,12 @@ import { inputHandler } from "./input.js";
 import { ScrcpyServer } from "./base_socket.js";
 import { initializeWithGameSave, saveGameState } from "./game_save_manager.js";
 import { clearDiffVolume } from "./volume_manager.js";
+import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/const.js";
 
 // Create scrcpy server and register handlers (video first, then input)
-const scrcpyServer = new ScrcpyServer(6767);
+const scrcpyServer = new ScrcpyServer(
+  REDROID_SCRCPY_SERVER_SETTINGS.tunnelPort,
+);
 scrcpyServer.addHandler(videoHandler);
 scrcpyServer.addHandler(inputHandler);
 import type {
