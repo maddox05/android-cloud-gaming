@@ -8,6 +8,8 @@ import { initializeWithGameSave, saveGameState } from "./game_save_manager.js";
 import { clearDiffVolume } from "./volume_manager.js";
 import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/const.js";
 
+const ENABLE_GAME_SAVES = 1;
+
 // Create scrcpy server and register handlers (video first, then input)
 const scrcpyServer = new ScrcpyServer(
   REDROID_SCRCPY_SERVER_SETTINGS.tunnelPort,
@@ -254,7 +256,9 @@ class Worker {
         scrcpyServer.close();
 
         await redroidRunner.stopContainer();
-        // await saveGameState(this.currentUserId);
+        if (ENABLE_GAME_SAVES) {
+          await saveGameState(this.currentUserId);
+        }
         await clearDiffVolume();
       } catch (err) {
         console.error("Failed to save game state during restart:", err);
@@ -284,8 +288,8 @@ class Worker {
     console.log("Preparing container for game saves...");
     await redroidRunner.stopContainer();
 
-    if (this.currentUserId) {
-      // await initializeWithGameSave(this.currentUserId);
+    if (this.currentUserId && ENABLE_GAME_SAVES) {
+      await initializeWithGameSave(this.currentUserId);
     }
 
     await redroidRunner.startContainer();
