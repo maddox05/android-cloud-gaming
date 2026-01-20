@@ -216,7 +216,7 @@ class RedroidRunner {
     console.log("Config result:", configResult);
 
     // Wait for FreeKiosk to save config
-    await this.sleep(10000);
+    await this.sleep(10000); // TODO REMOVE
 
     // Launch FreeKiosk to activate the lock
     console.log("Launching FreeKiosk to activate lock...");
@@ -225,7 +225,7 @@ class RedroidRunner {
     );
     console.log("Launch result:", launchResult);
 
-    await this.sleep(2000);
+    await this.sleep(2000); // TODO REMOVE
     console.log("Kiosk mode setup complete!");
   }
 
@@ -243,7 +243,6 @@ class RedroidRunner {
     } catch (err) {
       console.log("No existing scrcpy process to kill (or pkill failed):");
     }
-    await this.sleep(500);
 
     // Remove old port forward
     console.log("Removing old port forwards...");
