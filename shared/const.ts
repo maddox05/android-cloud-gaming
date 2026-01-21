@@ -43,44 +43,124 @@ export const REDROID_SCRCPY_SERVER_SETTINGS = {
 export const GAMES_LIST: Game[] = [
   {
     id: "com.supercell.clashroyale",
+    slug: "clash-royale",
     name: "Clash Royale",
-    description: "Real-time PvP battles",
+    category: "Strategy",
+    description: `Play Clash Royale instantly in your browser without downloading. Enjoy lag-free, low latency, and high-quality gaming experience playing this game.
+
+Clash Royale is a real-time multiplayer game starring the Royales, your favorite Clash characters and much, much more. Collect and upgrade dozens of cards featuring the Clash of Clans troops, spells and defenses you know and love.
+
+**Features:**
+- Real-time PvP battles
+- Collect and upgrade cards
+- Build your ultimate Battle Deck
+- Progress through Arenas`,
     thumbnail:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQMt18VVv2_bw1FRALdGOsPqf027hhFfQVFzQ&s",
+    images: [],
   },
   {
     id: "com.supercell.clashofclans",
+    slug: "clash-of-clans",
     name: "Clash of Clans",
-    description: "Strategic base building game",
+    category: "Strategy",
+    description: `Play Clash of Clans instantly in your browser without downloading. Enjoy lag-free, low latency, and high-quality gaming experience playing this game.
+
+Clash of Clans is an epic combat strategy game. Build your village, train your troops, and battle with millions of other players online! Forge a powerful Clan with other players and crush enemy clans in Clan Wars.
+
+**Features:**
+- Build your village into an unbeatable fortress
+- Raise your own army of Barbarians, Archers, and more
+- Battle with players worldwide
+- Join a Clan and take part in Clan Wars`,
     thumbnail:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR25TlNh8ve7ot5SIbP9nwgGNygwmb6g2dxFQ&s",
+    images: [],
   },
   {
     id: "youtube.lite.anikinc",
+    slug: "youtube-lite",
     name: "YouTube Lite",
-    description: "Lightweight YouTube experience",
+    category: "Entertainment",
+    description: `Play YouTube Lite instantly in your browser without downloading. Enjoy lag-free, low latency, and high-quality streaming experience.
+
+YouTube Lite is a lightweight version of YouTube optimized for faster loading and less data usage. Watch your favorite videos, subscribe to channels, and enjoy content without the bloat.
+
+**Features:**
+- Lightweight and fast
+- Lower data usage
+- All your favorite content
+- Simple and clean interface`,
     thumbnail:
       "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/YouTube_social_white_square_%282024%29.svg/1200px-YouTube_social_white_square_%282024%29.svg.png",
+    images: [],
   },
   {
     id: "com.roblox.client",
+    slug: "roblox",
     name: "Roblox",
-    description: "Make Anything, Enjoy Anything",
+    category: "Adventure",
+    description: `Play Roblox instantly in your browser without downloading. Enjoy lag-free, low latency, and high-quality gaming experience playing this game.
+
+Roblox is the ultimate virtual universe that lets you create, share experiences with friends, and be anything you can imagine. Join millions of people and discover an infinite variety of immersive experiences created by a global community.
+
+**Features:**
+- Millions of experiences to explore
+- Play with friends across devices
+- Create your own games
+- Customize your avatar`,
     thumbnail:
       "https://yt3.googleusercontent.com/xTxr7gmbkxiPKjrmN5ut0Kn8UcHpkkgyTv-_EeDPphcQusrWyKfSZw13EKCYXQyYdeoC3ON1zQ=s900-c-k-c0x00ffffff-no-rj",
+    images: [
+      "https://media.wired.com/photos/611e8c4c616d2959940414e8/16:9/w_2400,h_1350,c_limit/Games-Roblox-Exploitation.jpg",
+      "https://media.wired.com/photos/611e8c4c616d2959940414e8/16:9/w_2400,h_1350,c_limit/Games-Roblox-Exploitation.jpg",
+      "https://media.wired.com/photos/611e8c4c616d2959940414e8/16:9/w_2400,h_1350,c_limit/Games-Roblox-Exploitation.jpg",
+    ],
   },
   {
     id: "com.tocaboca.tocalifeworld",
+    slug: "toca-boca-world",
     name: "Toca Boca World",
-    description: "Build your own world and stories",
+    category: "Simulation",
+    description: `Play Toca Boca World instantly in your browser without downloading. Enjoy lag-free, low latency, and high-quality gaming experience playing this game.
+
+Toca Boca World is the app where you can create your own world and play out any story you like. This mega-app lets you explore tons of locations, meet fun characters, and play with pets and so much more!
+
+**Features:**
+- Create your own stories
+- Explore tons of locations
+- Collect characters and pets
+- Endless creative possibilities`,
     thumbnail:
       "https://play-lh.googleusercontent.com/AL4EeC-ElUtlJN2wZnQrDyC_8UpFYtvpK7AbJNJIQe0vYe8tucm6Qi20JJQlhCLHqw",
+    images: [],
   },
   {
     id: "com.innersloth.spacemafia",
+    slug: "among-us",
     name: "Among Us",
-    description: "Find the impostor among your crew",
+    category: "Party",
+    description: `Play Among Us instantly in your browser without downloading. Enjoy lag-free, low latency, and high-quality gaming experience playing this game.
+
+Among Us is an online multiplayer social deduction game where Crewmates work together to complete tasks while trying to identify the Impostors among them. Play with 4-15 players online or via local WiFi.
+
+**Features:**
+- Play with 4-15 players
+- Cross-platform play
+- Customizable settings
+- Multiple maps to explore`,
     thumbnail:
       "https://play-lh.googleusercontent.com/8ddL1kuoNUB5vUvgDVjYY3_6HwQcrg1K2fd_R8soD-e2QYj8fT9cfhfh3G0hnSruLKec",
+    images: [],
   },
 ];
+
+/** Find a game by its slug */
+export function getGameBySlug(slug: string): Game | undefined {
+  return GAMES_LIST.find((game) => game.slug === slug);
+}
+
+/** Find a game by its package ID */
+export function getGameById(id: string): Game | undefined {
+  return GAMES_LIST.find((game) => game.id === id);
+}

@@ -11,10 +11,12 @@ import {
   type ErrorCode,
   type InputMessage,
 } from "../../../shared/types";
+import { getGameIdBySlug } from "./helpers";
 import "./InGame.css";
 
 export default function InGame() {
-  const { appId } = useParams<{ appId: string }>();
+  const { slug } = useParams<{ slug: string }>();
+  const appId = slug ? getGameIdBySlug(slug) : undefined;
 
   const [status, setStatus] = useState<ConnectionStatus>(
     CONNECTION_STATUS.CONNECTING,

@@ -175,9 +175,8 @@ export default function Home() {
           {GAMES_LIST.map((game) => (
             <GameCard
               key={game.id}
-              id={game.id}
+              slug={game.slug}
               name={game.name}
-              description={game.description}
               thumbnail={game.thumbnail}
               canPlay={canPlay}
             />

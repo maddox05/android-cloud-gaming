@@ -1,23 +1,27 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { getGameInfoPath, getGameQueuePath } from "../in_game/helpers";
 import "./GameCard.css";
 
 interface GameCardProps {
-  id: string;
+  slug: string;
   name: string;
-  description: string;
   thumbnail: string;
   canPlay: () => boolean;
 }
 
-export default function GameCard({ id, name, description, thumbnail, canPlay }: GameCardProps) {
-  const handleClick = (e: React.MouseEvent) => {
-    if (!canPlay()) {
-      e.preventDefault();
+export default function GameCard({ slug, name, thumbnail, canPlay }: GameCardProps) {
+  const navigate = useNavigate();
+
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (canPlay()) {
+      navigate(getGameQueuePath(slug));
     }
   };
 
   return (
-    <Link to={`/queue/${encodeURIComponent(id)}`} className="game-card" target="_blank" rel="noopener noreferrer" onClick={handleClick}>
+    <Link to={getGameInfoPath(slug)} className="game-card">
       <div className="thumbnail">
         <img
           src={thumbnail}
@@ -26,14 +30,11 @@ export default function GameCard({ id, name, description, thumbnail, canPlay }: 
             (e.target as HTMLImageElement).style.display = "none";
           }}
         />
-        <div className="play-overlay">
-          <span className="play-btn">Play</span>
-        </div>
       </div>
-      <div className="info">
-        <div className="name">{name}</div>
-        <div className="description">{description}</div>
-      </div>
+      <div className="name">{name}</div>
+      <button className="play-btn" onClick={handlePlayClick}>
+        Play
+      </button>
     </Link>
   );
 }

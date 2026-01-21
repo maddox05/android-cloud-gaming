@@ -6,7 +6,7 @@
 /* Game Grid */
 .game-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   justify-items: center;
   gap: 24px;
 }
@@ -56,7 +56,10 @@
   border-radius: var(--radius-lg);
   padding: 24px;
   text-align: center;
-  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .feature-card:hover {
@@ -107,7 +110,9 @@
   font-weight: 600;
   padding: 16px 48px;
   border-radius: var(--radius-lg);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
 }
 
@@ -192,7 +197,9 @@
   background: #000;
   color: #fff;
   border-radius: 50%;
-  transition: background 0.2s, transform 0.2s;
+  transition:
+    background 0.2s,
+    transform 0.2s;
 }
 
 /* Section Title (if needed) */
@@ -258,7 +265,9 @@
   font-weight: 500;
   color: var(--text-primary);
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
 }
 
 .google-btn:hover {

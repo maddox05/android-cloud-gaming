@@ -7,9 +7,12 @@ import { AlertPopup } from "./components/AlertPopup";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
+import { getGameRoutePattern } from "./in_game/helpers";
+
 const Home = lazy(() => import("./home/Home"));
 const Pricing = lazy(() => import("./pricing/Pricing"));
 const Roadmap = lazy(() => import("./roadmap/Roadmap"));
+const GameInfo = lazy(() => import("./game_info/GameInfo"));
 const Queue = lazy(() => import("./queue/Queue"));
 const InGame = lazy(() => import("./in_game/InGame"));
 const About = lazy(() => import("./pages/About"));
@@ -24,7 +27,7 @@ const RedeemInvite = lazy(() => import("./launch/RedeemInvite"));
 
 function AppLayout() {
   const location = useLocation();
-  const hideNavFooter = location.pathname.startsWith("/app/") || location.pathname.startsWith("/queue/");
+  const hideNavFooter = location.pathname.includes("/run") || location.pathname.includes("/queue");
 
   return (
     <>
@@ -41,8 +44,9 @@ function AppLayout() {
           <Route path="/copyright-policy" element={<CopyrightPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
-          <Route path="/queue/:appId" element={<Queue />} />
-          <Route path="/app/:appId" element={<InGame />} />
+          <Route path={getGameRoutePattern()} element={<GameInfo />} />
+          <Route path={getGameRoutePattern("/queue")} element={<Queue />} />
+          <Route path={getGameRoutePattern("/run")} element={<InGame />} />
           <Route path="/waitlist" element={<JoinWaitlist />} />
           <Route path="/waitlist/:userId" element={<Waitlist />} />
           <Route path="/redeem" element={<RedeemInvite />} />

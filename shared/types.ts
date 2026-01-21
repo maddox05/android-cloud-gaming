@@ -35,9 +35,12 @@ export const FREE_USER_MAX_VIDEO_SIZE = MAX_VIDEO_SIZE_MAP.ULD;
 // ============================================
 export interface Game {
   id: string;
+  slug: string;
   name: string;
-  description: string;
+  category: string;
+  description: string; // Markdown description
   thumbnail: string;
+  images: string[]; // Carousel images (screenshots)
 }
 export const MSG = {
   // Signal messages

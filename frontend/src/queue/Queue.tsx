@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { websocketAPI, type QueueInfo } from "../utils/websocket_api";
 import { videoInputWebRTC } from "../utils/video_and_input_webrtc";
-import { getGameName } from "../in_game/helpers";
+import { getGameNameBySlug, getGameIdBySlug, getGameRunPath } from "../in_game/helpers";
 import { getMaxVideoSize } from "../utils/videoQuality";
 import { showAlert } from "../services/alertService";
 import {
@@ -16,7 +16,8 @@ const ESTIMATED_SECONDS_PER_PLAYER = 60;
 
 export default function Queue() {
   const navigate = useNavigate();
-  const { appId } = useParams<{ appId: string }>();
+  const { slug } = useParams<{ slug: string }>();
+  const appId = slug ? getGameIdBySlug(slug) : undefined;
 
   const [position, setPosition] = useState<number | null>(null);
   const [total, setTotal] = useState<number | null>(null);
@@ -101,7 +102,7 @@ export default function Queue() {
         if (timerInterval.current) clearInterval(timerInterval.current);
         // Set TURN servers before navigation so they're available when WebRTC connects
         videoInputWebRTC.setTurnServers(turnInfo);
-        navigate(`/app/${appId}`);
+        navigate(getGameRunPath(slug!));
       };
 
       websocketAPI.onError(handleError);
@@ -142,7 +143,7 @@ export default function Queue() {
       ? Math.max(0, position * ESTIMATED_SECONDS_PER_PLAYER)
       : 0;
 
-  const gameName = appId ? getGameName(appId) : "Loading...";
+  const gameName = slug ? getGameNameBySlug(slug) : "Loading...";
 
   return (
     <div className="queue-container">
