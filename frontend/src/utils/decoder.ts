@@ -1,5 +1,4 @@
 import { NAL_TYPE } from "../types";
-import { showAlert } from "../services/alertService";
 
 export class H264Decoder {
   private canvas: HTMLCanvasElement;
