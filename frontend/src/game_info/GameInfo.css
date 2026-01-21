@@ -244,11 +244,11 @@
     grid-template-columns: 1fr;
   }
 
-  .game-carousel {
+  .game-details {
     order: 1;
   }
 
-  .game-details {
+  .game-carousel {
     order: 2;
   }
 
