@@ -1,5 +1,6 @@
 import { spawn, exec, execSync } from "child_process";
 import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/const.js";
+import { ScrcpyServer } from "./base_socket.js";
 
 const WORKER_NAME = process.env.WORKER_NAME;
 if (!WORKER_NAME) {
@@ -267,7 +268,7 @@ class RedroidRunner {
     // Setup port reverse for scrcpy abstract socket
     console.log("Setting up port reverse...");
     await this.execAsync(
-      `adb -s ${this.adbTarget} reverse localabstract:scrcpy tcp:${REDROID_SCRCPY_SERVER_SETTINGS.tunnelPort}`,
+      `adb -s ${this.adbTarget} reverse localabstract:scrcpy tcp:${ScrcpyServer.getInstance().getPort()}`,
     );
 
     // Start scrcpy server
