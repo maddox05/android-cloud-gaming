@@ -8,6 +8,7 @@ import {
 } from "./waitlist_functions";
 import "./Waitlist.css";
 import { useUser } from "../context/useUser";
+import FAQ from "./FAQ";
 
 export default function JoinWaitlist() {
   const navigate = useNavigate();
@@ -222,20 +223,7 @@ export default function JoinWaitlist() {
           </div>
         )}
 
-        <div className="waitlist-info">
-          <p>
-            Want Access Now? <a href="/pricing">Skip the waitlist</a> and get
-            immediate access. Questions? Join our{" "}
-            <a
-              href="https://discord.gg/U4QYdzXEnr"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Discord community
-            </a>
-            .
-          </p>
-        </div>
+        <FAQ />
       </div>
     </div>
   );
