@@ -3,8 +3,19 @@ import wrtc from "@roamhq/wrtc";
 import { redroidRunner } from "./redriod_runner.js";
 import { videoHandler } from "./video.js";
 import { inputHandler } from "./input.js";
+import { ScrcpyServer } from "./base_socket.js";
 import { initializeWithGameSave, saveGameState } from "./game_save_manager.js";
 import { clearDiffVolume } from "./volume_manager.js";
+import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/const.js";
+
+const ENABLE_GAME_SAVES = 0;
+
+// Create scrcpy server and register handlers (video first, then input)
+const scrcpyServer = new ScrcpyServer(
+  REDROID_SCRCPY_SERVER_SETTINGS.tunnelPort,
+);
+scrcpyServer.addHandler(videoHandler);
+scrcpyServer.addHandler(inputHandler);
 import type {
   InputMessage,
   SignalMessage,
@@ -242,18 +253,18 @@ class Worker {
     if (this.hasStarted && this.currentUserId) {
       try {
         console.log("Saving users game state before restart...");
-        videoHandler.disconnect();
-        inputHandler.disconnect();
+        scrcpyServer.close();
 
         await redroidRunner.stopContainer();
-        // await saveGameState(this.currentUserId);
+        if (ENABLE_GAME_SAVES) {
+          await saveGameState(this.currentUserId);
+        }
         await clearDiffVolume();
       } catch (err) {
         console.error("Failed to save game state during restart:", err);
       }
     } else {
-      videoHandler.disconnect();
-      inputHandler.disconnect();
+      scrcpyServer.close();
     }
 
     this.webrtcCleanup();
@@ -277,8 +288,8 @@ class Worker {
     console.log("Preparing container for game saves...");
     await redroidRunner.stopContainer();
 
-    if (this.currentUserId) {
-      // await initializeWithGameSave(this.currentUserId);
+    if (this.currentUserId && ENABLE_GAME_SAVES) {
+      await initializeWithGameSave(this.currentUserId);
     }
 
     await redroidRunner.startContainer();
@@ -286,24 +297,12 @@ class Worker {
     console.log(
       `Starting Redroid with game: ${gameId}, maxVideoSize: ${maxVideoSize}...`,
     );
-    await redroidRunner.start(gameId, maxVideoSize);
 
-    console.log("Connecting to scrcpy video socket (first)...");
-    try {
-      await videoHandler.connect();
-    } catch (err) {
-      throw new Error(
-        `Failed to connect to scrcpy video socket: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-    console.log("Connecting to scrcpy control socket (second)...");
-    try {
-      await inputHandler.connect();
-    } catch (err) {
-      throw new Error(
-        `Failed to connect to scrcpy control socket: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
+    // Start scrcpy server listening BEFORE starting redroid (scrcpy will connect to us)
+    console.log("Starting scrcpy server...");
+    await scrcpyServer.listen();
+
+    await redroidRunner.start(gameId, maxVideoSize);
 
     this.hasStarted = true;
 

@@ -17,6 +17,7 @@ export const MAX_SESSION_TIME_MS = 60 * 60 * 1000; // 1 hour todo for laer use t
 export const FREE_USER_MAX_TIME_MS = 10 * 60 * 1000; // 10 minutes for free users
 
 export const REDROID_SCRCPY_SERVER_SETTINGS = {
+  tunnelPort: 6767,
   // Video settings
   maxFps: 20, // max_fps
   videoBitRate: 100000, // video_bit_rate
@@ -25,14 +26,14 @@ export const REDROID_SCRCPY_SERVER_SETTINGS = {
   videoCodecOptions: {
     profile: 1, // Baseline profile for better compatibility
     level: 256, // Level 1.0
-    iFrameInterval: 2, // I-frame every 2 seconds
+    iFrameInterval: 2, // I-frame every 2 seconds (doesnt follow this)
   },
 
   // Scrcpy server flags
   // sendDeviceMeta: false, // send_device_meta - don't send device name
   // sendCodecMeta: false, // send_codec_meta - don't send codec info
   // sendFrameMeta: false, // send_frame_meta - send PTS timestamps
-  tunnelForward: true, // tunnel_forward - use adb forward instead of reverse
+  tunnelForward: false, // tunnel_forward - use adb forward instead of reverse
   audio: false, // audio - no audio streaming
   control: true, // control - enable touch/input control
   cleanup: false, // cleanup - don't restore display settings on exit

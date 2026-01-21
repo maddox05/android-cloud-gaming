@@ -1,4 +1,4 @@
-import net from "net";
+import { BaseConnectionHandler } from "./base_socket.js";
 import { InputMessage, MSG } from "../shared/types.js";
 import { redroidRunner } from "./redriod_runner.js";
 
@@ -14,46 +14,19 @@ const ACTION_MOVE = 2;
 // Touch pointer ID - use simple ID for finger touch
 const POINTER_ID_FINGER = BigInt(0); // todo allow for multiple inputs at same time
 
-class InputHandler {
+class InputHandler extends BaseConnectionHandler {
   private static instance: InputHandler;
-  private socket: net.Socket | null = null;
-  private connected = false;
   private touchBuffer = Buffer.alloc(32); // Pre-allocated, reused for every touch
-  private constructor() {}
+
+  private constructor() {
+    super("Input/Control");
+  }
 
   static getInstance(): InputHandler {
     if (!InputHandler.instance) {
       InputHandler.instance = new InputHandler();
     }
     return InputHandler.instance;
-  }
-
-  async connect(): Promise<void> {
-    if (this.connected) return;
-
-    return new Promise((resolve, reject) => {
-      this.socket = net.createConnection(6767, "127.0.0.1", () => {
-        console.log("Input/Control socket connected");
-        this.socket!.setNoDelay(true); // Disable Nagle's algorithm for lower latency
-        this.connected = true;
-        resolve();
-      });
-
-      this.socket.on("error", (err) => {
-        console.error("Input socket error:", err);
-        this.connected = false;
-        reject(err);
-      });
-
-      this.socket.on("close", () => {
-        console.log("Input socket closed");
-        this.connected = false;
-      });
-
-      this.socket.on("data", (data) => {
-        // Device messages - ignore for now
-      });
-    });
   }
 
   /**
@@ -105,7 +78,7 @@ class InputHandler {
   }
 
   sendInput(msg: InputMessage): void {
-    if (!this.socket || !this.connected) {
+    if (!this.isConnected()) {
       console.warn("Input socket not connected");
       return;
     }
@@ -147,15 +120,7 @@ class InputHandler {
     }
 
     const buf = this.buildTouchMessage(action, xPercent, yPercent);
-    this.socket.write(buf);
-  }
-
-  disconnect(): void {
-    if (this.socket) {
-      this.socket.destroy();
-      this.socket = null;
-      this.connected = false;
-    }
+    this.write(buf);
   }
 
   /**
@@ -164,15 +129,20 @@ class InputHandler {
    * Useful when a new client connects and needs an immediate keyframe
    */
   resetVideo(): void {
-    if (!this.socket || !this.connected) {
+    if (!this.isConnected()) {
       console.warn("Cannot reset video: control socket not connected");
       return;
     }
 
     const buf = Buffer.alloc(1);
     buf.writeUInt8(SC_CONTROL_MSG_TYPE_RESET_VIDEO, 0);
-    this.socket.write(buf);
+    this.write(buf);
     console.log("Sent RESET_VIDEO to scrcpy");
+  }
+
+  protected onData(data: Buffer): void {
+    // Control socket may receive responses from scrcpy, log them
+    console.log("Input/Control received data:", data.length, "bytes");
   }
 }
 

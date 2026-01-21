@@ -158,15 +158,13 @@ class RedroidRunner {
     }
     console.log("Device booted!");
 
-    await this.spoofWithMagisk(); //help
+    // Run FreeKiosk setup, magisk spoof,  and scrcpy setup in parallel
 
-    // Run FreeKiosk setup and scrcpy setup in parallel
     await Promise.all([
+      this.spoofWithMagisk(),
       this.setupKioskModeUsingFreeKiosk(packageName),
-      this.setupScrcpy(), // this needs to wait a few secs so its sockets can open but kiosk takes longer, so we dont need to wait
-      // todo somehow check if scrcpy video and input sockets are readyß
-    ]); // scrcpy wont send video until redriodRunner.start() finishes so this is fine!
-
+      this.setupScrcpy(),
+    ]);
     this.running = true;
 
     console.log("RedroidRunner started successfully!");
@@ -218,7 +216,7 @@ class RedroidRunner {
     console.log("Config result:", configResult);
 
     // Wait for FreeKiosk to save config
-    await this.sleep(10000);
+    await this.sleep(10000); // TODO REMOVE
 
     // Launch FreeKiosk to activate the lock
     console.log("Launching FreeKiosk to activate lock...");
@@ -227,7 +225,7 @@ class RedroidRunner {
     );
     console.log("Launch result:", launchResult);
 
-    await this.sleep(2000);
+    await this.sleep(2000); // TODO REMOVE
     console.log("Kiosk mode setup complete!");
   }
 
@@ -245,12 +243,12 @@ class RedroidRunner {
     } catch (err) {
       console.log("No existing scrcpy process to kill (or pkill failed):");
     }
-    await this.sleep(500);
 
     // Remove old port forward
     console.log("Removing old port forwards...");
     try {
       await this.execAsync(`adb -s ${this.adbTarget} forward --remove-all`);
+      await this.execAsync(`adb -s ${this.adbTarget} reverse --remove-all`);
     } catch (err) {
       console.warn("Failed to remove old port forwards:");
     }
@@ -266,10 +264,10 @@ class RedroidRunner {
       .stdout;
     console.log(`Using scrcpy version: ${scrcpyVersion}`);
 
-    // Setup port forward for scrcpy abstract socket
-    console.log("Setting up port forward...");
+    // Setup port reverse for scrcpy abstract socket
+    console.log("Setting up port reverse...");
     await this.execAsync(
-      `adb -s ${this.adbTarget} forward tcp:${6767} localabstract:scrcpy`,
+      `adb -s ${this.adbTarget} reverse localabstract:scrcpy tcp:${REDROID_SCRCPY_SERVER_SETTINGS.tunnelPort}`,
     );
 
     // Start scrcpy server

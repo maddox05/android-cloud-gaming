@@ -1,13 +1,13 @@
-import net from "net";
+import { BaseConnectionHandler } from "./base_socket.js";
 
-class VideoHandler {
+class VideoHandler extends BaseConnectionHandler {
   private static instance: VideoHandler;
-  private socket: net.Socket | null = null;
-  private connected = false;
   private onDataCallback: ((data: Buffer) => void) | null = null;
-  private pendingData: Buffer[] = []; // Buffer data until callback is set
+  private pendingData: Buffer[] = [];
 
-  private constructor() {}
+  private constructor() {
+    super("Video");
+  }
 
   static getInstance(): VideoHandler {
     if (!VideoHandler.instance) {
@@ -29,50 +29,16 @@ class VideoHandler {
     }
   }
 
-  /**
-   * Connect to scrcpy video socket.
-   * IMPORTANT: This MUST be called BEFORE inputHandler.connect()
-   * scrcpy expects connections in order: video first, then control
-   */
-  async connect(): Promise<void> {
-    if (this.connected) return;
-
-    return new Promise((resolve, reject) => {
-      this.socket = net.createConnection(6767, "127.0.0.1", () => {
-        console.log("Video socket connected (first connection)");
-        this.socket!.setNoDelay(true); // Disable Nagle's algorithm for lower latency
-        this.connected = true;
-        resolve();
-      });
-
-      this.socket.on("data", (data) => {
-        if (this.onDataCallback) {
-          this.onDataCallback(data);
-        } else {
-          // Buffer data until callback is set (don't lose SPS/PPS!)
-          this.pendingData.push(data); // data is already a Buffer, no copy needed
-        }
-      });
-
-      this.socket.on("error", (err) => {
-        console.error("Video socket error:", err);
-        this.connected = false;
-        reject(err);
-      });
-
-      this.socket.on("close", () => {
-        console.log("Video socket closed");
-        this.connected = false;
-      });
-    });
+  protected onData(data: Buffer): void {
+    if (this.onDataCallback) {
+      this.onDataCallback(data);
+    } else {
+      // Buffer data until callback is set (don't lose SPS/PPS!)
+      this.pendingData.push(data);
+    }
   }
 
-  disconnect(): void {
-    if (this.socket) {
-      this.socket.destroy();
-      this.socket = null;
-      this.connected = false;
-    }
+  protected onClose(): void {
     this.onDataCallback = null;
     this.pendingData = [];
   }

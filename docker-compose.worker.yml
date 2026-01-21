@@ -27,6 +27,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp:/tmp # For temporary game save tar files
       - ./docker-compose.worker.yml:/app/docker-compose.worker.yml:ro
+      - ./worker:/app # Live code updates
+      - /app/node_modules # Preserve node_modules from image build
+      - ./shared:/shared # Live shared code updates
     environment:
       SIGNAL_URL: ${SIGNAL_URL}
       WORKER_NAME: ${COMPOSE_PROJECT_NAME}
