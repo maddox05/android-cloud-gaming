@@ -444,7 +444,11 @@ class RedroidRunner {
   }
 
   /**
-   * Get the diff volume name for this worker
+   * Get the diff volume name for this worker.
+   * Volume should be structured like
+   * - /    (root of volume)
+   * --- /upper
+   * ------ /data ....
    */
   getDiffVolumeName(): string {
     return `${WORKER_NAME}-redroid-diff`;

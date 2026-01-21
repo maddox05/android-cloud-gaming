@@ -6,9 +6,7 @@ import { inputHandler } from "./input.js";
 import { ScrcpyServer } from "./base_socket.js";
 import { initializeWithGameSave, saveGameState } from "./game_save_manager.js";
 import { clearDiffVolume } from "./volume_manager.js";
-
-const ENABLE_GAME_SAVES = 0;
-
+import { ENABLE_GAME_SAVES } from "../shared/const.js";
 // Create scrcpy server and register handlers (video first, then input)
 const scrcpyServer = ScrcpyServer.getInstance();
 scrcpyServer.addHandler(videoHandler);

@@ -22,3 +22,16 @@ CLOUDFLARE_R2_SECRET_ACCESS_KEY=
 worker also now has all this state (user id etc) turn it into a singleton
 
 signal server on worker start will now need to send the user id of the client, so worker can get correct game save
+
+pt2.
+
+I figured out that andriod saves a lot of files in a lot of diff places
+
+what we want for game saves now is to only save data we have created. so our algorithm when saving will be as follows
+
+for litteraly all data that isnt our apps, delete.
+
+for our GAMES_LIST app ids (/data/upper/data/com.X.Y)
+remove update and cache
+
+so the only things that should eever be saved are the games we have available.

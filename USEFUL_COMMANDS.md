@@ -10,3 +10,5 @@ docker compose -p worker2 -f docker-compose.worker.yml up --build -d && \
 docker compose -p worker3 -f docker-compose.worker.yml up --build -d
 
 docker run --rm -it -v redroid-base:/data alpine sh
+
+adb shell su -c "rm -rf /data/data/com.freekiosk/\*" # to reset free kisok

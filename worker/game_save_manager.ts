@@ -33,6 +33,7 @@ export async function initializeWithGameSave(userId: string): Promise<void> {
       console.log(`Game save restored for user ${userId}`);
     } else {
       console.log(`Save existed but download failed, starting fresh`);
+      // todo throw and err here
     }
   } else {
     console.log(`No existing save for user ${userId}, starting fresh`);
