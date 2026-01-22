@@ -337,6 +337,7 @@ class RedroidRunner {
       console.log("Device spoofing complete!");
     } else {
       console.warn("Spoofing may have failed:", result.stdout, result.stderr);
+      throw new Error("Spoofing may have failed");
     }
   }
 

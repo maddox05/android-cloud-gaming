@@ -7,8 +7,8 @@ services:
     cpus: 4 # should limit to 2 on a good CPU & GPU combo
     mem_limit: 4g
     mem_reservation: 3g
-    ports:
-      - "5555:5555"
+    # ports:
+    #   - "5555:5555"
     volumes:
       - redroid-base:/data-base # Shared base data partition
       - redroid-diff:/data-diff
