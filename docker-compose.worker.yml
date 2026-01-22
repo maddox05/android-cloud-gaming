@@ -4,7 +4,7 @@ services:
     image: ${REDROID_IMAGE}:${REDROID_TAG}
     privileged: true
     stop_grace_period: 0s
-    cpus: 3
+    cpus: 4 # should limit to 2 on a good CPU & GPU combo
     mem_limit: 4g
     mem_reservation: 3g
     ports:
