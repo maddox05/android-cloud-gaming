@@ -7,6 +7,8 @@ services:
     cpus: 3
     mem_limit: 4g
     mem_reservation: 3g
+    ports:
+      - "5555:5555"
     volumes:
       - redroid-base:/data-base # Shared base data partition
       - redroid-diff:/data-diff

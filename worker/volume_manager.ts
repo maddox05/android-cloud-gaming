@@ -87,15 +87,24 @@ async function cleanVolumeForSave(): Promise<void> {
     console.warn("Step 3 (remove non-allowed apps) warning:", err);
   }
 
-  // Step 4: For allowed apps, remove cache/code_cache/update
+  // Step 4: For allowed apps, remove cache/code_cache/update/no_backup
   for (const appId of allowedApps) {
     try {
       await execAsync(
-        `docker run --rm -v ${volumeName}:/vol alpine rm -rf /vol/upper/data/${appId}/cache /vol/upper/data/${appId}/code_cache /vol/upper/data/${appId}/update`,
+        `docker run --rm -v ${volumeName}:/vol alpine rm -rf /vol/upper/data/${appId}/cache /vol/upper/data/${appId}/code_cache /vol/upper/data/${appId}/update /vol/upper/data/${appId}/no_backup`,
       );
     } catch {
       // Ignore errors - app may not exist
     }
+  }
+
+  // Step 5: For Roblox specifically, also delete the files directory
+  try {
+    await execAsync(
+      `docker run --rm -v ${volumeName}:/vol alpine rm -rf /vol/upper/data/com.roblox.client/files`,
+    );
+  } catch {
+    // Ignore errors - Roblox may not exist
   }
 
   console.log("Volume cleaned for save");
