@@ -26,7 +26,7 @@ import { FREE_USER_MAX_TIME_MS } from "../shared/const.js";
 // Environment Validation
 // ============================================
 
-const requiredEnvVars = ["SIGNAL_PORT", "SUPABASE_URL", "SUPABASE_SERVICE_KEY"];
+const requiredEnvVars = ["SIGNAL_PORT", "SUPABASE_URL", "SUPABASE_SERVICE_KEY", "WORKER_PASSWORD"];
 const missingEnvVars = requiredEnvVars.filter((v) => !process.env[v]);
 
 if (missingEnvVars.length > 0) {
@@ -150,7 +150,12 @@ app.ws("/", (ws, req) => {
   }
 
   if (role === "worker") {
-    // Workers don't need auth (todo at some point)
+    const password = req.query.password as string | undefined;
+    if (!password || password !== process.env.WORKER_PASSWORD) {
+      console.log("Worker connection rejected: invalid password");
+      ws.close();
+      return;
+    }
     new Worker(ws);
   } else if (role === "client") {
     if (getWorkerCount() === 0) {

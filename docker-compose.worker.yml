@@ -38,6 +38,7 @@ services:
       # Redroid image config (needed for docker compose up inside worker)
       REDROID_IMAGE: ${REDROID_IMAGE}
       REDROID_TAG: ${REDROID_TAG}
+      WORKER_PASSWORD: ${WORKER_PASSWORD}
       # FreeKiosk PIN
       FREE_KIOSK_PIN: ${FREE_KIOSK_PIN}
       # R2 credentials for game saves
