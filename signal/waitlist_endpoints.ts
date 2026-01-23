@@ -303,8 +303,6 @@ export async function generateInvites(count: number): Promise<{
   processed: Array<{ user_id: string; email: string; invite_code: string }>;
   errors: Array<{ user_id: string; error: string }>;
 }> {
-  const processCount = Math.min(count, 100);
-
   const supabase = getSupabase();
   if (!supabase) {
     throw new Error("Database not configured");
@@ -315,7 +313,7 @@ export async function generateInvites(count: number): Promise<{
     .from("waitlist")
     .select("user_id")
     .order("time_joined", { ascending: true })
-    .limit(processCount);
+    .limit(count);
   // const waitlistUsers = [{ user_id: "01b0b7b6-b660-43a5-b84d-1d5bda9d7aa6" }];
   // const fetchError = null;
 
@@ -399,4 +397,4 @@ export async function generateInvites(count: number): Promise<{
   return { processed, errors };
 }
 
-// generateInvites(50); // tsx --env-file=./.env ./signal/waitlist_endpoints.ts
+// generateInvites(200); // tsx --env-file=./.env ./signal/waitlist_endpoints.ts
