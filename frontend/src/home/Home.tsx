@@ -211,7 +211,10 @@ export default function Home() {
 
       {/* Testimonials Section */}
       <section className="testimonials-section">
-        <h2 className="section-title" style={{ position: "relative", zIndex: 2 }}>
+        <h2
+          className="section-title"
+          style={{ position: "relative", zIndex: 2 }}
+        >
           What People Say About Maddox Cloud
         </h2>
         <div className="testimonials-grid">
@@ -284,7 +287,7 @@ export default function Home() {
               />
             </div>
             <span className="social-proof-text">
-              Join <strong>1,500+</strong> others
+              Join <strong>3,100+</strong> others
             </span>
           </div>
         </div>
