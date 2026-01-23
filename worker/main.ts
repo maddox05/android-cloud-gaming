@@ -90,13 +90,13 @@ class Worker {
 
     this.videoChannel.onopen = () => {
       console.log("Video channel open");
-      let videoChunkCount = 0;
+      // let videoChunkCount = 0;
       videoHandler.setCallback((data) => {
         if (this.videoChannel && this.videoChannel.readyState === "open") {
-          videoChunkCount++;
-          console.log(
-            `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`,
-          );
+          // videoChunkCount++;
+          // console.log(
+          //   `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`,
+          // );
           /* @ts-ignore */
           this.videoChannel.send(data);
         }
