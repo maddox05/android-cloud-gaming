@@ -105,6 +105,18 @@ export default function JoinWaitlist() {
             Be among the first to experience cloud gaming on MaddoxCloud. Join
             our waitlist and get early access when spots open up.
           </p>
+          <Link to="/redeem" className="redeem-hint-card">
+            <span className="redeem-hint-icon">🎟️</span>
+            <span className="redeem-hint-text">
+              <span className="redeem-hint-title">
+                Already have an invite code?
+              </span>
+              <span className="redeem-hint-subtitle">
+                Redeem it to skip the waitlist
+              </span>
+            </span>
+            <span className="redeem-hint-arrow">→</span>
+          </Link>
         </header>
 
         {!supabaseUserId ? (
