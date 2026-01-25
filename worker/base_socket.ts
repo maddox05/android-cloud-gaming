@@ -65,15 +65,20 @@ export abstract class BaseConnectionHandler {
  * First registered handler gets first connection, second gets second, etc.
  */
 export class ScrcpyServer {
+  private static instance: ScrcpyServer | null = null;
+
   private server: net.Server | null = null;
   private handlers: BaseConnectionHandler[] = [];
   private nextHandlerIndex = 0;
-  private port: number;
-  private host: string;
+  private port = 0;
 
-  constructor(port: number, host: string = "127.0.0.1") {
-    this.port = port;
-    this.host = host;
+  private constructor() {}
+
+  static getInstance(): ScrcpyServer {
+    if (!ScrcpyServer.instance) {
+      ScrcpyServer.instance = new ScrcpyServer();
+    }
+    return ScrcpyServer.instance;
   }
 
   /** Register a handler. First registered = first connection */
@@ -110,11 +115,17 @@ export class ScrcpyServer {
         reject(err);
       });
 
-      this.server.listen(this.port, this.host, () => {
-        console.log(`ScrcpyServer listening on ${this.host}:${this.port}`);
+      this.server.listen(this.port, "127.0.0.1", () => {
+        const addr = this.server.address() as net.AddressInfo;
+        this.port = addr.port; // Update to actual port
+        console.log(`ScrcpyServer listening on 127.0.0.1:${this.port}`);
         resolve();
       });
     });
+  }
+
+  getPort(): number {
+    return this.port;
   }
 
   /** Close the server and all connections */

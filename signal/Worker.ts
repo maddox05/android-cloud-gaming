@@ -82,7 +82,11 @@ export default class Worker {
     switch (msg.type) {
       case MSG.REGISTER:
         const msgTyped = msg as RegisterMessage;
-        if (!msgTyped.games || !Array.isArray(msgTyped.games)) {
+        if (
+          !msgTyped.games ||
+          !Array.isArray(msgTyped.games) ||
+          msgTyped.games.length === 0
+        ) {
           console.error(`Worker ${this.id} sent invalid games array`);
           this.sendShutdown("invalid_games");
           return;
@@ -160,7 +164,9 @@ export default class Worker {
 
   sendWorkerStart(gameId: string, maxVideoSize: number): void {
     if (!this.client) {
-      console.error(`Worker ${this.id}: Cannot send WORKER_START - no client assigned`);
+      console.error(
+        `Worker ${this.id}: Cannot send WORKER_START - no client assigned`,
+      );
       return;
     }
     this.send({

@@ -8,6 +8,7 @@ import {
 } from "./waitlist_functions";
 import { getCurrentUser } from "../utils/supabase";
 import "./Waitlist.css";
+import FAQ from "./FAQ";
 
 // SVG Icons for share buttons
 const TikTokIcon = () => (
@@ -424,22 +425,7 @@ export default function Waitlist() {
           </div>
         )}
 
-        <div className="waitlist-info">
-          <p>
-            Want faster access? Check out our{" "}
-            <Link to="/pricing">pricing plans</Link> to skip the waitlist.
-            <br></br>Questions? Join our{" "}
-            <a
-              href="https://discord.gg/U4QYdzXEnr"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Discord community
-            </a>{" "}
-            for support and random invite code drops that give you instant
-            access!
-          </p>
-        </div>
+        <FAQ />
 
         {/* Leave Waitlist */}
         <div className="leave-waitlist-section">

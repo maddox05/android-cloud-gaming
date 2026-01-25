@@ -4,9 +4,11 @@ services:
     image: ${REDROID_IMAGE}:${REDROID_TAG}
     privileged: true
     stop_grace_period: 0s
-    cpus: 3
+    cpus: 4 # should limit to 2 on a good CPU & GPU combo
     mem_limit: 4g
     mem_reservation: 3g
+    # ports:
+    #   - "5555:5555"
     volumes:
       - redroid-base:/data-base # Shared base data partition
       - redroid-diff:/data-diff
@@ -36,6 +38,7 @@ services:
       # Redroid image config (needed for docker compose up inside worker)
       REDROID_IMAGE: ${REDROID_IMAGE}
       REDROID_TAG: ${REDROID_TAG}
+      WORKER_PASSWORD: ${WORKER_PASSWORD}
       # FreeKiosk PIN
       FREE_KIOSK_PIN: ${FREE_KIOSK_PIN}
       # R2 credentials for game saves

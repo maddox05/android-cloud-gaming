@@ -3,6 +3,7 @@ import { useAuthModal } from "../context/AuthModalContext";
 import { useUser } from "../context/useUser";
 import { showAlert } from "../services/alertService";
 import GameCard from "./GameCard";
+import ShapoWidget from "../components/ShapoWidget";
 import "./Home.css";
 import { GAMES_LIST } from "../../../shared/const";
 
@@ -205,6 +206,57 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Shapo Widget */}
+      <ShapoWidget widgetId="4279326f22c7c940975d" />
+
+      {/* Testimonials Section */}
+      <section className="testimonials-section">
+        <h2
+          className="section-title"
+          style={{ position: "relative", zIndex: 2 }}
+        >
+          What People Say About Maddox Cloud
+        </h2>
+        <div className="testimonials-grid">
+          <img
+            src="/imgs/testimonials/testimonial-1.png"
+            alt="User testimonial"
+            className="testimonial-img"
+            draggable="false"
+          />
+          <img
+            src="/imgs/testimonials/testimonial-2.png"
+            alt="User testimonial"
+            className="testimonial-img"
+            draggable="false"
+          />
+          <img
+            src="/imgs/testimonials/testimonial-3.png"
+            alt="User testimonial"
+            className="testimonial-img"
+            draggable="false"
+          />
+          <img
+            src="/imgs/testimonials/testimonial-4.png"
+            alt="User testimonial"
+            className="testimonial-img"
+            draggable="false"
+          />
+          <img
+            src="/imgs/testimonials/testimonial-5.png"
+            alt="User testimonial"
+            className="testimonial-img"
+            draggable="false"
+          />
+          <img
+            src="/imgs/testimonials/testimonial-6.png"
+            alt="User testimonial"
+            className="testimonial-img"
+            draggable="false"
+          />
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="cta-section">
         <div className="cta-waitlist">
@@ -213,13 +265,29 @@ export default function Home() {
           </Link>
           <div className="cta-social-proof">
             <div className="avatar-stack">
-              <img className="avatar" src="https://i.pinimg.com/474x/2d/b7/0f/2db70fd9f6ad7c8e2b0b1374eafbee9f.jpg" alt="" />
-              <img className="avatar" src="https://wallpapers.com/images/featured/sad-anime-pfp-hcci6syk8c832hcm.jpg" alt="" />
-              <img className="avatar" src="https://s3-alpha.figma.com/hub/file/2944732189/b47472b8-4e17-477e-a0a8-d5fcbed6a374-cover.png" alt="" />
-              <img className="avatar" src="https://api.dicebear.com/9.x/lorelei/svg?seed=gamer1" alt="" />
+              <img
+                className="avatar"
+                src="https://i.pinimg.com/474x/2d/b7/0f/2db70fd9f6ad7c8e2b0b1374eafbee9f.jpg"
+                alt=""
+              />
+              <img
+                className="avatar"
+                src="https://wallpapers.com/images/featured/sad-anime-pfp-hcci6syk8c832hcm.jpg"
+                alt=""
+              />
+              <img
+                className="avatar"
+                src="https://s3-alpha.figma.com/hub/file/2944732189/b47472b8-4e17-477e-a0a8-d5fcbed6a374-cover.png"
+                alt=""
+              />
+              <img
+                className="avatar"
+                src="https://api.dicebear.com/9.x/lorelei/svg?seed=gamer1"
+                alt=""
+              />
             </div>
             <span className="social-proof-text">
-              Join <strong>1,500+</strong> others
+              Join <strong>3,100+</strong> others
             </span>
           </div>
         </div>

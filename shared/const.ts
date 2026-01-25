@@ -3,7 +3,9 @@ import type { Game } from "./types.js";
 // Game Saves - Redroid base image version
 // Increment this when creating a new base redroid image
 // This ensures save compatibility (saves from v1 won't load on v2 base)
-export const REDROID_BASE_IMAGE_VERSION = 2;
+export const REDROID_BASE_IMAGE_VERSION = 3;
+
+export const ENABLE_GAME_SAVES = true;
 
 // R2 paths for game saves
 export const R2_GAME_SAVES_PREFIX = "game_saves";
@@ -17,9 +19,8 @@ export const MAX_SESSION_TIME_MS = 60 * 60 * 1000; // 1 hour todo for laer use t
 export const FREE_USER_MAX_TIME_MS = 10 * 60 * 1000; // 10 minutes for free users
 
 export const REDROID_SCRCPY_SERVER_SETTINGS = {
-  tunnelPort: 6767,
   // Video settings
-  maxFps: 20, // max_fps
+  maxFps: 60, // max_fps
   videoBitRate: 100000, // video_bit_rate
 
   // Video codec options (H.264 profile settings)
@@ -152,6 +153,24 @@ Among Us is an online multiplayer social deduction game where Crewmates work tog
 - Multiple maps to explore`,
     thumbnail:
       "https://play-lh.googleusercontent.com/8ddL1kuoNUB5vUvgDVjYY3_6HwQcrg1K2fd_R8soD-e2QYj8fT9cfhfh3G0hnSruLKec",
+    images: [],
+  },
+  {
+    id: "com.robtopx.geometryjumplite",
+    slug: "geometry-dash-lite",
+    name: "Geometry Dash Lite",
+    category: "Arcade",
+    description: `Play Geometry Dash Lite instantly in your browser without downloading. Enjoy lag-free, low latency, and high-quality gaming experience playing this game.
+
+Geometry Dash Lite is a rhythm-based action platformer where you jump and fly your way through danger. Push your skills to the limit as you jump, fly and flip through dangerous passages and spiky obstacles.
+
+**Features:**
+- Rhythm-based action platformer
+- Multiple levels with unique soundtracks
+- Practice mode to hone your skills
+- Unlock new icons and colors`,
+    thumbnail:
+      "https://play-lh.googleusercontent.com/p7kWbWBFxQIrzolEqiV5uSvctLeyssZvBV7UBOX29wzZI52IdcSs4qCB_zsQJL1mt9A",
     images: [],
   },
 ];

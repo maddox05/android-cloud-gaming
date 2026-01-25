@@ -4,6 +4,7 @@ import { pipeline } from "stream/promises";
 import { createWriteStream, createReadStream } from "fs";
 import { unlink } from "fs/promises";
 import { redroidRunner } from "./redriod_runner.js";
+import { GAMES_LIST } from "../shared/const.js";
 
 const WORKER_NAME = process.env.WORKER_NAME!;
 
@@ -27,7 +28,6 @@ export async function clearDiffVolume(): Promise<void> {
   const volumeName = redroidRunner.getDiffVolumeName();
   console.log(`Clearing diff volume: ${volumeName}`);
 
-  // Use docker run with alpine to clear the volume contents
   try {
     await execAsync(`docker volume rm ${volumeName}`);
   } catch (err) {
@@ -35,6 +35,79 @@ export async function clearDiffVolume(): Promise<void> {
   }
   await execAsync(`docker volume create ${volumeName}`);
   console.log("Diff volume cleared");
+}
+
+/**
+ * Clean the volume before saving - keeps only GAMES_LIST app data
+ * Removes all other content and cleans cache/code_cache/update from game apps
+ *
+ * Volume structure after cleanup: /vol/upper/data/{app_id}/
+ * Tar will contain: /upper/data/{app_id}/
+ */
+async function cleanVolumeForSave(): Promise<void> {
+  const volumeName = redroidRunner.getDiffVolumeName();
+  const allowedApps = GAMES_LIST.map((g) => g.id);
+
+  console.log(`Cleaning volume ${volumeName} for save...`);
+
+  // Step 1: Delete everything at root EXCEPT 'upper' directory
+  try {
+    await execAsync(
+      `docker run --rm -v ${volumeName}:/vol alpine find /vol -mindepth 1 -maxdepth 1 ! -name upper -exec rm -rf {} +`,
+    );
+  } catch (err) {
+    console.warn("Step 1 (clean root) warning:", err);
+  }
+
+  // Step 2: In /vol/upper, delete everything EXCEPT 'data' directory
+  try {
+    await execAsync(
+      `docker run --rm -v ${volumeName}:/vol alpine find /vol/upper -mindepth 1 -maxdepth 1 ! -name data -exec rm -rf {} +`,
+    );
+  } catch (err) {
+    console.warn("Step 2 (clean /upper) warning:", err);
+  }
+
+  // Step 3: In /vol/upper/data, delete all apps NOT in allowedApps
+  try {
+    const listResult = await execAsync(
+      `docker run --rm -v ${volumeName}:/vol alpine ls /vol/upper/data 2>/dev/null || true`,
+    );
+    const existingApps = listResult.split("\n").filter(Boolean);
+
+    for (const app of existingApps) {
+      if (!allowedApps.includes(app)) {
+        console.log(`Removing non-allowed app: ${app}`);
+        await execAsync(
+          `docker run --rm -v ${volumeName}:/vol alpine rm -rf /vol/upper/data/${app}`,
+        );
+      }
+    }
+  } catch (err) {
+    console.warn("Step 3 (remove non-allowed apps) warning:", err);
+  }
+
+  // Step 4: For allowed apps, remove cache/code_cache/update/no_backup
+  for (const appId of allowedApps) {
+    try {
+      await execAsync(
+        `docker run --rm -v ${volumeName}:/vol alpine rm -rf /vol/upper/data/${appId}/cache /vol/upper/data/${appId}/code_cache /vol/upper/data/${appId}/update /vol/upper/data/${appId}/no_backup`,
+      );
+    } catch {
+      // Ignore errors - app may not exist
+    }
+  }
+
+  // Step 5: For Roblox specifically, also delete the files directory
+  try {
+    await execAsync(
+      `docker run --rm -v ${volumeName}:/vol alpine rm -rf /vol/upper/data/com.roblox.client/files`,
+    );
+  } catch {
+    // Ignore errors - Roblox may not exist
+  }
+
+  console.log("Volume cleaned for save");
 }
 
 /**
@@ -54,9 +127,9 @@ export async function extractToVolume(stream: Readable): Promise<void> {
     // Clear existing diff data
     await clearDiffVolume();
 
-    // Extract using docker + alpine (safer than host extraction)
+    // Mounts Docker volume & save data to a linux machine and extracts the game save in the DATA folder
     await execAsync(
-      `docker run --rm -v ${volumeName}:/data -v ${tempFile}:/backup.tar.gz alpine sh -c "cd /data && tar xzf /backup.tar.gz"`
+      `docker run --rm -v ${volumeName}:/data -v ${tempFile}:/backup.tar.gz alpine sh -c "cd /data && tar xzf /backup.tar.gz"`,
     );
 
     console.log("Game save extracted successfully");
@@ -80,13 +153,21 @@ export async function createVolumeSnapshot(): Promise<Buffer> {
 
   console.log(`Creating snapshot of volume: ${volumeName}`);
 
+  // Clean the volume first - only keep GAMES_LIST app data
+  await cleanVolumeForSave();
+
   try {
     // Create tarball using docker + alpine
+    // How this works:
+    //   -v ${volumeName}:/data  -> mounts the Docker volume inside the container at /data
+    //   -v /tmp:/backup         -> mounts host's /tmp folder inside the container at /backup
+    //   tar czf /backup/...     -> writes tarball to /backup, which is actually host's /tmp
+    // So the tarball ends up at /tmp on the host, accessible via tempFile
     await execAsync(
-      `docker run --rm -v ${volumeName}:/data -v /tmp:/backup alpine sh -c "cd /data && tar czf /backup/game_save_${WORKER_NAME}_out.tar.gz ."`
+      `docker run --rm -v ${volumeName}:/data -v /tmp:/backup alpine sh -c "cd /data && tar czf /backup/game_save_${WORKER_NAME}_out.tar.gz ."`,
     );
 
-    // Read the tarball into a buffer
+    // Read the tarball (now on host at tempFile) into a buffer
     const chunks: Buffer[] = [];
     const readStream = createReadStream(tempFile);
 

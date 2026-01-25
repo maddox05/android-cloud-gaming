@@ -6,14 +6,9 @@ import { inputHandler } from "./input.js";
 import { ScrcpyServer } from "./base_socket.js";
 import { initializeWithGameSave, saveGameState } from "./game_save_manager.js";
 import { clearDiffVolume } from "./volume_manager.js";
-import { REDROID_SCRCPY_SERVER_SETTINGS } from "../shared/const.js";
-
-const ENABLE_GAME_SAVES = 0;
-
+import { ENABLE_GAME_SAVES } from "../shared/const.js";
 // Create scrcpy server and register handlers (video first, then input)
-const scrcpyServer = new ScrcpyServer(
-  REDROID_SCRCPY_SERVER_SETTINGS.tunnelPort,
-);
+const scrcpyServer = ScrcpyServer.getInstance();
 scrcpyServer.addHandler(videoHandler);
 scrcpyServer.addHandler(inputHandler);
 import type {
@@ -38,12 +33,17 @@ if (!process.env.SIGNAL_URL) {
   process.exit(1);
 }
 
+if (!process.env.WORKER_PASSWORD) {
+  console.error("WORKER_PASSWORD environment variable is required");
+  process.exit(1);
+}
+
 const SIGNAL_SERVER_URL = `${
   process.env.SIGNAL_URL.includes("localhost") ||
   process.env.SIGNAL_URL.includes("signal")
     ? "ws"
     : "wss"
-}://${process.env.SIGNAL_URL}?role=worker`;
+}://${process.env.SIGNAL_URL}?role=worker&password=${encodeURIComponent(process.env.WORKER_PASSWORD!)}`;
 console.log(`Signal server URL: ${SIGNAL_SERVER_URL}`);
 
 type PC = InstanceType<typeof RTCPeerConnection>;
@@ -90,13 +90,13 @@ class Worker {
 
     this.videoChannel.onopen = () => {
       console.log("Video channel open");
-      let videoChunkCount = 0;
+      // let videoChunkCount = 0;
       videoHandler.setCallback((data) => {
         if (this.videoChannel && this.videoChannel.readyState === "open") {
-          videoChunkCount++;
-          console.log(
-            `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`,
-          );
+          // videoChunkCount++;
+          // console.log(
+          //   `Video sent: chunk #${videoChunkCount}, ${data.length} bytes`,
+          // );
           /* @ts-ignore */
           this.videoChannel.send(data);
         }
