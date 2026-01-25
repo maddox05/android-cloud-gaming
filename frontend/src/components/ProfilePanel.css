@@ -85,6 +85,20 @@
   color: var(--text-muted);
 }
 
+.panel-user-id {
+  font-size: 0.5625rem;
+  color: var(--text-muted);
+  opacity: 0.6;
+  cursor: pointer;
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.panel-user-id:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
 /* Panel Setting - Video Quality */
 .panel-setting {
   margin-bottom: 24px;

@@ -63,6 +63,13 @@ export function ProfilePanel({
                   {user?.user_metadata?.name || "User"}
                 </span>
                 <span className="panel-user-email">{user?.email}</span>
+                <span
+                  className="panel-user-id"
+                  onClick={() => navigator.clipboard.writeText(user?.id || "")}
+                  title="Click to copy"
+                >
+                  ID: {user?.id}
+                </span>
               </div>
             </div>
 
