@@ -134,7 +134,7 @@ export interface ErrorMessage {
 /** Worker registers with signal server */
 export interface RegisterMessage {
   type: typeof MSG.REGISTER;
-  games: string[];
+  games: string[]; // array of COM.X.Y for each app
 }
 
 /** Ping message from signal server */

@@ -5,6 +5,7 @@ import Client from "./Client.js";
 import Worker from "./Worker.js";
 import { getAllClients, getAllWorkers, getWorkerCount } from "./registry.js";
 import { processQueue, checkQueueTimeouts } from "./queue.js";
+import { getStats } from "./stats.js";
 import {
   verifyToken,
   getUserAccessType,
@@ -88,6 +89,9 @@ app.use(express.json());
 
 // Health check
 app.get("/health", (_req, res) => res.send("OK"));
+
+// Stats endpoint
+app.get("/stats", (_req, res) => res.json(getStats()));
 
 // ============================================
 // API Endpoints
