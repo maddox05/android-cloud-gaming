@@ -90,6 +90,9 @@ app.use(express.json());
 // Health check
 app.get("/health", (_req, res) => res.send("OK"));
 
+// Domain verification for frontend failover
+app.get("/test.txt", (_req, res) => res.type("text/plain").send("t67"));
+
 // Stats endpoint
 app.get("/stats", (_req, res) => res.json(getStats()));
 
