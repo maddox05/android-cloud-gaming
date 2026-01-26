@@ -4,6 +4,7 @@ import {
   getWaitlistPosition,
   getTotalWaitlistCount,
   removeSelfFromWaitlist,
+  getUserInviteCodeWhenUserAssignedCodeAndNotRedeemed,
   type WaitlistPosition,
 } from "./waitlist_functions";
 import { getCurrentUser } from "../utils/supabase";
@@ -184,6 +185,7 @@ export default function Waitlist() {
 
   const [position, setPosition] = useState<WaitlistPosition | null>(null);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [assignedInviteCode, setAssignedInviteCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState(false);
   const [showReferralSection, setShowReferralSection] = useState(false);
@@ -210,13 +212,15 @@ export default function Waitlist() {
           return;
         }
 
-        const [positionData, count] = await Promise.all([
+        const [positionData, count, inviteCode] = await Promise.all([
           getWaitlistPosition(userId),
           getTotalWaitlistCount(),
+          getUserInviteCodeWhenUserAssignedCodeAndNotRedeemed(userId),
         ]);
 
         setPosition(positionData);
         setTotalCount(count);
+        setAssignedInviteCode(inviteCode);
       } catch (err) {
         console.error("Error fetching waitlist data:", err);
       } finally {
@@ -310,18 +314,33 @@ export default function Waitlist() {
             You're on the list! We'll email you a <strong>invite code</strong>{" "}
             when it's your turn.
           </p>
-          <Link to="/redeem" className="redeem-hint-card">
-            <span className="redeem-hint-icon">🎟️</span>
-            <span className="redeem-hint-text">
-              <span className="redeem-hint-title">
-                Got an invite code from the waitlist or a friend?
+          {assignedInviteCode ? (
+            <Link to={`/redeem/${assignedInviteCode}`} className="redeem-hint-card">
+              <span className="redeem-hint-icon">🎉</span>
+              <span className="redeem-hint-text">
+                <span className="redeem-hint-title">
+                  You got an invite code!
+                </span>
+                <span className="redeem-hint-subtitle">
+                  Click here to redeem and get access now
+                </span>
               </span>
-              <span className="redeem-hint-subtitle">
-                Redeem it to skip the waitlist
+              <span className="redeem-hint-arrow">→</span>
+            </Link>
+          ) : (
+            <Link to="/redeem" className="redeem-hint-card">
+              <span className="redeem-hint-icon">🎟️</span>
+              <span className="redeem-hint-text">
+                <span className="redeem-hint-title">
+                  Got an invite code from the waitlist or a friend?
+                </span>
+                <span className="redeem-hint-subtitle">
+                  Redeem it to skip the waitlist
+                </span>
               </span>
-            </span>
-            <span className="redeem-hint-arrow">→</span>
-          </Link>
+              <span className="redeem-hint-arrow">→</span>
+            </Link>
+          )}
         </header>
 
         <div className="waitlist-position-card">

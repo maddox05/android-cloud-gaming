@@ -255,3 +255,28 @@ export async function redeemInviteCode(
     return { success: false, error: "Network error - please try again" };
   }
 }
+
+/*
+ * Gets an invite code that was assigned to a user but hasn't been redeemed yet.
+ * This allows users who were on the waitlist and received an invite code to see
+ * their code and decide whether to redeem it.
+ *
+ * @param userId - The user's ID to check for assigned codes
+ * @returns The invite code if one exists and is unredeemed, null otherwise
+ */
+export async function getUserInviteCodeWhenUserAssignedCodeAndNotRedeemed(
+  userId: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("invite_codes")
+    .select("invite_code")
+    .eq("assigned_to", userId)
+    .is("user_id", null)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data.invite_code;
+}

@@ -346,7 +346,7 @@ export async function generateInvites(count: number): Promise<{
     // Insert into invite_codes table
     const { data: inviteData, error: insertError } = await supabase
       .from("invite_codes")
-      .insert({})
+      .insert({ assigned_to: userId })
       .select("invite_code")
       .single();
 
@@ -372,12 +372,7 @@ export async function generateInvites(count: number): Promise<{
       });
       console.log(`Sent invite email to ${email} with code ${inviteCode}`);
     } catch (emailError) {
-      console.error(`Failed to send email to ${email}:`, emailError);
-      errors.push({
-        user_id: userId,
-        error: `Failed to send email: ${emailError}`,
-      });
-      continue;
+      throw new Error(`Failed to send email to ${email}: ${emailError}`);
     }
 
     // Remove from waitlist only after successful email
@@ -387,7 +382,9 @@ export async function generateInvites(count: number): Promise<{
       .eq("user_id", userId);
 
     if (deleteError) {
-      console.error(`Failed to remove ${userId} from waitlist:`, deleteError);
+      throw new Error(
+        `Failed to remove ${userId} from waitlist: ${deleteError.message}`,
+      );
     }
 
     processed.push({ user_id: userId, email, invite_code: inviteCode });

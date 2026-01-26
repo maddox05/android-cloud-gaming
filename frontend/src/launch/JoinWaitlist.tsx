@@ -5,6 +5,7 @@ import {
   joinWaitlist,
   isOnWaitlist,
   getTotalWaitlistCount,
+  getUserInviteCodeWhenUserAssignedCodeAndNotRedeemed,
 } from "./waitlist_functions";
 import "./Waitlist.css";
 import { useUser } from "../context/useUser";
@@ -20,6 +21,7 @@ export default function JoinWaitlist() {
   const [isJoining, setIsJoining] = useState(false);
   const [hasSubscription, setHasSubscription] = useState(false);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [assignedInviteCode, setAssignedInviteCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -39,12 +41,18 @@ export default function JoinWaitlist() {
             setHasSubscription(true);
           } else if (user.accessType === null) {
             // Only check waitlist status if they definitively don't have access
-            const onWaitlist = await isOnWaitlist(supabaseUserId);
+            const [onWaitlist, inviteCode] = await Promise.all([
+              isOnWaitlist(supabaseUserId),
+              getUserInviteCodeWhenUserAssignedCodeAndNotRedeemed(supabaseUserId),
+            ]);
+
             if (onWaitlist) {
               // Redirect directly to their position page
               navigate(`/waitlist/${supabaseUserId}`, { replace: true });
               return;
             }
+
+            setAssignedInviteCode(inviteCode);
           }
           // If accessType is undefined, we're still loading - don't make decisions yet
         }
@@ -106,18 +114,35 @@ export default function JoinWaitlist() {
             Be among the first to experience cloud gaming on MaddoxCloud. Join
             our waitlist and get early access when spots open up.
           </p>
-          <Link to="/redeem" className="redeem-hint-card">
-            <span className="redeem-hint-icon">🎟️</span>
-            <span className="redeem-hint-text">
-              <span className="redeem-hint-title">
-                Already have an invite code?
-              </span>
-              <span className="redeem-hint-subtitle">
-                Redeem it to skip the waitlist
-              </span>
-            </span>
-            <span className="redeem-hint-arrow">→</span>
-          </Link>
+          {!hasSubscription && (
+            assignedInviteCode ? (
+              <Link to={`/redeem/${assignedInviteCode}`} className="redeem-hint-card">
+                <span className="redeem-hint-icon">🎉</span>
+                <span className="redeem-hint-text">
+                  <span className="redeem-hint-title">
+                    You got an invite code!
+                  </span>
+                  <span className="redeem-hint-subtitle">
+                    Click here to redeem and get instant access
+                  </span>
+                </span>
+                <span className="redeem-hint-arrow">→</span>
+              </Link>
+            ) : (
+              <Link to="/redeem" className="redeem-hint-card">
+                <span className="redeem-hint-icon">🎟️</span>
+                <span className="redeem-hint-text">
+                  <span className="redeem-hint-title">
+                    Already have an invite code?
+                  </span>
+                  <span className="redeem-hint-subtitle">
+                    Skip the waitlist and get instant access
+                  </span>
+                </span>
+                <span className="redeem-hint-arrow">→</span>
+              </Link>
+            )
+          )}
         </header>
 
         {!supabaseUserId ? (
