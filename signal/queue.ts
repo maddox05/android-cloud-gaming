@@ -15,7 +15,7 @@ export function addToQueue(client: Client): void {
   // i can see race issues with this instantly (if i go multi threaded)
   if (queue.includes(client)) {
     console.log(
-      `tried to add client ${client.id} to the queue when bro was alr queued`
+      `tried to add client ${client.id} to the queue when bro was alr queued`,
     );
     return;
   }
@@ -37,12 +37,19 @@ export function addToQueue(client: Client): void {
     console.log(
       `Client ${client.id} (paid) added to queue at position ${
         insertIndex !== -1 ? insertIndex + 1 : queue.length
-      }`
+      }`,
     );
-  } else {
+  } else if (client.accessType === "free") {
     queue.push(client);
     console.log(
-      `Client ${client.id} (free) added to queue at position ${queue.length}`
+      `Client ${client.id} (free) added to queue at position ${queue.length}`,
+    );
+  } else {
+    console.log(
+      `Client ${client.id} (null/undefined) TRIED added to queue at position ${queue.length}`,
+    );
+    throw new Error(
+      "How in the hell is a non-free / non paid client getting in the queue?",
     );
   }
 }
@@ -77,7 +84,7 @@ export function amIQueued(client: Client): boolean {
     (c) =>
       c === client ||
       c.id === client.id ||
-      (client.userId && c.userId === client.userId)
+      (client.userId && c.userId === client.userId),
   );
 }
 
@@ -109,7 +116,7 @@ export async function processQueue(): Promise<void> {
       client.sendQueueReady();
 
       console.log(
-        `Matched client ${client.id} with worker ${worker.id} for game ${client.game}`
+        `Matched client ${client.id} with worker ${worker.id} for game ${client.game}`,
       );
     }
   }
@@ -132,7 +139,7 @@ export function checkQueueTimeouts(): void {
       console.log(`Client ${client.id} timed out in queue`);
       client.sendError(
         ERROR_CODE.QUEUE_TIMEOUT,
-        "Queue timeout - you've been waiting too long. Please try again."
+        "Queue timeout - you've been waiting too long. Please try again.",
       );
       removeFromQueue(client);
       client.disconnect("queue_timeout");

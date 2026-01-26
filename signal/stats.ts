@@ -14,6 +14,7 @@ export interface WorkerStats {
   clientId: string | null;
   lastPing: number;
   msSinceLastPing: number;
+  isRegistered: boolean;
 }
 
 export interface ClientStats {
@@ -79,6 +80,7 @@ export function getStats(): StatsResponse {
     clientId: w.client?.id ?? null,
     lastPing: w.lastPing,
     msSinceLastPing: now - w.lastPing,
+    isRegistered: w.isRegistered,
   }));
 
   // Build client stats

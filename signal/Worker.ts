@@ -40,7 +40,7 @@ export default class Worker {
   private isDisconnected = false;
 
   // Registration flag (worker must send REGISTER before being available)
-  private isRegistered = false;
+  isRegistered = false;
 
   constructor(ws: WebSocket) {
     this.id = generateWorkerId();
@@ -80,6 +80,7 @@ export default class Worker {
   // ============================================
 
   private handleMessage(msg: SignalMessage): void {
+    if (this.isDisconnected) return;
     switch (msg.type) {
       case MSG.REGISTER:
         const msgTyped = msg as RegisterMessage;
@@ -232,14 +233,6 @@ export default class Worker {
     this.ws.close();
 
     console.log(`Worker ${this.id} removed`);
-  }
-
-  // Called when client requeues (switches games)
-  handleClientRequeued(): void {
-    if (this.isDisconnected) return;
-
-    this.client = null;
-    this.disconnect("client_requeued");
   }
 
   // Called when client notifies us of disconnect (avoid circular disconnect)

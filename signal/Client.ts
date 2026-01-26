@@ -32,6 +32,7 @@ import {
 } from "./consts.js";
 import { logSession } from "./db/database.js";
 import { MAX_SESSION_TIME_MS, FREE_USER_MAX_TIME_MS } from "../shared/const.js";
+import { throws } from "assert";
 
 export type ClientConnectionState =
   | "waiting"
@@ -109,6 +110,8 @@ export default class Client {
   // ============================================
 
   private handleMessage(msg: SignalMessage): void {
+    if (this.isDisconnected) return;
+
     // Any message resets ping timer
     this.lastPing = Date.now();
 
@@ -157,15 +160,16 @@ export default class Client {
     // If already has worker, clean up first
     if (this.worker) {
       // this should never happen
-      this.worker.handleClientRequeued();
-      this.worker = null;
+      this.disconnect("invalid_state_achieved");
+      return;
     }
 
     // If already queued, just update game
     if (this.connectionState === "queued") {
       // this should never happen
-      this.game = appId;
-      this.sendQueueInfo();
+      this.disconnect("invalid_state_achieved");
+      // this.game = appId;
+      // this.sendQueueInfo();
       return;
     }
 
@@ -218,7 +222,7 @@ export default class Client {
 
     if (!this.worker) {
       this.sendError(
-        ERROR_CODE.NO_WORKERS_AVAILABLE,
+        ERROR_CODE.NO_WORKERS_AVAILABLE, // todo this is not the correct err code
         "No worker assigned. Please rejoin the queue.",
       );
       this.disconnect("no_worker");

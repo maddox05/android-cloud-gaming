@@ -16,16 +16,19 @@ export async function getUserAccessType(userId: string): Promise<AccessType> {
   // Check for paid subscription first
   const hasSubscription = await checkSubscription(userId);
   if (hasSubscription) {
+    console.log(`[Auth] User ${userId}: paid`);
     return "paid";
   }
 
   // Check for free access via redeemed invite code
   const hasFreeAccess = await checkFreeAccess(userId);
   if (hasFreeAccess) {
+    console.log(`[Auth] User ${userId}: free`);
     return "free";
   }
 
   // No access
+  console.log(`[Auth] User ${userId}: no access`);
   return null;
 }
 
@@ -39,9 +42,7 @@ export async function verifyToken(
   const client = getSupabase();
 
   if (!client) {
-    console.error(
-      "Supabase not configured - SUPABASE_URL and SUPABASE_SERVICE_KEY required"
-    );
+    console.error("[Auth] Supabase not configured");
     return null;
   }
 
@@ -52,7 +53,6 @@ export async function verifyToken(
     } = await client.auth.getUser(token);
 
     if (error || !user) {
-      console.log("Token verification failed:", error?.message);
       return null;
     }
 
@@ -61,7 +61,7 @@ export async function verifyToken(
       email: user.email,
     };
   } catch (err) {
-    console.error("Auth error:", err);
+    console.error("[Auth] Token verification error:", err);
     return null;
   }
 }
@@ -81,12 +81,11 @@ async function checkSubscriptionByCheckoutSession(
     .eq("client_reference_id", userId);
 
   if (sessionsError) {
-    console.error("Checkout sessions lookup error:", sessionsError.message);
+    console.error("[Auth] Checkout sessions lookup error:", sessionsError.message);
     return false;
   }
 
   if (!sessions || sessions.length === 0) {
-    console.log(`No checkout sessions found for user ${userId}`);
     return false;
   }
 
@@ -97,11 +96,7 @@ async function checkSubscriptionByCheckoutSession(
       payment_status: string;
     };
 
-    if (payment_status !== "paid") {
-      continue;
-    }
-
-    if (!subscription) {
+    if (payment_status !== "paid" || !subscription) {
       continue;
     }
 
@@ -113,15 +108,11 @@ async function checkSubscriptionByCheckoutSession(
       .single();
 
     if (subError) {
-      console.error(
-        `Subscription lookup error for ${subscription}:`,
-        subError.message
-      );
+      console.error("[Auth] Subscription lookup error:", subError.message);
       continue;
     }
 
     if (sub && (sub.status === "active" || sub.status === "trialing")) {
-      console.log(`User ${userId} has active subscription: ${sub.id}`);
       return true;
     }
   }
@@ -135,13 +126,8 @@ async function checkSubscriptionByCheckoutSession(
  */
 async function checkSubscriptionByEmail(
   client: SupabaseClient,
-  email: string,
-  userId: string
+  email: string
 ): Promise<boolean> {
-  console.log(
-    `Fallback: checking subscription by email for ${userId} (${email})`
-  );
-
   const { data: customers, error: custError } = await client
     .schema("stripe")
     .from("customers")
@@ -149,19 +135,12 @@ async function checkSubscriptionByEmail(
     .ilike("email", email);
 
   if (custError) {
-    console.error("Customer lookup error:", custError.message);
+    console.error("[Auth] Customer lookup error:", custError.message);
     return false;
   }
 
   if (!customers || customers.length === 0) {
-    console.log(`No customers found for email ${email}`);
     return false;
-  }
-
-  if (customers.length > 1) {
-    console.log(
-      `Multiple customers found for email ${email}, this should NOT HAPPEN!`
-    );
   }
 
   for (const customer of customers) {
@@ -175,16 +154,11 @@ async function checkSubscriptionByEmail(
       .in("status", ["active", "trialing"]);
 
     if (subError) {
-      console.error("Subscription query error:", subError.message);
+      console.error("[Auth] Subscription query error:", subError.message);
       continue;
     }
 
     if (subs && subs.length > 0) {
-      console.log(
-        `User ${userId} has active subscription (via email fallback): ${
-          (subs[0] as { id: string }).id
-        }`
-      );
       return true;
     }
   }
@@ -201,7 +175,7 @@ export async function checkUserHasPassword(userId: string): Promise<boolean> {
   const client = getSupabase();
 
   if (!client) {
-    console.error("Supabase not configured");
+    console.error("[Auth] Supabase not configured");
     return false;
   }
 
@@ -211,13 +185,13 @@ export async function checkUserHasPassword(userId: string): Promise<boolean> {
     });
 
     if (error) {
-      console.error("Error checking password status:", error.message);
+      console.error("[Auth] Password check error:", error.message);
       return false;
     }
 
     return data === true;
   } catch (err) {
-    console.error("Password check error:", err);
+    console.error("[Auth] Password check error:", err);
     return false;
   }
 }
@@ -232,7 +206,7 @@ export async function checkSubscription(userId: string): Promise<boolean> {
   const client = getSupabase();
 
   if (!client) {
-    console.error("Supabase not configured");
+    console.error("[Auth] Supabase not configured");
     return false;
   }
 
@@ -251,22 +225,20 @@ export async function checkSubscription(userId: string): Promise<boolean> {
       await client.auth.admin.getUserById(userId);
 
     if (userError) {
-      console.error("Failed to fetch user email:", userError.message);
+      console.error("[Auth] Failed to fetch user email:", userError.message);
     } else if (userData?.user?.email) {
       const foundByEmail = await checkSubscriptionByEmail(
         client,
-        userData.user.email,
-        userId
+        userData.user.email
       );
       if (foundByEmail) {
         return true;
       }
     }
 
-    console.log(`User ${userId} has no active subscription`);
     return false;
   } catch (err) {
-    console.error("Subscription check error:", err);
+    console.error("[Auth] Subscription check error:", err);
     return false;
   }
 }
