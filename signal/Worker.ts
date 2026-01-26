@@ -15,6 +15,7 @@ import {
   ERROR_CODE,
   type TurnInfo,
 } from "../shared/types.js";
+import { GAMES_LIST } from "../shared/const.js";
 
 export type WorkerStatus = "available" | "busy";
 
@@ -85,7 +86,9 @@ export default class Worker {
         if (
           !msgTyped.games ||
           !Array.isArray(msgTyped.games) ||
-          msgTyped.games.length === 0
+          (msgTyped.games.length === 0 &&
+            JSON.stringify(msgTyped.games) !==
+              JSON.stringify(GAMES_LIST.map((game) => game.slug))) // TODO remove this if worker ever has not ALL games
         ) {
           console.error(`Worker ${this.id} sent invalid games array`);
           this.sendShutdown("invalid_games");

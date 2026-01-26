@@ -26,13 +26,18 @@ import { FREE_USER_MAX_TIME_MS } from "../shared/const.js";
 // Environment Validation
 // ============================================
 
-const requiredEnvVars = ["SIGNAL_PORT", "SUPABASE_URL", "SUPABASE_SERVICE_KEY", "WORKER_PASSWORD"];
+const requiredEnvVars = [
+  "SIGNAL_PORT",
+  "SUPABASE_URL",
+  "SUPABASE_SERVICE_KEY",
+  "WORKER_PASSWORD",
+];
 const missingEnvVars = requiredEnvVars.filter((v) => !process.env[v]);
 
 if (missingEnvVars.length > 0) {
   console.error(
     "Missing required environment variables:",
-    missingEnvVars.join(", ")
+    missingEnvVars.join(", "),
   );
   process.exit(1);
 }
@@ -171,7 +176,7 @@ app.ws("/", (ws, req) => {
           type: MSG.ERROR,
           code: ERROR_CODE.AUTH_FAILED,
           message: "Authentication required",
-        })
+        }),
       );
       ws.close();
       return;
@@ -183,28 +188,11 @@ app.ws("/", (ws, req) => {
             type: MSG.ERROR,
             code: ERROR_CODE.AUTH_FAILED,
             message: "Invalid or expired token",
-          })
+          }),
         );
         ws.close();
         return;
       }
-
-      // const hasSubscription = await checkSubscription(user.id);
-      // if (!hasSubscription) {
-      //   console.log(
-      //     `User ${user.id} (${user.email}) rejected - no active subscription`
-      //   );
-      //   ws.send(
-      //     JSON.stringify({
-      //       type: MSG.ERROR,
-      //       code: ERROR_CODE.NO_SUBSCRIPTION,
-      //       message:
-      //         "Active subscription required. Please subscribe to play. If you believe this is an error, contact support, we will help ASAP!",
-      //     })
-      //   );
-      //   ws.close();
-      //   return;
-      // }
 
       console.log(`Client authenticated: ${user.id}`);
 
@@ -225,7 +213,7 @@ app.ws("/", (ws, req) => {
         // If already exceeded, send authenticated then disconnect
         if (timeUsedTodayMs >= FREE_USER_MAX_TIME_MS) {
           console.log(
-            `Free user ${user.id} exceeded daily limit (${timeUsedTodayMs}ms used)`
+            `Free user ${user.id} exceeded daily limit (${timeUsedTodayMs}ms used)`,
           );
           client.sendAuthenticated(); // todo this is kinda retarded maybe change later
           client.disconnect("daily_time_exceeded"); // make this a contsant???
@@ -264,7 +252,7 @@ setInterval(() => {
       console.log(`Client ${client.id} timed out (connecting)`);
       client.sendError(
         ERROR_CODE.CONNECTION_TIMEOUT,
-        "Connection timeout - please try again."
+        "Connection timeout - please try again.",
       );
       client.disconnect("connecting_timeout");
     }
@@ -272,7 +260,7 @@ setInterval(() => {
       console.log(`Client ${client.id} timed out (input/AFK)`);
       client.sendError(
         ERROR_CODE.SESSION_TIMEOUT,
-        "Session ended due to inactivity."
+        "Session ended due to inactivity.",
       );
       client.disconnect("input_timeout");
     }
@@ -308,7 +296,7 @@ app.listen(PORT, () => {
   console.log(`Signal server running on port ${PORT}`);
   console.log(`WebSocket endpoint: ws://localhost:${PORT}/`);
   console.log(
-    `Ping interval: ${CHECK_LOOP_INTERVAL}ms, Timeout: ${PING_TIMEOUT_THRESHOLD}ms`
+    `Ping interval: ${CHECK_LOOP_INTERVAL}ms, Timeout: ${PING_TIMEOUT_THRESHOLD}ms`,
   );
   console.log(`Queue process interval: ${QUEUE_PROCESS_INTERVAL}ms`);
 });
