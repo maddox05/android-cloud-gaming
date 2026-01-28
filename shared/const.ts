@@ -60,6 +60,7 @@ Clash Royale is a real-time multiplayer game starring the Royales, your favorite
     thumbnail:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQMt18VVv2_bw1FRALdGOsPqf027hhFfQVFzQ&s",
     images: [],
+    onPhone: true,
   },
   {
     id: "com.supercell.clashofclans",
@@ -78,6 +79,7 @@ Clash of Clans is an epic combat strategy game. Build your village, train your t
     thumbnail:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR25TlNh8ve7ot5SIbP9nwgGNygwmb6g2dxFQ&s",
     images: [],
+    onPhone: true,
   },
   {
     id: "youtube.lite.anikinc",
@@ -96,6 +98,7 @@ YouTube Lite is a lightweight version of YouTube optimized for faster loading an
     thumbnail:
       "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/YouTube_social_white_square_%282024%29.svg/1200px-YouTube_social_white_square_%282024%29.svg.png",
     images: [],
+    onPhone: true,
   },
   {
     id: "com.roblox.client",
@@ -118,6 +121,7 @@ Roblox is the ultimate virtual universe that lets you create, share experiences 
       "https://media.wired.com/photos/611e8c4c616d2959940414e8/16:9/w_2400,h_1350,c_limit/Games-Roblox-Exploitation.jpg",
       "https://media.wired.com/photos/611e8c4c616d2959940414e8/16:9/w_2400,h_1350,c_limit/Games-Roblox-Exploitation.jpg",
     ],
+    onPhone: true,
   },
   {
     id: "com.tocaboca.tocalifeworld",
@@ -136,6 +140,7 @@ Toca Boca World is the app where you can create your own world and play out any 
     thumbnail:
       "https://play-lh.googleusercontent.com/AL4EeC-ElUtlJN2wZnQrDyC_8UpFYtvpK7AbJNJIQe0vYe8tucm6Qi20JJQlhCLHqw",
     images: [],
+    onPhone: true,
   },
   {
     id: "com.innersloth.spacemafia",
@@ -154,6 +159,7 @@ Among Us is an online multiplayer social deduction game where Crewmates work tog
     thumbnail:
       "https://play-lh.googleusercontent.com/8ddL1kuoNUB5vUvgDVjYY3_6HwQcrg1K2fd_R8soD-e2QYj8fT9cfhfh3G0hnSruLKec",
     images: [],
+    onPhone: true,
   },
   {
     id: "com.robtopx.geometryjumplite",
@@ -172,6 +178,8 @@ Geometry Dash Lite is a rhythm-based action platformer where you jump and fly yo
     thumbnail:
       "https://play-lh.googleusercontent.com/p7kWbWBFxQIrzolEqiV5uSvctLeyssZvBV7UBOX29wzZI52IdcSs4qCB_zsQJL1mt9A",
     images: [],
+    onPhone: false,
+    relativeLink: "g/geometry-dash-lite/index.html",
   },
 ];
 

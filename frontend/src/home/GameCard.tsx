@@ -1,37 +1,34 @@
-import { Link, useNavigate } from "react-router-dom";
-import { getGameInfoPath, getGameQueuePath } from "../in_game/helpers";
+import { Link } from "react-router-dom";
+import { getGameInfoPath } from "../in_game/helpers";
+import { usePlayGame } from "../context/usePlayGame";
+import type { Game } from "../../../shared/types";
 import "./GameCard.css";
 
 interface GameCardProps {
-  slug: string;
-  name: string;
-  thumbnail: string;
-  canPlay: () => boolean;
+  game: Game;
 }
 
-export default function GameCard({ slug, name, thumbnail, canPlay }: GameCardProps) {
-  const navigate = useNavigate();
+export default function GameCard({ game }: GameCardProps) {
+  const { playGame } = usePlayGame();
 
   const handlePlayClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (canPlay()) {
-      navigate(getGameQueuePath(slug));
-    }
+    playGame(game);
   };
 
   return (
-    <Link to={getGameInfoPath(slug)} className="game-card">
+    <Link to={getGameInfoPath(game.slug)} className="game-card">
       <div className="thumbnail">
         <img
-          src={thumbnail}
-          alt={name}
+          src={game.thumbnail}
+          alt={game.name}
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = "none";
           }}
         />
       </div>
-      <div className="name">{name}</div>
+      <div className="name">{game.name}</div>
       <button className="play-btn" onClick={handlePlayClick}>
         Play
       </button>

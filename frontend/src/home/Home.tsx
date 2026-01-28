@@ -1,7 +1,4 @@
 import { Link } from "react-router-dom";
-import { useAuthModal } from "../context/AuthModalContext";
-import { useUser } from "../context/useUser";
-import { showAlert } from "../services/alertService";
 import GameCard from "./GameCard";
 import ShapoWidget from "../components/ShapoWidget";
 import "./Home.css";
@@ -146,27 +143,6 @@ const FeatureIcon = ({ type }: { type: string }) => {
 };
 
 export default function Home() {
-  const { startLogin } = useAuthModal();
-  const { user, accessType } = useUser();
-
-  const canPlay = (): boolean => {
-    if (!user) {
-      startLogin();
-      return false;
-    }
-    if (accessType === null) {
-      showAlert({
-        type: "warning",
-        title: "Access Required",
-        message:
-          "Join the waitlist for early access, or buy access now. Full release is coming soon.",
-        link: { href: "/waitlist", label: "Join Waitlist" },
-      });
-      return false;
-    }
-    return true;
-  };
-
   return (
     <main className="main-content">
       {/* Games Grid - First */}
@@ -174,13 +150,7 @@ export default function Home() {
         <h2 className="section-title">All Games</h2>
         <div className="game-grid">
           {GAMES_LIST.map((game) => (
-            <GameCard
-              key={game.id}
-              slug={game.slug}
-              name={game.name}
-              thumbnail={game.thumbnail}
-              canPlay={canPlay}
-            />
+            <GameCard key={game.id} game={game} />
           ))}
         </div>
       </section>

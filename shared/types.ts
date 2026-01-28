@@ -41,6 +41,8 @@ export interface Game {
   description: string; // Markdown description
   thumbnail: string;
   images: string[]; // Carousel images (screenshots)
+  onPhone: boolean; // Whether the game works well on phone
+  relativeLink?: string;
 }
 export const MSG = {
   // Signal messages

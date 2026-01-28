@@ -1,17 +1,13 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { getGameBySlug } from "../../../shared/const";
-import { useUser } from "../context/useUser";
-import { useAuthModal } from "../context/AuthModalContext";
-import { getGameQueuePath } from "../in_game/helpers";
+import { usePlayGame } from "../context/usePlayGame";
 import "./GameInfo.css";
 
 const PLACEHOLDER_IMAGE = "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&q=80";
 
 export default function GameInfo() {
   const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
-  const { user, accessType } = useUser();
-  const { startLogin } = useAuthModal();
+  const { playGame } = usePlayGame();
 
   const game = slug ? getGameBySlug(slug) : undefined;
 
@@ -29,15 +25,7 @@ export default function GameInfo() {
   const images = game.images.filter(Boolean).length > 0 ? game.images.filter(Boolean) : [PLACEHOLDER_IMAGE];
 
   const handlePlay = () => {
-    if (!user) {
-      startLogin();
-      return;
-    }
-    if (accessType === null) {
-      navigate("/waitlist");
-      return;
-    }
-    navigate(getGameQueuePath(game.slug));
+    playGame(game);
   };
 
   return (
