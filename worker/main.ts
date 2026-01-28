@@ -303,6 +303,8 @@ class Worker {
     await scrcpyServer.listen();
 
     await redroidRunner.start(gameId, maxVideoSize);
+    videoHandler.setCanSendVideo(true);
+    inputHandler.resetVideo();
 
     this.hasStarted = true;
 
