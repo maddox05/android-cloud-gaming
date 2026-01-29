@@ -2,6 +2,7 @@ import {
   isLocalhost,
   selectedSignalServerIndex,
   SIGNAL_SERVER_DOMAINS,
+  GAMES_DATABASE_LINKS,
 } from "../consts";
 import axios from "axios";
 
@@ -33,4 +34,27 @@ export async function findWorkingSignalServerDomain(): Promise<void> {
     }
   }
   console.error("No working signal server found");
+}
+
+export async function testDatabaseLinks(domains: string[]) {
+  for (const link of domains) {
+    const res = await axios.get(`https://${link}/test.txt`, {
+      timeout: 5000,
+    });
+
+    if (res.data.trim() === "t67") {
+      console.log(`${link} is working`);
+      return link;
+    } else {
+      console.log(`${link} is NOT working`);
+    }
+  }
+
+  console.error("No database links are working");
+
+  return domains[0];
+}
+
+export async function returnWorkingGameDbLink(gameUrlFromBase: string) {
+  return `https://${await testDatabaseLinks(GAMES_DATABASE_LINKS)}/${gameUrlFromBase}`;
 }

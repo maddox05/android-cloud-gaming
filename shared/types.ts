@@ -42,7 +42,7 @@ export interface Game {
   thumbnail: string;
   images: string[]; // Carousel images (screenshots)
   onPhone: boolean; // Whether the game works well on phone
-  relativeLink?: string;
+  linkFromBase?: string;
 }
 export const MSG = {
   // Signal messages

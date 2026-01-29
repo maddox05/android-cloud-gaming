@@ -20,8 +20,8 @@ export function usePlayGame() {
    */
   const playGame = (game: Game): boolean => {
     // Check if game supports phone play
-    if (!game.onPhone && game.relativeLink) {
-      window.location.href = `/${game.relativeLink}`; // todo fix
+    if (!game.onPhone && game.linkFromBase) {
+      window.location.href = `/${game.linkFromBase}`; // todo fix
       return false;
     }
 
