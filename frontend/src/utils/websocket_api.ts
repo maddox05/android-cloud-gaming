@@ -1,4 +1,4 @@
-import { config } from "../config";
+import { config } from "../consts";
 import { getAccessToken } from "./supabase";
 import {
   MSG,

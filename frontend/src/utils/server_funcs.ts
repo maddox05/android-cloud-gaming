@@ -1,5 +1,5 @@
 import { getAccessToken } from "./supabase";
-import { config } from "../config";
+import { config } from "../consts";
 import type { AccessType } from "../../../shared/types";
 import axios from "axios";
 /**

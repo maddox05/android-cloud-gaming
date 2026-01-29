@@ -1,6 +1,6 @@
 import axios from "axios";
 import { supabase, getCurrentUser, getAccessToken } from "../utils/supabase";
-import { config } from "../config";
+import { config } from "../consts";
 
 // ============================================================================
 // WAITLIST TYPES

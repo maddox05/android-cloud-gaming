@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import Router from "./Router";
 import "./index.css";
 import { setupNavigationSentinel } from "./utils/navigationSentinel";
-import { findWorkingSignalServerDomain } from "./config";
+import { findWorkingSignalServerDomain } from "./utils/unblocking";
 
 findWorkingSignalServerDomain();
 

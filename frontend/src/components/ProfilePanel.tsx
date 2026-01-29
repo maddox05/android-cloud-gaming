@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { config } from "../config";
+import { config } from "../consts";
 import { Avatar } from "./Avatar";
 import { CloseIcon, CreditCardIcon } from "./Icons";
 import {

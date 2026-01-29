@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
-import { config } from "../config";
+import { config } from "../consts";
 
 // Export supabase client for use by other modules (e.g., waitlist_functions.ts)
 export const supabase = createClient(
