@@ -5,13 +5,13 @@ export default function PrivacyPolicy() {
     <div className="page-container">
       <div className="page-content">
         <h1>Privacy Policy</h1>
-        <p className="page-effective-date">Effective Date: January 1, 2025</p>
+        <p className="page-effective-date">Effective Date: January 30, 2026</p>
 
         <section className="page-section">
           <p>
-            Maddox Schmidlkofer built the MaddoxCloud app as a freemium service.
-            This SERVICE is provided by Maddox Schmidlkofer at no cost and is
-            intended for use as is.
+            MaddoxCloud ("the Service") is operated by Schmidlkofer Development
+            LLC. The Service is provided on a freemium basis, with a free tier
+            and optional paid subscriptions for enhanced access.
           </p>
           <p>
             This page informs visitors about policies regarding the collection,
@@ -39,28 +39,90 @@ export default function PrivacyPolicy() {
             <li>Avatar</li>
             <li>Email address</li>
             <li>Authentication tokens</li>
+            <li>
+              Account linking information (e.g., Google or Microsoft OAuth
+              providers)
+            </li>
+            <li>Waitlist and invite code data</li>
           </ul>
+        </section>
+
+        <section className="page-section">
+          <h2>Usage Data</h2>
           <p>
-            The app uses third-party services that may collect information used
-            to identify you:
+            When you use the Service, we automatically collect certain usage
+            data to operate and improve the platform, including:
           </p>
           <ul className="page-list">
-            <li>Google Play Services</li>
-            <li>Google Analytics</li>
-            <li>Supabase</li>
+            <li>Games played (application package name)</li>
+            <li>Video quality settings used during sessions</li>
+            <li>Session start and end timestamps</li>
+            <li>Session end reason</li>
+            <li>
+              Cumulative daily playtime (used to enforce free-tier limits)
+            </li>
           </ul>
+        </section>
+
+        <section className="page-section">
+          <h2>Payment Information</h2>
+          <p>
+            If you subscribe to a paid plan, your payment is processed by
+            Stripe, a third-party payment processor. MaddoxCloud does not store
+            your full credit card details. All payment data is handled directly
+            by Stripe in accordance with their{" "}
+            <a
+              href="https://stripe.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              privacy policy
+            </a>
+            .
+          </p>
+        </section>
+
+        <section className="page-section">
+          <h2>Third-Party Services</h2>
+          <p>
+            The Service uses third-party services that may collect information
+            used to identify you:
+          </p>
+          <ul className="page-list">
+            <li>
+              <strong>Google Analytics</strong> — website analytics and usage
+              tracking
+            </li>
+            <li>
+              <strong>Google AdSense</strong> — advertising services
+            </li>
+            <li>
+              <strong>Supabase</strong> — authentication and database services
+            </li>
+            <li>
+              <strong>Stripe</strong> — payment processing
+            </li>
+            <li>
+              <strong>Cloudflare</strong> — content delivery, WebRTC TURN
+              servers, and cloud storage for game saves
+            </li>
+          </ul>
+          <p>
+            These third parties have access to your Personal Information only to
+            perform their respective services and are obligated not to disclose
+            or use the information for any other purpose.
+          </p>
         </section>
 
         <section className="page-section">
           <h2>Log Data</h2>
           <p>
-            Whenever you use our Service, in the case of an error in the app, we
-            collect data and information (through third-party products) called
-            Log Data. This Log Data may include information such as your
-            device's Internet Protocol ("IP") address, device name, operating
-            system version, the configuration of the app when utilizing our
-            Service, the time and date of your use of the Service, and other
-            statistics.
+            Whenever you use our Service, in the case of an error, we collect
+            data and information (through third-party products) called Log Data.
+            This Log Data may include information such as your device's Internet
+            Protocol ("IP") address, device name, operating system version, the
+            configuration of the app when utilizing our Service, the time and
+            date of your use of the Service, and other statistics.
           </p>
         </section>
 
@@ -73,31 +135,12 @@ export default function PrivacyPolicy() {
             memory.
           </p>
           <p>
-            This Service does not use "cookies" explicitly. However, the app may
-            use third-party code and libraries that use "cookies" to collect
+            The Service uses third-party services such as Google Analytics and
+            Google AdSense that set cookies on your device to collect
             information and improve their services. You have the option to
-            either accept or refuse these cookies and know when a cookie is
-            being sent to your device. If you choose to refuse our cookies, you
-            may not be able to use some portions of this Service.
-          </p>
-        </section>
-
-        <section className="page-section">
-          <h2>Service Providers</h2>
-          <p>
-            We may employ third-party companies and individuals for the
-            following reasons:
-          </p>
-          <ul className="page-list">
-            <li>To facilitate our Service</li>
-            <li>To provide the Service on our behalf</li>
-            <li>To perform Service-related services</li>
-            <li>To assist us in analyzing how our Service is used</li>
-          </ul>
-          <p>
-            These third parties have access to your Personal Information only to
-            perform these tasks on our behalf and are obligated not to disclose
-            or use the information for any other purpose.
+            either accept or refuse these cookies through your browser settings.
+            If you choose to refuse cookies, you may not be able to use some
+            portions of this Service.
           </p>
         </section>
 
@@ -134,6 +177,32 @@ export default function PrivacyPolicy() {
             this from our servers. If you are a parent or guardian and you are
             aware that your child has provided us with personal information,
             please contact us so that we can take necessary actions.
+          </p>
+        </section>
+
+        <section className="page-section">
+          <h2>Data Retention</h2>
+          <p>
+            We retain your account data for as long as your account is active or
+            as needed to provide you the Service. Usage and session logs are
+            retained for service improvement and operational purposes. If you
+            wish to request deletion of your account and associated data, please
+            contact us using the information below.
+          </p>
+        </section>
+
+        <section className="page-section">
+          <h2>Your Rights</h2>
+          <p>You have the right to:</p>
+          <ul className="page-list">
+            <li>Request access to the personal data we hold about you</li>
+            <li>Request deletion of your account and associated data</li>
+            <li>Opt out of marketing communications</li>
+          </ul>
+          <p>
+            To exercise any of these rights, please contact us at{" "}
+            <a href="mailto:contact@maddoxcloud.com">contact@maddoxcloud.com</a>
+            .
           </p>
         </section>
 

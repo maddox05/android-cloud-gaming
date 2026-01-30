@@ -122,6 +122,8 @@ Roblox is the ultimate virtual universe that lets you create, share experiences 
       "https://media.wired.com/photos/611e8c4c616d2959940414e8/16:9/w_2400,h_1350,c_limit/Games-Roblox-Exploitation.jpg",
     ],
     onPhone: true,
+    quickAlert:
+      "There is currently an issue where you get booted out after 5 minutes. You can browse avatars and games but not much else. We are working on a fix.",
   },
   {
     id: "com.tocaboca.tocalifeworld",

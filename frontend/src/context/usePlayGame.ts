@@ -43,6 +43,20 @@ export function usePlayGame() {
       return false;
     }
 
+    // Show quick alert if set, then continue on dismiss
+    if (game.quickAlert) {
+      showAlert({
+        type: "info",
+        title: "Notice",
+        message: game.quickAlert,
+        link: { href: `${getGameQueuePath(game.slug)}`, label: "Continue" },
+        onDismiss: () => {
+          navigate(getGameQueuePath(game.slug));
+        },
+      });
+      return true;
+    }
+
     // All checks passed, navigate to game queue
     navigate(getGameQueuePath(game.slug));
     return true;

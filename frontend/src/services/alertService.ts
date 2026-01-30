@@ -4,8 +4,9 @@ export interface AlertOptions {
   type?: AlertType;
   title?: string;
   message: string;
-  link: { href: string; label: string };
+  link?: { href: string; label: string };
   onCloseRedirect?: string;
+  onDismiss?: () => void;
 }
 
 type AlertListener = (options: AlertOptions | null) => void;
