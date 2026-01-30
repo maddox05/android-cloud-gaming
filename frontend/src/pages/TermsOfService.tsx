@@ -5,7 +5,7 @@ export default function TermsOfService() {
     <div className="page-container">
       <div className="page-content">
         <h1>Terms of Service</h1>
-        <p className="page-effective-date">Effective Date: January 1, 2025</p>
+        <p className="page-effective-date">Effective Date: January 30, 2026</p>
 
         <section className="page-section">
           <h2>Agreement to Terms</h2>
@@ -19,9 +19,17 @@ export default function TermsOfService() {
         <section className="page-section">
           <h2>Description of Service</h2>
           <p>
-            MaddoxCloud is a cloud gaming platform that allows users to stream and play
-            Android games through their web browser. The Service is provided on a freemium
-            basis, with optional premium features available for purchase.
+            MaddoxCloud is a cloud gaming platform operated by Schmidlkofer Development LLC
+            that allows users to stream and play Android games through their web browser
+            using WebRTC technology. The Service is provided on a freemium basis: free-tier
+            users receive up to 10 minutes of playtime per day at standard video quality,
+            while paid subscribers receive unlimited playtime and access to higher video
+            quality options.
+          </p>
+          <p>
+            Games available on the platform are third-party Android applications owned by
+            their respective developers and publishers. MaddoxCloud does not claim ownership
+            of any games streamed through the Service.
           </p>
         </section>
 
@@ -84,26 +92,30 @@ export default function TermsOfService() {
         <section className="page-section">
           <h2>Subscriptions and Payments</h2>
           <p>
-            Some parts of the Service are billed on a subscription basis. You will be billed
-            in advance on a recurring and periodic basis. Billing cycles are set on a monthly
-            or annual basis, depending on the type of subscription plan you select.
+            Paid subscriptions unlock unlimited playtime and higher video quality options.
+            You will be billed in advance on a recurring and periodic basis. Billing cycles
+            are set on a monthly or annual basis, depending on the type of subscription plan
+            you select.
           </p>
           <p>
-            A valid payment method is required to process the payment for your subscription.
-            You shall provide accurate and complete billing information. By submitting such
+            All payments are processed through Stripe, a third-party payment processor. A
+            valid payment method is required to process payment for your subscription. You
+            shall provide accurate and complete billing information. By submitting such
             payment information, you automatically authorize us to charge all subscription
-            fees incurred through your account.
+            fees incurred through your account. MaddoxCloud does not store your full credit
+            card details; payment data is handled directly by Stripe in accordance with
+            their privacy and security policies.
           </p>
         </section>
 
         <section className="page-section">
-          <h2>Free Trial</h2>
+          <h2>Free Tier</h2>
           <p>
-            MaddoxCloud may, at its sole discretion, offer a subscription with a free trial
-            for a limited period of time. You may be required to enter your billing information
-            in order to sign up for the free trial. If you do enter your billing information
-            when signing up for a free trial, you will not be charged until the free trial
-            has expired.
+            MaddoxCloud offers a free tier that provides up to 10 minutes of playtime per
+            day at standard (ULD) video quality. The free tier does not require payment
+            information. Free-tier limitations are subject to change at our sole discretion.
+            To access unlimited playtime and higher video quality options, you may upgrade
+            to a paid subscription at any time.
           </p>
         </section>
 
@@ -130,10 +142,10 @@ export default function TermsOfService() {
         <section className="page-section">
           <h2>Limitation of Liability</h2>
           <p>
-            In no event shall MaddoxCloud, nor its directors, employees, partners, agents,
-            suppliers, or affiliates, be liable for any indirect, incidental, special,
-            consequential, or punitive damages, including without limitation, loss of profits,
-            data, use, goodwill, or other intangible losses, resulting from:
+            In no event shall MaddoxCloud, Schmidlkofer Development LLC, or its service
+            providers be liable for any indirect, incidental, special, consequential, or
+            punitive damages, including without limitation, loss of profits, data, use,
+            goodwill, or other intangible losses, resulting from:
           </p>
           <ul className="page-list">
             <li>Your access to or use of or inability to access or use the Service</li>
@@ -172,6 +184,25 @@ export default function TermsOfService() {
             at any time. If a revision is material, we will try to provide at least 30 days'
             notice prior to any new terms taking effect. What constitutes a material change
             will be determined at our sole discretion.
+          </p>
+        </section>
+
+        <section className="page-section">
+          <h2>Governing Law</h2>
+          <p>
+            These Terms shall be governed and construed in accordance with the laws of the
+            State of Indiana, United States, without regard to its conflict of law provisions.
+          </p>
+        </section>
+
+        <section className="page-section">
+          <h2>Dispute Resolution</h2>
+          <p>
+            If you have any concerns or disputes about the Service, you agree to first try
+            to resolve the dispute informally by contacting us at{" "}
+            <a href="mailto:contact@maddoxcloud.com">contact@maddoxcloud.com</a>. If the
+            dispute is not resolved within 30 days, any formal legal proceedings shall be
+            brought exclusively in the courts located in the State of Indiana, United States.
           </p>
         </section>
 

@@ -5,7 +5,7 @@ export default function CopyrightPolicy() {
     <div className="page-container">
       <div className="page-content">
         <h1>Copyright Policy</h1>
-        <p className="page-effective-date">Effective Date: January 1, 2025</p>
+        <p className="page-effective-date">Effective Date: January 30, 2026</p>
 
         <section className="page-section">
           <h2>Respect for Intellectual Property</h2>
@@ -122,9 +122,8 @@ export default function CopyrightPolicy() {
             Please send all copyright infringement notices and counter-notifications to:
           </p>
           <p className="page-contact-info">
-            <strong>MaddoxCloud Copyright Agent</strong><br />
-            Email: <a href="mailto:copyright@maddoxcloud.com">copyright@maddoxcloud.com</a><br />
-            Alternative: <a href="mailto:contact@maddoxcloud.com">contact@maddoxcloud.com</a>
+            <strong>Schmidlkofer Development LLC</strong><br />
+            Email: <a href="mailto:contact@maddoxcloud.com">contact@maddoxcloud.com</a>
           </p>
           <p>
             Please note that this procedure is exclusively for notifying us that your

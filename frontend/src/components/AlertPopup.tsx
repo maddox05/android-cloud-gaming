@@ -99,11 +99,13 @@ export function AlertPopup() {
 
   const handleClose = () => {
     const redirect = alertData?.onCloseRedirect;
+    const onDismiss = alertData?.onDismiss;
     hideAlert();
     setAlertData(null);
     if (redirect) {
       navigate(redirect);
     }
+    onDismiss?.();
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -149,9 +151,11 @@ export function AlertPopup() {
 
         <p className="alert-message">{alertData.message}</p>
 
-        <button className="alert-cta" onClick={handleLinkClick}>
-          {alertData.link.label}
-        </button>
+        {alertData.link && (
+          <button className="alert-cta" onClick={handleLinkClick}>
+            {alertData.link.label}
+          </button>
+        )}
       </div>
     </div>
   );
