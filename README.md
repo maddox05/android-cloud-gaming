@@ -1,4 +1,4 @@
-# Android Cloud Gaming
+# MaddoxCloud - Android Cloud Gaming
 
 A cloud gaming platform that streams Android games to your browser using WebRTC. Play mobile games on any device with a web browser.
 
