@@ -2,6 +2,7 @@ export const SIGNAL_SERVER_DOMAINS = [
   "android-cloud-gaming-production.up.railway.app",
   "cloud-signal.commonground.click", // there is only 1 signal server these are just domains it can be accessed from
 ];
+export const GAMES_DATABASE_LINKS = [];
 export const isLocalhost =
   window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1";

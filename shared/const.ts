@@ -181,7 +181,7 @@ Geometry Dash Lite is a rhythm-based action platformer where you jump and fly yo
       "https://play-lh.googleusercontent.com/p7kWbWBFxQIrzolEqiV5uSvctLeyssZvBV7UBOX29wzZI52IdcSs4qCB_zsQJL1mt9A",
     images: [],
     onPhone: false,
-    relativeLink: "g/geometry-dash-lite/index.html",
+    linkFromBase: "g/geometry-dash-lite/index.html",
   },
 ];
 

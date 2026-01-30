@@ -42,8 +42,9 @@ export interface Game {
   thumbnail: string;
   images: string[]; // Carousel images (screenshots)
   onPhone: boolean; // Whether the game works well on phone
-  relativeLink?: string;
+  linkFromBase?: string;
   quickAlert?: string; // Optional alert message shown before launching the game
+
 }
 export const MSG = {
   // Signal messages

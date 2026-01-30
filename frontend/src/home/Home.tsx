@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import GameCard from "./GameCard";
-import ShapoWidget from "../components/ShapoWidget";
+
 import "./Home.css";
 import { GAMES_LIST } from "../../../shared/const";
 
@@ -176,9 +176,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Shapo Widget */}
-      <ShapoWidget widgetId="4279326f22c7c940975d" />
-
       {/* Testimonials Section */}
       <section className="testimonials-section">
         <h2
@@ -225,6 +222,10 @@ export default function Home() {
             draggable="false"
           />
         </div>
+        {/* Trustpilot */}
+        <a href="https://www.trustpilot.com/review/maddoxcloud.com" target="_blank" rel="noopener noreferrer">
+          <img src="/imgs/trust_pilot.png" alt="Trustpilot reviews" style={{ display: "block", margin: "0 auto", maxWidth: "300px", width: "100%" }} />
+        </a>
       </section>
 
       {/* CTA Section */}
