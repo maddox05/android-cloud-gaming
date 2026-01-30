@@ -361,19 +361,19 @@ export async function generateInvites(count: number): Promise<{
     const inviteCode = inviteData.invite_code;
 
     // Send email
-    const emailContent = buildInviteEmail(inviteCode);
-    try {
-      await emailTransporter.sendMail({
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
-        to: email,
-        subject: emailContent.subject,
-        text: emailContent.text,
-        html: emailContent.html,
-      });
-      console.log(`Sent invite email to ${email} with code ${inviteCode}`);
-    } catch (emailError) {
-      throw new Error(`Failed to send email to ${email}: ${emailError}`);
-    }
+    // const emailContent = buildInviteEmail(inviteCode);
+    // try {
+    //   await emailTransporter.sendMail({
+    //     from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    //     to: email,
+    //     subject: emailContent.subject,
+    //     text: emailContent.text,
+    //     html: emailContent.html,
+    //   });
+    //   console.log(`Sent invite email to ${email} with code ${inviteCode}`);
+    // } catch (emailError) {
+    //   throw new Error(`Failed to send email to ${email}: ${emailError}`);
+    // }
 
     // Remove from waitlist only after successful email
     const { error: deleteError } = await supabase

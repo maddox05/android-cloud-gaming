@@ -257,7 +257,7 @@ export default function Home() {
               />
             </div>
             <span className="social-proof-text">
-              Join <strong>3,100+</strong> others
+              Join <strong>17,900+</strong> others
             </span>
           </div>
         </div>
