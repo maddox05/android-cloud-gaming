@@ -43,6 +43,23 @@ export function usePlayGame() {
       return false;
     }
 
+    // Show early access notice on first ever play
+    const EARLY_ACCESS_KEY = "earlyAccessShown";
+    if (!localStorage.getItem(EARLY_ACCESS_KEY)) {
+      localStorage.setItem(EARLY_ACCESS_KEY, "1");
+      showAlert({
+        type: "info",
+        title: "Early Access",
+        message:
+          "We're still in early access and performance isn't where we want it to be yet. You may experience some lag or issues — thanks for bearing with us!",
+        link: { href: getGameQueuePath(game.slug), label: "Play Anyway" },
+        onDismiss: () => {
+          navigate(getGameQueuePath(game.slug));
+        },
+      });
+      return true;
+    }
+
     // Show quick alert if set, then continue on dismiss
     if (game.quickAlert) {
       showAlert({
